@@ -39,8 +39,15 @@ class LeaseStore:
         except OSError:
             raise RegistryError("REGISTRY_UNAVAILABLE: storage directory unavailable") from None
         self.clock = clock
-        with self.transaction() as db:
-            db.executescript(SCHEMA)
+        try:
+            db = sqlite3.connect(str(self.file), timeout=5)
+            try:
+                db.executescript(SCHEMA)
+                db.commit()
+            finally:
+                db.close()
+        except (sqlite3.Error, OSError):
+            raise RegistryError("REGISTRY_UNAVAILABLE: cannot open lease store") from None
 
     @contextlib.contextmanager
     def transaction(self):

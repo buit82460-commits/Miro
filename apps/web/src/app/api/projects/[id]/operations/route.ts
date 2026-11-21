@@ -39,6 +39,10 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     }
   }
   p.revision += 1;
-  pushHistory("command", `${id} ${String(op.type)} -> r${p.revision}`);
+  if (op.type === "update_subtitle") {
+    pushHistory("subtitle", `${id}/${String(op.clip_id ?? "")} -> r${p.revision}`);
+  } else {
+    pushHistory("command", `${id} ${String(op.type)} -> r${p.revision}`);
+  }
   return ok(p);
 }

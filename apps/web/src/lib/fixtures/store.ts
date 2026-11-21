@@ -49,6 +49,47 @@ export type FixtureReceipt = {
 
 const now = () => new Date().toISOString();
 
+export { now };
+
+export type FixturePlatform = {
+  id: string;
+  name: string;
+  version: number;
+  runtime: string;
+  accounts: string[];
+  entry_urls: Record<string, string>;
+  capabilities: Record<string, { status: string; runtime: string; input: string; output: string; evidence: string }>;
+  tracks: { read: string; publish: string };
+};
+
+function seedPlatforms(): FixturePlatform[] {
+  const caps = (read: string, pub: string) => ({
+    list: { status: read, runtime: "fixture", input: "account", output: "items", evidence: "fixture" },
+    download: { status: read, runtime: "fixture", input: "url", output: "file", evidence: "fixture" },
+    draft: { status: pub, runtime: "fixture", input: "video", output: "draft", evidence: "fixture" },
+    publish: { status: pub, runtime: "fixture", input: "video", output: "post", evidence: "fixture" },
+    reconcile: { status: read, runtime: "fixture", input: "post_id", output: "receipt", evidence: "fixture" },
+    watch: { status: read, runtime: "fixture", input: "post_id", output: "events", evidence: "fixture" },
+  });
+  return [
+    {
+      id: "threads", name: "Threads", version: 1, runtime: "fixture",
+      accounts: ["@miro.demo"], entry_urls: {},
+      capabilities: caps("SUPPORTED", "SUPPORTED"), tracks: { read: "READY", publish: "READY" },
+    },
+    {
+      id: "facebook", name: "Facebook", version: 1, runtime: "fixture",
+      accounts: ["Miro Demo Page"], entry_urls: {},
+      capabilities: caps("SUPPORTED", "PARTIAL"), tracks: { read: "READY", publish: "DEGRADED" },
+    },
+    {
+      id: "tiktok", name: "TikTok", version: 1, runtime: "fixture",
+      accounts: ["@miro.demo"], entry_urls: {},
+      capabilities: caps("PARTIAL", "PARTIAL"), tracks: { read: "DEGRADED", publish: "DEGRADED" },
+    },
+  ];
+}
+
 function seedProject(id: string, title: string): FixtureProject {
   return {
     id,
@@ -82,6 +123,8 @@ const store: {
   receipts: FixtureReceipt[];
   history: { at: string; event: string; detail: string }[];
   seq: number;
+  platforms: FixturePlatform[];
+  registryVersion: number;
 } = {
   tasks: [
     { id: "task-1", title: "Dựng video Threads mở đầu", status: "awaiting_review", revision: 2, updated_at: now() },
@@ -91,6 +134,8 @@ const store: {
   receipts: [],
   history: [{ at: now(), event: "seed", detail: "fixture khởi tạo" }],
   seq: 100,
+  platforms: seedPlatforms(),
+  registryVersion: 1,
 };
 
 export function getStore() {
@@ -115,6 +160,8 @@ export function resetFixture() {
   store.receipts = [];
   store.history = [{ at: now(), event: "seed", detail: "fixture khởi tạo" }];
   store.seq = 100;
+  store.platforms = seedPlatforms();
+  store.registryVersion = 1;
 }
 
 export function ok<T>(result: T, status = 200) {
