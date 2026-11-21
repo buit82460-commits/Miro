@@ -104,9 +104,30 @@ def test_mix_overflow_timing_exact(tmp_path):
     assert entry.get("overflow_secs") == 1.5
 
 
-def test_render_video_preview_boolean(tmp_path):
+def test_render_video_preview_that_20s_640(tmp_path):
+    # P1 ghi nhan 3: test render-preview that — duration <=20s + scale 640.
     import shutil
-    if not shutil.which("ffmpeg"):
-        pytest.skip("khong co ffmpeg")
+    import subprocess
+    if not shutil.which("ffmpeg") or not shutil.which("ffprobe"):
+        pytest.skip("khong co ffmpeg/ffprobe")
     engine = LocalEngine()
-    pytest.skip("can video that — preview boolean da co trong handlers.editor_render")
+    src = tmp_path / "src.mp4"
+    r = subprocess.run(
+        ["ffmpeg", "-y", "-v", "error", "-f", "lavfi",
+         "-i", "testsrc=size=1280x720:rate=30:duration=60",
+         "-f", "lavfi", "-i", "sine=frequency=440:duration=60",
+         "-c:v", "libx264", "-preset", "ultrafast", "-c:a", "aac",
+         "-shortest", str(src)],
+        capture_output=True, text=True, timeout=300)
+    assert r.returncode == 0 and src.is_file(), r.stderr[-300:]
+    mix = _wav(tmp_path / "mix.wav", 60.0, rate=engine.SAMPLE_RATE)
+    out = tmp_path / "preview.mp4"
+    engine.render_video(str(src), str(mix), out, preview=True)
+    assert out.is_file()
+    dur = engine.probe_duration(out)
+    assert 0 < dur <= 20.5, dur
+    p = subprocess.run(
+        ["ffprobe", "-v", "error", "-select_streams", "v:0",
+         "-show_entries", "stream=width", "-of", "csv=p=0", str(out)],
+        capture_output=True, text=True, timeout=60)
+    assert p.stdout.strip() == "640", p.stdout
