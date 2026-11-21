@@ -57,3 +57,15 @@ Phạm vi M1: READ-only (read/navigate trên fake page trong bộ nhớ), không
 - Luật 1-tab/platform — ĐẠT: `register_live_tab` ưu tiên tab open cùng browser+profile+platform (reused, không đăng ký tab thứ 2 kể cả khi URL khác); chưa có tab → `TAB_REQUIRED_OPEN_FIRST` (mở tab trước, không tự `new_page`/`goto`); `acquire_tab` thiếu tab cũng `TAB_REQUIRED_OPEN_FIRST`, không navigate.
 - Lệnh: `python -m pytest tests/test_chrome_single_tab.py tests/test_live_chrome_readonly.py -q` trong `C:\Miro\apps\backend` → **11 passed** (8 endpoint/single-tab + 3 readonly có sẵn; fake hoàn toàn, không Chrome/CDP thật).
 - Phần mở: chưa chạy `ManagedChromeSession.open` + `acquire` + `read` trên Chrome remote-debugging thật (live thật chưa chạy).
+
+## 7. P0 tab: targetId CDP thật, chuẩn hóa URL, protected-continue (commit ee2b615, ngày 2026-11-21)
+
+**Kết luận: ĐẠT** — kiểm tra độc lập bằng đọc diff + đối chiếu A + chạy lại test.
+
+- Đối chiếu A (`C:\dubtool\core\browser_runtime.py`) — ĐẠT từng điểm:
+  - `_target` (`:70-75`): A mở CDP session trên context + `Target.getTargetInfo` → `targetInfo`. C (`live_chrome._cdp_target_id`) cùng thứ tự: attr/callable `target_id` trên page trước (fake/test passthrough, không tốn CDP) → `context.new_cdp_session(page)` + `Target.getTargetInfo` → `""` (caller fallback key ổn định `live-<id(page)>`); `detach` trong `finally`, lỗi nuốt có scope. Khác chữ ký (A là method `_target(context, page)`, C là hàm `_cdp_target_id(session, page)` quét contexts chứa page) nhưng cùng ngữ nghĩa — chấp nhận, đã ghi rõ trong docstring.
+  - `_urls_same_destination` (`:27-37`): C copy đúng logic A — scheme/host/port + path strip `/` cuối + query trừ tracking so bằng nhau, parse lỗi → `False`. `_IGNORED_QUERY_KEYS` trùng A từng key (`fbclid`, `utm_*` ×5, `_rdc`, `_rdr`). Áp dụng đúng 5 chỗ: `register_live_tab` match + revalidate, `acquire_tab` rank/exact + `needs_nav`, `read_tab` origin + mid-read. Đóng nợ mục 3 §5 (chuẩn hóa URL kiểu A).
+  - `saw_protected` + `continue` (`:690-691`): C copy đúng — candidate protected (upload/dirty/flagWatch) cần navigate → release lease, `saw_protected=True`, `continue` (không raise sớm); hết vòng mới raise `TabProtected`. Test mới chứng minh không dừng sớm (`TAB_ORIGIN_CHANGED` ở candidate sau, không phải `TabProtected`) + raise sau vòng khi tất cả protected.
+- `register_live_tab` thành async — ĐẠT có ghi nhận: đổi chữ ký do `await _cdp_target_id`; đã sửa cả 2 callsite (`read_url_once` + tests), không còn caller sync cũ. Khác nhỏ vs A: fallback `live-<id(page):x>` khi CDP không trả targetId (A luôn có targetId thật từ CDP) — chỉ xảy ra khi CDP lỗi, key ổn định theo object, chấp nhận.
+- Lệnh: `python -m pytest tests/test_chrome_single_tab.py tests/test_browser_single_owner.py tests/test_live_chrome_readonly.py -q` trong `C:\Miro\apps\backend` → **25 passed** (3 file, fake hoàn toàn, không Chrome/CDP thật).
+- Phần mở (từ mục 4–5 reread, còn nguyên): window-check `bind_profile` (§4.1), 7 `account_providers` chưa đấu (§4.2), chưa chạy Chrome remote-debugging thật (§4.3/§5.5); cộng thêm: fallback `live-<id>` chưa từng chạy CDP thật nên chưa biết tần suất fallback trên Chrome thật.
