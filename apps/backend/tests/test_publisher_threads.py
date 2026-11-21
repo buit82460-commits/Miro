@@ -523,7 +523,15 @@ def test_actor_contract_missing_everything_blocks_by_default(tmp_path):
 
 
 def test_actor_contract_relaxation_only_with_explicit_env(tmp_path, monkeypatch):
-    """Chi MIRO_ALLOW_UNVERIFIED_ACTOR=1 (test/fake) moi noi long contract."""
+    """Chi MIRO_ALLOW_UNVERIFIED_ACTOR=1 (test/fake) moi noi long contract.
+
+    P1 (A+B de nghi): test bat env phai assert ro env dang bat; va co test
+    chay KHONG env chung minh production fail-closed (test ke tren).
+    """
+    import os
+
+    assert os.environ.get("MIRO_ALLOW_UNVERIFIED_ACTOR") != "1", \
+        "test nay chay khi env chua bat — neu fail o day la leak env giua cac test"
     pub, base, attempts = make_pub(tmp_path)
 
     class BareBrowser(MockBrowser):
@@ -538,6 +546,8 @@ def test_actor_contract_relaxation_only_with_explicit_env(tmp_path, monkeypatch)
     assert out.get("error") == "FAILED_BEFORE_POST"
 
     monkeypatch.setenv("MIRO_ALLOW_UNVERIFIED_ACTOR", "1")
+    assert os.environ.get("MIRO_ALLOW_UNVERIFIED_ACTOR") == "1", \
+        "env noi long dang bat ro rang trong test nay"
     intent2 = _actor_intent(tag="a3")
     out2 = pub.publish(intent2, BareBrowser())
     assert out2.get("error") != "FAILED_BEFORE_POST", out2
