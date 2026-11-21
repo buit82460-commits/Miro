@@ -44,14 +44,21 @@ def _load_manifest():
 
 
 class ReadOnlyBrowser:
-    """Chi doc, khong bao gio post — dem so lan goi post de assert 0 post."""
+    """Chi doc, khong bao gio post that.
+
+    - attempts: so lan publish di qua gate den post_once (gate mo).
+    - posts: so post THANH CONG (luon 0 — raise truoc khi post that).
+    An toan: bat ky code nao muon post that deu bi chan o day.
+    """
 
     def __init__(self, receipt=None):
         self.posts = 0
+        self.attempts = 0
         self.receipt = receipt
 
     def post_once(self, intent):
-        self.posts += 1
+        self.attempts += 1
+        # Dry-run: khong post len mang that — raise TRUOC khi co post thanh cong.
         raise AssertionError("dry-run: khong duoc post len mang that")
 
     def read_receipt(self, intent):
@@ -127,13 +134,25 @@ def test_real_batch_dryrun(tmp_path):
     # test-001 da published -> skip, khong post
     assert any(r.get("skipped") == "ALREADY_IN_PUBLICATION" for r in out)
 
-    # Batch 2v that (2 item co media that): prep chan MEDIA, van 0 post
+    # Batch 2v that (2 item co media that, file con tren may):
+    # hanh vi MOI (M2 fix #3): file that gate pass -> di qua gate den post;
+    # browser dry-run raise (loi sau click) -> batch ghi UNKNOWN + dung,
+    # 0 post THANH CONG. Neu file khong con -> MEDIA_UNVERIFIED fail-closed.
     data2 = json.loads((BATCH_2V / "download.json").read_text(encoding="utf-8-sig"))
     intents2 = [Intent.from_item(s, "haodaojrk5") for s in data2["saved"]]
+    have_files = [bool(Path(s.get("local_path") or "").exists())
+                  for s in data2["saved"]]
     out2 = pub.run_batch(intents2, browser)
-    assert browser.posts == 0
-    assert all(r.get("error") or r.get("skipped") or r.get("receipt") or r.get("posted") is False
-               or "posted" in r for r in out2)
+    assert browser.posts == 0  # khong co post thanh cong nao
+    if all(have_files):
+        # Gate mo -> da goi post (attempt), loi sau click -> UNKNOWN, khong replay
+        assert browser.attempts > 0
+        assert any(r.get("receipt") in ("UNKNOWN", "UNCONFIRMED_NO_REPLAY")
+                   for r in out2)
+    else:
+        # File mat -> fail-closed truoc click, khong goi post
+        assert browser.attempts == 0
+        assert all(r.get("error") or r.get("skipped") for r in out2)
 
 
 @needs_a
@@ -153,6 +172,17 @@ def test_real_media_gate(tmp_path):
     intent = Intent.from_item(item, "haodaojrk5")
     assert intent.media_path  # from_item giu duong dan media that
     browser = ReadOnlyBrowser()
-    out = pub.publish(intent, browser)
-    assert out.get("error") == "FAILED_BEFORE_POST"  # MEDIA_NOT_PORTED: cam post chay
-    assert browser.posts == 0
+    # Hanh vi MOI (M2 fix #3): file that gate pass -> publish di den post
+    # (khong con MEDIA_NOT_PORTED cung); browser dry-run raise truoc khi
+    # co post thanh cong -> chung to gate MO, va 0 post that.
+    with pytest.raises(AssertionError, match="dry-run"):
+        pub.publish(intent, browser)
+    assert browser.attempts == 1  # da di qua gate den post
+    assert browser.posts == 0  # khong co post thanh cong nao
+    # Gate fail van fail-closed: file khong ton tai -> FAILED_BEFORE_POST
+    bad = Intent(intent_id="threads-bad", shortcode="bad",
+                 owner="haodaojrk5", text="x #dub000001", tag="#dub000001",
+                 media_path=str(tmp_path / "khong-ton-tai.mp4"))
+    out = pub.publish(bad, browser)
+    assert out.get("error") == "FAILED_BEFORE_POST"
+    assert browser.attempts == 1  # khong goi post khi gate fail

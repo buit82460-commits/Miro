@@ -81,6 +81,14 @@ def _cmd_label(args):
     if not args:
         return "?"
     base = args[1] if args[0] == "--headed" and len(args) > 1 else args[0]
+    if base == "find" and "--role" in args:
+        idx = args.index("--role")
+        if idx + 1 < len(args):
+            return f"find:{args[idx + 1]}"
+    if base == "get" and "--property" in args:
+        idx = args.index("--property")
+        if idx + 1 < len(args):
+            return f"get:{args[idx + 1]}"
     return base
 
 
@@ -117,3 +125,95 @@ def take_call_log():
     calls = list(CALL_LOG)
     del CALL_LOG[:]
     return calls
+
+
+def session_start(name="miro-act"):
+    payload = run_cli(["session", "start", "--name", name],
+                      use_session=False)
+    if not _ok(payload):
+        err = payload.get("error") if isinstance(payload, dict) else None
+        return {"ok": False, "error": err or "SESSION_START_FAILED"}
+    data = payload.get("data") or {}
+    return {"ok": True, "session_id": data.get("session_id")}
+
+
+def session_end(session_id):
+    payload = run_cli(["session", "end", session_id], use_session=False)
+    if not _ok(payload):
+        err = payload.get("error") if isinstance(payload, dict) else None
+        return {"ok": False, "error": err or "SESSION_END_FAILED"}
+    return {"ok": True}
+
+
+def list_windows(app=None):
+    args = ["list-windows"]
+    if app:
+        args += ["--app", app]
+    payload = run_cli(args)
+    if not _ok(payload):
+        err = payload.get("error") if isinstance(payload, dict) else None
+        return {"ok": False, "error": err or "LIST_FAILED"}
+    return {"ok": True, "windows": payload.get("data")}
+
+
+def find(window_id, role=None, name=None, native_id=None, value=None):
+    args = ["find", "--window-id", str(window_id)]
+    if role:
+        args += ["--role", role]
+    if name:
+        args += ["--name", name]
+    if native_id:
+        args += ["--native-id", native_id]
+    if value:
+        args += ["--value", value]
+    payload = run_cli(args)
+    if not _ok(payload):
+        err = payload.get("error") if isinstance(payload, dict) else None
+        return {"ok": False, "error": err or "FIND_FAILED"}
+    data = payload.get("data") or {}
+    return {"ok": True, "matches": data.get("matches", []),
+            "snapshot_id": data.get("snapshot_id")}
+
+
+def get_value(ref):
+    payload = run_cli(["get", ref, "--property", "value"])
+    if not _ok(payload):
+        err = payload.get("error") if isinstance(payload, dict) else None
+        return {"ok": False, "error": err or "GET_FAILED"}
+    data = payload.get("data") or {}
+    return {"ok": True, "value": data.get("value")}
+
+
+def get_states(ref):
+    payload = run_cli(["get", ref, "--property", "states"])
+    if not _ok(payload):
+        err = payload.get("error") if isinstance(payload, dict) else None
+        return {"ok": False, "error": err or "GET_STATES_FAILED"}
+    val = (payload.get("data") or {}).get("value")
+    return {"ok": True, "states": val if isinstance(val, list) else []}
+
+
+def set_value(ref, text):
+    payload = run_cli(["set-value", ref, text])
+    if not _ok(payload):
+        err = payload.get("error") if isinstance(payload, dict) else None
+        code = err.get("code") if isinstance(err, dict) else err
+        return {"ok": False, "error": code or "SET_FAILED", "detail": err}
+    data = payload.get("data") or {}
+    post = data.get("post_state", {}) if isinstance(data, dict) else {}
+    return {"ok": True, "value": post.get("value")}
+
+
+def write(ref, text):
+    """Alias cua set_value cho act boundary (desktop_act goi ops.write)."""
+    return set_value(ref, text)
+
+
+def click(ref, headed=False):
+    args = (["--headed", "click", ref] if headed else ["click", ref])
+    payload = run_cli(args)
+    if not _ok(payload):
+        err = payload.get("error") if isinstance(payload, dict) else None
+        code = err.get("code") if isinstance(err, dict) else err
+        return {"ok": False, "error": code or "CLICK_FAILED", "detail": err}
+    return {"ok": True}
