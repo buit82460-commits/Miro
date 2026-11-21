@@ -110,6 +110,18 @@ class TaskItem(BaseModel):
     checkpoints: dict[str, TaskCheckpoint] = Field(default_factory=dict)
 
 
+class WorkerOwner(BaseModel):
+    """Chủ worker đã chạy job: pid + create_time để restart kiểm tra liveness.
+
+    Port JARVIS jobs/runner.py `_run_autonomously` (workerOwner={pid, createdAt}).
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    pid: int
+    created_at: float
+
+
 class TaskRecord(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -123,4 +135,7 @@ class TaskRecord(BaseModel):
     error: TaskError | None = None
     pending_mutation: dict[str, Any] | None = None
     worker_stopped: bool = False
+    worker_owner: WorkerOwner | None = None
+    retry_count: int = 0
+    stop_grace_seconds: float = 10.0
     items: list[TaskItem] = Field(default_factory=list)

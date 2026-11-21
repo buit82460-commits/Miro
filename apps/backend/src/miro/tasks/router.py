@@ -67,6 +67,15 @@ async def worker_stopped(task_id: str, request: Request):
         return _err(exc)
 
 
+@router.post("/{task_id}/wait-stop")
+async def wait_stop(task_id: str, request: Request, grace_seconds: float | None = None):
+    """Watchdog stop: doi worker thoat trong grace, het grace buoc STOPPED."""
+    try:
+        return await get_service(request).wait_stop(task_id, grace_seconds)
+    except (TaskConflictError, PermissionError) as exc:
+        return _err(exc)
+
+
 @router.post("/{task_id}/restart")
 async def restart(task_id: str, request: Request):
     try:

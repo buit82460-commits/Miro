@@ -66,10 +66,18 @@ async def test_restart_shows_correct_state(tmp_path):
     svc2 = make_service(tmp_path / "second")
     rec2 = svc2.submit(payload(request_id="req-2"))
     rec2["status"] = "running"
+    rec2["worker_owner"] = {"pid": 999999999, "created_at": 1.0}  # chu cu da chet
     svc2.store.upsert_task(rec2)
     out = svc2.restart(rec2["id"])
     assert out["status"] == "needs_attention"
     assert out["error"]["code"] == "RESTARTED"
+
+    # chu cu con song (cung process) -> OWNERSHIP_UNKNOWN, khong replay
+    rec2b = svc2.submit(payload(request_id="req-2b"))
+    rec2b["status"] = "running"
+    svc2.store.upsert_task(rec2b)
+    out2 = svc2.restart(rec2b["id"])
+    assert out2["error"]["code"] == "OWNERSHIP_UNKNOWN"
 
     # unknown mutation blocks resume after restart
     remote = FakeRemote()

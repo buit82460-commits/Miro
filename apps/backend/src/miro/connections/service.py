@@ -110,7 +110,39 @@ def _check_evidence(item: dict, ev: VerifyEvidence) -> str:
             f"ACCOUNT_MISMATCH: tab dang dung {ev.observed_account_id}, "
             f"khac account dich {item['account_id']}"
         )
+    # Verify kep truoc/sau op (port JARVIS live_chrome worker verify profile+actor
+    # truoc VA sau moi op): caller gui snapshot sau, doi chieu voi snapshot truoc.
+    after = _norm(ev.observed_account_id_after)
+    if after and after != _norm(ev.observed_account_id):
+        item.update(status="unverified", verified_at=None,
+                    verified_target_id="", evidence_sha="")
+        _store.put(item)
+        raise RegistryError("ACCOUNT_MISMATCH: account doi giua chung (truoc/sau khac nhau)")
+    if _norm(ev.profile_path_after) and _norm(ev.profile_path):
+        import os as _os
+        if _os.path.normcase(_os.path.realpath(_norm(ev.profile_path_after))) != \
+                _os.path.normcase(_os.path.realpath(_norm(ev.profile_path))):
+            raise RegistryError("PROFILE_MISMATCH: profile path doi giua chung")
     return _norm(ev.observed_account_id)
+
+
+# Hook de worker (lease store) invalidate lease khi account bi revoke/doi.
+# Test that inject fake; production noi voi LeaseStore o worker.
+_revoke_hook = None
+
+
+def set_revoke_hook(fn) -> None:
+    global _revoke_hook
+    _revoke_hook = fn
+
+
+def _notify_revoked(item: dict) -> None:
+    if _revoke_hook is None:
+        return
+    try:
+        _revoke_hook(item)
+    except Exception:
+        pass
 
 
 def verify_account(account_id: str, ev: VerifyEvidence) -> AccountOut:
@@ -122,6 +154,8 @@ def verify_account(account_id: str, ev: VerifyEvidence) -> AccountOut:
     _check_evidence(item, ev)
     if not item.get("profile_binding_id") and _norm(ev.profile_binding_id):
         item["profile_binding_id"] = _norm(ev.profile_binding_id)
+    if _norm(ev.browser_instance_id):
+        item["browser_instance_id"] = _norm(ev.browser_instance_id)
     raw = f"{item['platform']}:{item['account_id']}:{ev.tab_id}:{ev.target_id}".encode()
     item.update(
         status="connected",
@@ -164,13 +198,85 @@ def reconnect_account(account_id: str, ev: VerifyEvidence,
     return _out(_store.put(item))
 
 
+async def verify_via_browser(account_id: str, runtime, tab_record: dict,
+                             caller: str = "connections-verify") -> AccountOut:
+    """Verify tai khoan that qua Browser M1: acquire tab (lease) + verify actor
+    truoc/sau read, roi moi chuyen connected. Tab mat/lease bi giu/account lech
+    -> loi ro, khong fallback tab khac (port JARVIS live_chrome worker Đ2).
+    """
+    item_key = _norm(account_id)
+    item = _store.get(item_key)
+    if item is None:
+        raise RegistryError("ACCOUNT_NOT_FOUND")
+    if item["status"] == "revoked":
+        raise RegistryError("ACCOUNT_REVOKED: them lai account truoc khi verify")
+    if runtime is None:
+        raise RegistryError("BROWSER_UNAVAILABLE: can Browser M1 runtime de verify that")
+    request = {
+        "profileBindingId": item.get("profile_binding_id") or tab_record.get("profileBindingId", ""),
+        "platformId": item["platform"],
+        "url": tab_record.get("url", ""),
+        "leaseTtl": 180,
+        "expectedAccountId": item["account_id"],
+        "channelId": tab_record.get("channelId"),
+    }
+    expected_profile = item.get("profile_binding_id") or ""
+    if expected_profile and request["profileBindingId"] != expected_profile:
+        raise RegistryError("ACCOUNT_MISMATCH: tab khac profile binding (thiet bi) voi account")
+    lease = None
+    acquired = None
+    try:
+        acquired = await runtime.acquire_tab(request, caller)
+    except Exception as exc:
+        from miro.browser.errors import LeaseBusy as _LeaseBusy
+        if isinstance(exc, _LeaseBusy) or "BUSY" in type(exc).__name__.upper() \
+                or "BUSY" in str(exc).upper():
+            raise RegistryError(f"TAB_LEASE_BUSY: {exc}") from None
+        raise
+    try:
+        result = await acquired.read()
+        # read_tab cua runtime da verify actor truoc/sau (WorkerStopped neu lech).
+        # Lay observed that tu provider de doi chieu lan cuoi; khong fallback.
+        observed = ""
+        provider = getattr(runtime, "verify_actor", None) or \
+            (runtime.account_providers or {}).get(item["platform"])
+        if provider is not None:
+            try:
+                import asyncio as _asyncio
+                out = provider(acquired.page, acquired.record)
+                if _asyncio.iscoroutine(out):
+                    out = await out
+                observed = str(out or "")
+            except Exception:
+                observed = ""
+        if not observed:
+            raise RegistryError("ACCOUNT_MISMATCH: khong doc duoc observed identity tu tab")
+        ev = VerifyEvidence(
+            tab_id=tab_record.get("targetId", ""),
+            platform_id=item["platform"],
+            profile_binding_id=request["profileBindingId"],
+            observed_account_id=observed,
+            target_id=tab_record.get("targetId", ""),
+        )
+        return verify_account(item_key, ev)
+    finally:
+        if acquired is not None:
+            try:
+                await acquired.release()
+            except Exception:
+                pass
+
+
 def revoke_account(account_id: str) -> AccountOut:
     item = _store.get(_norm(account_id))
     if item is None:
         raise RegistryError("ACCOUNT_NOT_FOUND")
     item.update(status="revoked", credential_ref=None, is_default=False,
                 verified_target_id="", evidence_sha="")
-    return _out(_store.put(item))
+    out = _out(_store.put(item))
+    # Thu hoi quyen co hieu luc o worker: invalidate lease de worker cu mat quyen ngay.
+    _notify_revoked(item)
+    return out
 
 
 def set_default(account_id: str) -> AccountOut:

@@ -29,6 +29,13 @@ class VerifyEvidence(BaseModel):
     profile_binding_id: str = ""
     observed_account_id: str = Field(min_length=1)
     target_id: str = ""
+    # Verify kep truoc/sau op (JARVIS live_chrome worker): caller gui kem snapshot
+    # truoc va sau de service doi chieu; lech -> PROFILE_MISMATCH/ACCOUNT_MISMATCH.
+    browser_instance_id: str = ""
+    window_id: str = ""
+    observed_account_id_after: str = ""
+    profile_path: str = ""
+    profile_path_after: str = ""
 
 
 class AccountOut(BaseModel):
