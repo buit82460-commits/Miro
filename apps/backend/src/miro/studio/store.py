@@ -82,7 +82,9 @@ class IdempotentStore:
     # ---- snapshot ----
     def _snapshot(self) -> dict:
         return {"results": self._results, "fingerprints": self._fingerprints,
-                "revisions": self._revisions}
+                "revisions": self._revisions,
+                "contaminated": sorted(self._contaminated),
+                "active": dict(self._active)}
 
     def _load(self) -> None:
         path = self._persist_dir / "idempotency.json"
@@ -95,6 +97,10 @@ class IdempotentStore:
         self._results = data.get("results", {})
         self._fingerprints = data.get("fingerprints", {})
         self._revisions = data.get("revisions", {})
+        self._contaminated = set(data.get("contaminated", []))
+        # Active in-flight tu lan chay truoc: giu nguyen de tranh 2 pipeline
+        # cung video sau restart (B: recover_pending chi replay nhom web-safe).
+        self._active = dict(data.get("active", {}))
 
     def _save(self) -> None:
         if self._persist_dir:
@@ -173,21 +179,25 @@ class IdempotentStore:
                 raise SlotBusy(
                     f"Pipeline {video_id} dang chay (slot don); cho xong roi chay lai.")
             self._active[video_id] = request_id
+            self._save()
 
     def release_slot(self, video_id: str, request_id: str) -> None:
         with self._guard:
             if self._active.get(video_id) == request_id:
                 del self._active[video_id]
+                self._save()
 
     def mark_contaminated(self, video_id: str) -> None:
         """Cleanup failure: block new pipelines until manual inspection (B: 231-244)."""
         with self._guard:
             self._active.pop(video_id, None)
             self._contaminated.add(video_id)
+            self._save()
 
     def clear_contamination(self, video_id: str) -> None:
         with self._guard:
             self._contaminated.discard(video_id)
+            self._save()
 
     def is_contaminated(self, video_id: str) -> bool:
         with self._guard:

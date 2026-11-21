@@ -98,6 +98,10 @@ class PipelineError(RuntimeError):
     """Step failure. Carries a machine-readable code for terminal persist."""
 
 
+class PipelineCancelled(RuntimeError):
+    """User cancel giua chung: khong retry, khong contamination, tha slot."""
+
+
 class PipelineConflict(ValueError):
     status_code = 409
     status = 409
@@ -412,6 +416,21 @@ class Pipeline:
         self.engine = engine or LocalEngine()
         self.retry_delays = retry_delays
         self.max_attempts = max_attempts
+        self._cancel_ids: set[str] = set()
+        self._cancel_guard = threading.Lock()
+
+    def request_cancel(self, video_id: str) -> None:
+        with self._cancel_guard:
+            self._cancel_ids.add(video_id)
+
+    def clear_cancel(self, video_id: str) -> None:
+        with self._cancel_guard:
+            self._cancel_ids.discard(video_id)
+
+    def _check_cancel(self, video_id: str) -> None:
+        with self._cancel_guard:
+            if video_id in self._cancel_ids:
+                raise PipelineCancelled(f"Pipeline {video_id} bi huy bo.")
 
     # ---- project.json (A: pipeline.py:83-103) ----
     def _project_path(self, video_id: str) -> Path:
@@ -598,8 +617,6 @@ class Pipeline:
                                      segments, src, tgt_lang)
             ctx["segments"] = segments
             self._save_segments(vid, segments)
-            atomic_write_json(self._work_dir(vid) / "dub.srt",
-                              srt_from_segments(segments))
             self._mark_step(vid, "translate", ih)
             ctx["ran"].append("translate")
         else:
@@ -747,6 +764,7 @@ class Pipeline:
             for i, step in enumerate(STEPS):
                 if requested is not None and step not in requested:
                     continue
+                self._check_cancel(ctx["video_id"])
                 if progress_cb:
                     progress_cb(i / total * 100)
                 try:

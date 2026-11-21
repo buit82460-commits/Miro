@@ -222,3 +222,57 @@ def test_C9_create_from_dubtool_and_handoff_guards(handlers, video):
     with pytest.raises((ValueError, PipelineError)):
         lone.handoff(solo["video_id"], "T", "D", "t", request_id="C9-empty",
                      transcript="   ")
+
+
+def test_C10_dub_srt_content_not_json_quoted(handlers, video):
+    """Bug Checker bat: dub.srt phai la SRT text, khong phai JSON-quoted."""
+    out = _full_chain(handlers, video, "C10")
+    srt = handlers.pipeline._work_dir(out["video_id"]) / "dub.srt"
+    assert srt.is_file()
+    text = srt.read_text(encoding="utf-8")
+    assert text.startswith("1\n"), text[:60]
+    assert "Cau dich" in text
+    assert not text.lstrip().startswith('"')
+
+
+def test_C11_contamination_survives_restart(tmp_path, video):
+    """B: contamination phai song qua restart (khong tu mo khoa im lang)."""
+    from miro.studio.handlers import StudioHandlers as H
+    root = tmp_path / "studio"
+    store_dir = root / "store"
+    first = H(root=root, store=IdempotentStore(persist_dir=store_dir))
+    dl = first.do_download(video, request_id="C11-dl")
+    vid = dl["video_id"]
+    first.store.mark_contaminated(vid)
+    # Mo lai nhu restart BE: van bi khoa
+    second = H(root=root, store=IdempotentStore(persist_dir=store_dir))
+    assert second.store.is_contaminated(vid) is True
+    with pytest.raises(StudioConflict):
+        second.translate(vid, request_id="C11-tr")
+    second.clear_pipeline_block(vid)
+    assert second.store.is_contaminated(vid) is False
+
+
+def test_C12_cancel_pipeline_stops_and_releases_slot(handlers, video):
+    """Cancel: step ke tiep dung, slot duoc tha, khong contamination."""
+    from miro.studio.pipeline import PipelineCancelled
+    dl = handlers.do_download(video, request_id="C12-dl")
+    vid = dl["video_id"]
+    handlers.cancel_pipeline(vid)
+    with pytest.raises((PipelineCancelled, PipelineError)):
+        handlers.pipeline.run(video, src_lang="auto", tgt_lang="vi",
+                              default_voice="test-voice")
+    try:
+        handlers.pipeline.run(video, src_lang="auto", tgt_lang="vi",
+                              default_voice="test-voice")
+        raised = None
+    except PipelineCancelled as exc:
+        raised = exc
+    except PipelineError as exc:
+        raised = exc.__cause__ or exc
+    assert isinstance(raised, PipelineCancelled)
+    handlers.pipeline.clear_cancel(vid)
+    # Slot duoc tha: chay translate duoc ngay
+    out = handlers.translate(vid, request_id="C12-tr",
+                             expected_revision=dl["revision"])
+    assert out["video_id"] == vid

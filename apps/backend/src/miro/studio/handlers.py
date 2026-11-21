@@ -22,7 +22,7 @@ import threading
 from pathlib import Path
 
 from .local_rules import duration_after, empty_plan, keep_ranges, local_plan
-from .pipeline import LocalEngine, Pipeline, PipelineConflict, PipelineError
+from .pipeline import LocalEngine, Pipeline, PipelineCancelled, PipelineConflict, PipelineError
 from .store import IdempotentStore, SlotContaminated, StudioConflict
 
 _REQUEST_ID_RE = re.compile(r"^[A-Za-z0-9_-]{1,80}$")
@@ -84,6 +84,13 @@ class StudioHandlers:
                 result = work()
             except ValueError:
                 raise
+            except PipelineCancelled as exc:
+                self.pipeline.clear_cancel(video_id)
+                result = {"video_id": video_id, "status": "cancelled",
+                          "error": {"code": "PIPELINE_CANCELLED", "message": str(exc)},
+                          "message": str(exc)}
+                result["revision"] = self.store.check_revision(video_id, None)
+                return self.store.put(request_id, payload, result)
             except PipelineError as exc:
                 result = {"video_id": video_id, "status": "needs_attention",
                           "error": {"code": "PIPELINE_FAILED", "message": str(exc)},
@@ -536,6 +543,13 @@ class StudioHandlers:
             video_id, expected_revision, work, bump=False)
 
     # ---- van hanh slot (B: contamination phai mo khoa thu cong) ----
+    def cancel_pipeline(self, video_id: str) -> dict:
+        """Huy pipeline dang chay: step ke tiep dung, slot duoc tha,
+        khong contamination. Pipeline chua chay: no-op."""
+        self.pipeline.request_cancel(video_id)
+        return {"video_id": video_id, "status": "cancel_requested",
+                "message": f"Da gui yeu cau huy pipeline {video_id}."}
+
     def clear_pipeline_block(self, video_id: str) -> dict:
         self.store.clear_contamination(video_id)
         return {"video_id": video_id, "contaminated": False,
