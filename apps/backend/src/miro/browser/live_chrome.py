@@ -71,7 +71,32 @@ def register_live_tab(session: ManagedChromeSession, url: str, *,
                       platform_id: str, profile_id: str,
                       expected_account: str = "") -> dict:
     """Đăng ký tab Chrome có sẵn đang mở đúng URL vào store để acquire.
-    Không tạo tab, không navigate — tab chưa mở sẵn → NO_MATCHING_TAB."""
+    Không tạo tab, không navigate.
+
+    Luật 1-tab/platform: platform đã có tab open (cùng browser + profile +
+    platform, status open) thì dùng đúng tab đó (reused), KHÔNG đăng ký
+    tab thứ 2 — kể cả khi URL yêu cầu khác (acquire/read verify URL sau).
+    Chưa có tab nào mà vẫn ở trạng thái verify (không hạ chuẩn verify) →
+    TAB_REQUIRED_OPEN_FIRST: mở tab trước, không tự new_page/goto.
+    Tab chưa mở sẵn → TAB_REQUIRED_OPEN_FIRST."""
+    store = session.runtime.store
+    existing = [r for r in store.list("tab")
+                if r.get("browserInstanceId") == session.runtime.instance_id
+                and r.get("profileBindingId") == profile_id
+                and r.get("platformId") == platform_id
+                and r.get("status") == "open"]
+    if existing:
+        record = sorted(existing,
+                        key=lambda r: float(r.get("lastUsedAt", 0)))[0]
+        page = session.runtime.pages.get(record.get("targetId", ""))
+        if page is None or getattr(page, "is_closed", lambda: True)():
+            for candidate in session.runtime._all_pages():
+                current = getattr(candidate, "url", None)
+                if isinstance(current, str) and current == record.get("url"):
+                    session.runtime.pages[record["targetId"]] = candidate
+                    break
+        record["lastUsedAt"] = time.time()
+        return store.put("tab", record["id"], record)
     pages = session.runtime._all_pages()
     for index, page in enumerate(pages):
         current = getattr(page, "url", None)
@@ -89,7 +114,8 @@ def register_live_tab(session: ManagedChromeSession, url: str, *,
             }
             return session.runtime.store.put("tab", record["id"], record)
     raise RegistryError(
-        "NO_MATCHING_TAB_AVAILABLE: mo san URL trong Chrome Profile 20 truoc; "
+        "TAB_REQUIRED_OPEN_FIRST: mo san 1 tab cua platform "
+        f"'{platform_id}' trong Chrome Profile 20 truoc; "
         "connector khong tu tao/navigate tab")
 
 

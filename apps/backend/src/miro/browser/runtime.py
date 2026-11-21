@@ -73,23 +73,55 @@ def _check_origin(url: str, allowed_origins: tuple[str, ...] | list[str]) -> Non
         "URL_NOT_REGISTERED: URL lech policy origin (scheme/host/port)")
 
 
-def chrome_endpoint(user_data_dir: str) -> str:
-    """Đọc DevToolsActivePort -> ws endpoint. Chrome chưa bật
-    remote-debugging -> CDP_UNAVAILABLE, không tự mở Chrome thay thế."""
+def default_user_data_dir() -> str:
+    """Chrome user-data-dir mặc định kiểu dubtool:
+    `%LOCALAPPDATA%\\Google\\Chrome\\User Data`."""
     import os
 
-    port_file = os.path.join(user_data_dir, "DevToolsActivePort")
+    return os.path.join(os.environ.get("LOCALAPPDATA", ""),
+                        "Google", "Chrome", "User Data")
+
+
+def chrome_endpoint(user_data_dir: str = "", *, endpoint: str = "") -> str:
+    """Đọc DevToolsActivePort -> ws endpoint (mẫu dubtool
+    `social_live_chrome.chrome_endpoint`).
+
+    - `endpoint` (fallback `--remote-debugging-port`/`--endpoint`): Chrome mở
+      cờ remote-debugging riêng thì dùng thẳng, không đọc file.
+    - Mặc định đọc `<user_data_dir>/DevToolsActivePort` (trống thì lấy
+      `%LOCALAPPDATA%\\Google\\Chrome\\User Data`): dòng 1 = port, dòng 2 =
+      route `/devtools/browser/...` -> `ws://127.0.0.1:{port}{route}`.
+    File thiếu/sai -> CDP_UNAVAILABLE kèm hướng dẫn bật Allow remote debugging
+    ở chrome://inspect. Không tự mở Chrome thay thế."""
+    import os
+    import re
+
+    given = (endpoint or "").strip()
+    if given:
+        return given
+    directory = (user_data_dir or "").strip() or default_user_data_dir()
+    hint = ("CDP_UNAVAILABLE: Chrome remote-debugging chua bat; mo "
+            "chrome://inspect/#remote-debugging trong Chrome va bat "
+            "Allow remote debugging truoc; khong tu mo browser thay the")
+    port_file = os.path.join(directory, "DevToolsActivePort")
     try:
         with open(port_file, "r", encoding="utf-8") as handle:
             lines = handle.read().splitlines()
     except OSError:
+        raise RegistryError(hint) from None
+    try:
+        port = int((lines[0] if lines else "").strip())
+        route = (lines[1] if len(lines) > 1 else "").strip()
+        valid = 1 <= port <= 65535 and re.fullmatch(
+            r"/devtools/browser/[A-Za-z0-9-]+", route) is not None
+    except (ValueError, IndexError):
+        valid = False
+        port, route = 0, ""
+    if not valid:
         raise RegistryError(
-            "CDP_UNAVAILABLE: Chrome remote-debugging chưa bật; "
-            "không tự mở browser thay thế") from None
-    port = (lines[0] if lines else "").strip()
-    route = (lines[1] if len(lines) > 1 else "").strip()
-    if not port.isdigit() or not route.startswith("/devtools/"):
-        raise RegistryError("CDP_UNAVAILABLE: DevToolsActivePort không hợp lệ")
+            "CDP_UNAVAILABLE: DevToolsActivePort khong hop le; mo "
+            "chrome://inspect/#remote-debugging va bat Allow remote "
+            "debugging truoc") from None
     return f"ws://127.0.0.1:{port}{route}"
 
 
@@ -353,7 +385,10 @@ class BrowserRuntime:
             return AcquiredTab(page=page, record=record, lease=lease, runtime=self, reused=True)
         if saw_busy:
             raise TabBusy("TAB_BUSY: matching tab is currently leased; no duplicate tab created")
-        raise RegistryError("NO_MATCHING_TAB_AVAILABLE")
+        raise RegistryError(
+            "TAB_REQUIRED_OPEN_FIRST: mo san 1 tab cua platform "
+            f"'{platform_id}' trong Chrome truoc; "
+            "connector khong tu tao (new_page) hay navigate tab moi")
 
     # -- read / navigate (giữ lease, verify kép) ----------------------------
     async def read_tab(self, acquired: AcquiredTab, max_chars: int = 4000) -> dict:
@@ -427,8 +462,8 @@ class ManagedChromeSession:
 
     @classmethod
     async def open(cls, connect, user_data_dir: str, database,
-                   **kwargs) -> ManagedChromeSession:
-        endpoint = chrome_endpoint(user_data_dir)
+                   *, endpoint: str = "", **kwargs) -> ManagedChromeSession:
+        endpoint = chrome_endpoint(user_data_dir, endpoint=endpoint)
         connect_calls = getattr(connect, "calls", None)
         before = len(connect_calls) if isinstance(connect_calls, list) else None
         runtime = await BrowserRuntime.open(connect, endpoint, database, **kwargs)
