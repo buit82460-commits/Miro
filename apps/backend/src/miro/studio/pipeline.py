@@ -367,13 +367,19 @@ class LocalEngine:
         filt = self._overlay_filter(overlays or [])
         if subtitles:
             filt += ("," if filt else "") + f"subtitles='{_escape_sub(subtitles)}'"
-        cmd = [ffmpeg, "-y", "-v", "error", "-i", str(video_path),
-               "-i", str(mix_wav)]
+        use_mix = bool(mix_wav) and Path(mix_wav).is_file()
+        audio_map = "1:a" if use_mix else "0:a"
+        cmd = [ffmpeg, "-y", "-v", "error", "-i", str(video_path)]
+        if use_mix:
+            cmd += ["-i", str(mix_wav)]
         if preview_secs:
-            cmd += ["-t", str(preview_secs), "-vf", "scale=480:-1"]
+            cmd += ["-t", str(preview_secs), "-vf", "scale=480:-1",
+                    "-map", "0:v", "-map", audio_map]
         elif filt:
             cmd += ["-filter_complex", f"[0:v]{filt}[v]", "-map", "[v]",
-                    "-map", "1:a"]
+                    "-map", audio_map]
+        else:
+            cmd += ["-map", "0:v", "-map", audio_map]
         cmd += ["-c:v", "libx264", "-preset", "veryfast", "-c:a", "aac",
                 "-shortest", str(out_path)]
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=900)
