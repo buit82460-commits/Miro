@@ -1,6 +1,6 @@
-# Mẫu câu hỏi 3 bên
+# Mẫu câu hỏi 3 bên (bắt buộc 3 slot)
 
-File: `HỎI-<khâu>-<số>.md` (vd: `HỎI-tab-01.md`)
+File: `HỎI-<khâu>-<số>.md` (vd: `HOI-tab-01.md`)
 
 ## Câu hỏi (bên hỏi: A/B/C)
 
@@ -9,15 +9,24 @@ File: `HỎI-<khâu>-<số>.md` (vd: `HỎI-tab-01.md`)
 - File A/B gốc:
 - Hỏi gì (1 câu cụ thể):
 
-## Trả lời
+## A (Dubtool) trả lời (bắt buộc — có thì đáp + file:dòng, không có thì ghi "không có")
 
-- Bên trả lời (A/B/C):
-- Đáp + bằng chứng file:dòng:
-- Kết luận port thế nào:
+- Đáp:
+- Bằng chứng file:dòng:
+
+## B (JARVIS) trả lời (bắt buộc — có thì đáp + file:dòng, không có thì ghi "không có")
+
+- Đáp:
+- Bằng chứng file:dòng:
+
+## C (Miro) trả lời (bắt buộc — tiếp nhận + kết luận port thế nào)
+
+- Tiếp nhận đáp A/B:
+- Kết luận port + test + Checker:
 
 ## Trạng thái
 
-- [ ] Đang hỏi
-- [ ] Đã đáp, chờ port
+- [ ] Đang hỏi (thiếu slot)
+- [ ] Đã đủ 3 slot, chờ port
 - [ ] Đã port + test, chờ Checker
 - [ ] XONG
