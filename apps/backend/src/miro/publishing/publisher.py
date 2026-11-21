@@ -371,9 +371,10 @@ class Intent:
     @classmethod
     def from_item(cls, item: dict, account: str) -> "Intent":
         text = caption_for(item)
-        # Legacy unique_tag khong zero-pad: shortcode it chu so cho tag ngan
-        # (vd test-001 -> #dub001), nen match #dub + bat ky so chu so nao.
-        found = re.search(r"#dub\d+", text)
+        # S4: thong nhat alphabet tag 6-so voi mat (TAG_RE #dub\d{6}(?!\d)).
+        # Tag ngan/dai hon (vd #dub001, #dub1234567) -> tag rong de mat nao
+        # miss ro rang (UNKNOWN) thay vi miss cam; caller can ly do doc caption.
+        found = re.search(r"#dub\d{6}(?!\d)", text.lower())
         return cls(
             intent_id=job_id_for(item),
             owner=_normalize_account(account),
@@ -547,25 +548,30 @@ def _author_of_href(href: str) -> str:
 
 
 def match_eye_records(records: list[dict], owner: str, want_tag: str,
-                      want_text: str, known_ids: list[str] | None = None) -> dict | None:
+                      want_text: str = "", known_ids: list[str] | None = None
+                      ) -> dict | None:
     """Same-record exact semantics cua core/rea_eye.match_eye_records.
 
+    - S1: record-major nhu A (voi moi record: post_id truoc roi tag, skip sc
+      da receipts). Loc author truoc la that chat co loi (thong nhat o day
+      cho ca 2 path). Path delegate goi ham goc; path fallback duoi day cung
+      record-major de da pending cung ket qua.
     - known post_id (tu journal ack_post_codes) truoc, trong CUNG record.
     - roi exact tag equality sau normalize, trong CUNG record.
-    - KHONG substring/prefix, KHONG text fallback (rea_eye khong co).
+    - S5: KHONG substring/prefix, KHONG text fallback (rea_eye khong co).
+      `want_text` giu cho de khong vo caller (4 cho truyen intent.text),
+      CO Y KHONG DUNG — khong fallback text du co truyen.
     Uy thac cho eye goc khi import duoc (pending {sc:{tag,post_ids}}).
     """
     known_ids = [str(x).strip() for x in (known_ids or []) if str(x).strip()]
     want_tag_n = _norm_tag_exact(want_tag)
+    owner_l = owner.lower().lstrip("@")
     if _legacy["eye_match"] is not None:
         try:
             pending = {"_want": {"tag": want_tag or "",
                                  "post_ids": list(known_ids)}}
-            norm_recs = []
-            for r in records or []:
-                if str(r.get("author") or "").lower().lstrip("@") != owner.lower().lstrip("@"):
-                    continue
-                norm_recs.append(r)
+            norm_recs = [r for r in records or []
+                         if str(r.get("author") or "").lower().lstrip("@") == owner_l]
             receipts, _ = _legacy["eye_match"](pending, norm_recs)
             rec = receipts.get("_want")
             if rec and rec.get("url"):
@@ -574,19 +580,18 @@ def match_eye_records(records: list[dict], owner: str, want_tag: str,
                         "has_video": bool(rec.get("has_video")), "match": f"eye-{via}"}
         except Exception:
             pass
-    owner_l = owner.lower().lstrip("@")
+    # S1 fallback record-major (giong A: record -> post_id truoc roi tag).
     for r in records or []:
         if str(r.get("author") or "").lower().lstrip("@") != owner_l:
+            continue
+        if not r.get("url"):
             continue
         pid = str(r.get("post_id") or "").strip()
-        if pid and pid in (known_ids or []) and r.get("url"):
+        if pid and pid in (known_ids or []):
             return {"url": r["url"], "post_id": pid,
                     "has_video": bool(r.get("has_video")), "match": "eye-post_id"}
-    for r in records or []:
-        if str(r.get("author") or "").lower().lstrip("@") != owner_l:
-            continue
         rtag = _norm_tag_exact(r.get("tag") or "")
-        if want_tag_n and rtag == want_tag_n and r.get("url"):
+        if want_tag_n and rtag == want_tag_n:
             return {"url": r["url"], "post_id": str(r.get("post_id") or ""),
                     "has_video": bool(r.get("has_video")), "match": "eye-tag"}
     return None

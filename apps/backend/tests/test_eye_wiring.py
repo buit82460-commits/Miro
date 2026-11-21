@@ -114,3 +114,52 @@ def test_b8_author_lech_tab_nao_tu_choi():
              "url": "https://www.threads.com/@bob/post/P9",
              "post_id": "P9", "has_video": False}]
     assert match_eye_records(recs, "alice", "#dub111111", "x", []) is None
+
+
+def test_s4_alphabet_tag_6_so_thong_nhat():
+    from miro.publishing.publisher import Intent
+    base = {"sha256": "", "media_path": "", "tags": []}
+    # tag ngan trong caption bi bo qua; caption_for tu append #dub000000
+    # (unique_tag) -> tag chot van 6 so, thong nhat alphabet voi mat.
+    short = dict(base, shortcode="nodigits",
+                 text="bai #dub001 ngan")
+    assert Intent.from_item(short, "alice").tag == "#dub000000"
+    chuan = dict(base, shortcode="nodigits",
+                 text="bai #dub123456 chuan")
+    got = Intent.from_item(chuan, "alice").tag
+    assert got in ("#dub123456", "#dub000000")  # caption co 6-so hop le
+    # tag 7 so khong hit nham 6 so dau (B3, giong mat)
+    dai = dict(base, shortcode="nodigits",
+               text="bai dai #dub1234567")
+    assert Intent.from_item(dai, "alice").tag == "#dub000000"
+
+
+def test_s1_record_major_post_id_truoc_tag_cung_record():
+    # A record-major: record dau co post_id khop -> chot ngay, khong nhay sang
+    # record sau du record sau co tag khop.
+    from miro.publishing.publisher import match_eye_records
+    recs = [{"author": "@alice", "tag": "#dub999999",
+             "url": "https://www.threads.com/@alice/post/KNOWN",
+             "post_id": "KNOWN", "has_video": False},
+            {"author": "@alice", "tag": "#dub111111",
+             "url": "https://www.threads.com/@alice/post/OTHER",
+             "post_id": "OTHER", "has_video": False}]
+    hit = match_eye_records(recs, "alice", "#dub111111", "", ["KNOWN"])
+    assert hit and hit["post_id"] == "KNOWN" and hit["match"] == "eye-post_id"
+
+
+def test_s5_want_text_co_y_khong_dung():
+    # S5: truyen text khac han van khong anh huong ket qua (khong fallback text).
+    from miro.publishing.publisher import match_eye_records
+    recs = [{"author": "@alice", "tag": "#dub111111",
+             "url": "https://www.threads.com/@alice/post/P1",
+             "post_id": "P1", "has_video": False}]
+    a = match_eye_records(recs, "alice", "#dub111111", "text nay noi ve cai khac")
+    b = match_eye_records(recs, "alice", "#dub111111")
+    assert a and b and a["post_id"] == b["post_id"] == "P1"
+    miss = match_eye_records(
+        [{"author": "@alice", "tag": "#dub999999",
+          "url": "https://www.threads.com/@alice/post/P9",
+          "post_id": "P9", "has_video": False}],
+        "alice", "#dub111111", "bai nay nhac #dub111111 trong text")
+    assert miss is None  # text co tag van miss — chi match field tag
