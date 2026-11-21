@@ -180,6 +180,11 @@ def atomic_save(path: Path, data: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_name(path.name + ".miro-tmp")
     tmp.write_text(json.dumps(data, ensure_ascii=False, allow_nan=False), encoding="utf-8")
+    try:
+        with open(tmp, "rb") as handle:
+            os.fsync(handle.fileno())
+    except OSError:
+        pass
     os.replace(tmp, path)
 
 
@@ -488,21 +493,36 @@ class Publisher:
     """Faithful Threads-model publisher. Browser injected (mock in tests)."""
 
     def __init__(self, base: str | Path, attempts_dir: str | Path | None = None,
-                 integrity_baseline: str | Path | None = None):
+                 integrity_baseline: str | Path | None = None,
+                 require_approval: bool = False):
         self.base = Path(base)
         self.attempts = Path(attempts_dir) if attempts_dir else self.base / "social-attempts"
         self.attempts.mkdir(parents=True, exist_ok=True)
         self.integrity_baseline = Path(integrity_baseline) if integrity_baseline else None
+        # M2 (JARVIS §10.5): True bat gate approval tai bien publish
+        # (SAU guard_duplicate + verify actor, TRUOC post_once).
+        self.require_approval = require_approval
 
-    def _pre_post_checks(self, intent: Intent, browser) -> None:
+    def _pre_post_checks(self, intent: Intent, browser, approval=None,
+                           revision: int = 0) -> None:
         enforce_adapter_integrity(self.integrity_baseline)
         if intent.media_sha256 or intent.media_path:
             err = ValueError("MEDIA_NOT_PORTED: publish co media bi cam khi chua gate video.")
             err.before_submit = True  # type: ignore[attr-defined]
             raise err
         verify_actor_contract(browser, intent)
+        if self.require_approval:
+            from miro.threads.flow import check_approval as _check_approval
+            try:
+                _check_approval(approval, intent, revision)
+            except Exception as exc:
+                code = getattr(exc, "code", type(exc).__name__)
+                err = RuntimeError(f"{code}: {exc}")
+                err.before_submit = True  # type: ignore[attr-defined]
+                raise err from None
 
-    def publish(self, intent: Intent, browser) -> dict:
+    def publish(self, intent: Intent, browser, approval=None,
+                revision: int = 0) -> dict:
         """Single submit mirroring _post_live_chrome_on_page :670-700.
 
         Journal "submit" duoc giu khi loi sau click roi RE-RAISE de caller
@@ -522,7 +542,7 @@ class Publisher:
         if skip:
             return {**skip, "shortcode": intent.shortcode or intent.intent_id}
         try:
-            self._pre_post_checks(intent, browser)
+            self._pre_post_checks(intent, browser, approval=approval, revision=revision)
         except Exception as exc:
             if getattr(exc, "before_submit", False):
                 atomic_save(journal_path, {"shortcode": intent.shortcode or intent.intent_id,
