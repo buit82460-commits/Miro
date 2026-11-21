@@ -25,7 +25,13 @@ export default function PublishPage() {
   const onSubmit = (input: PublishBatchInput) => {
     setMsg("");
     submit.mutate(input, {
-      onSuccess: (b) => setMsg(`Đã gửi batch ${String(b.id)} — trạng thái ${String(b.status)}.`),
+      onSuccess: (b) => {
+        const status = String((b as Record<string, unknown>).status);
+        const src = String((b as Record<string, unknown>).source ?? "fixture");
+        const detail = String((b as Record<string, unknown>).backend_detail ?? "");
+        const sample = src === "backend" ? "" : " (DỮ LIỆU MẪU — chưa đăng thật)";
+        setMsg(`Đã gửi batch ${String((b as Record<string, unknown>).id)} — trạng thái ${status}${sample}. ${detail}`);
+      },
       onError: (e) => setMsg(`Xuất bản thất bại: ${(e as Error).message}`),
     });
   };
@@ -33,6 +39,10 @@ export default function PublishPage() {
   return (
     <MiroNav>
       <h1 data-testid="publish-title">Xuất bản</h1>
+      <p data-testid="publish-sample-note" style={{ background: "#FFF7D6", border: "1px solid #E3C400", borderRadius: 8, padding: "6px 10px", maxWidth: 760 }}>
+        DỮ LIỆU MẪU — chưa đăng thật. Batch Threads gọi BE <code>POST /threads/publish</code> ở chế độ
+        dry-run (không post thật); chỉ khi BE không reachable mới dùng receipt mẫu (có gắn nhãn mẫu).
+      </p>
       <p>Batch theo video × platform × account. Receipt bên dưới dùng để đối soát.</p>
 
       <form
@@ -85,6 +95,14 @@ export default function PublishPage() {
           <li key={String(b.id)} data-testid={`batch-${String(b.id)}`}>
             {String(b.id)} · {String(b.video_id)} · {String(b.platform)} · {String(b.account)} ·{" "}
             <b data-testid={`batch-status-${String(b.id)}`}>{String(b.status)}</b>
+            {String((b as Record<string, unknown>).source ?? "fixture") === "backend" ? (
+              <span data-testid={`batch-source-${String(b.id)}`}> · BE thật (dry-run)</span>
+            ) : (
+              <span data-testid={`batch-source-${String(b.id)}`}> · DỮ LIỆU MẪU — chưa đăng thật</span>
+            )}
+            {(b as Record<string, unknown>).backend_detail ? (
+              <span data-testid={`batch-detail-${String(b.id)}`}> · {String((b as Record<string, unknown>).backend_detail)}</span>
+            ) : null}
           </li>
         ))}
       </ul>
@@ -95,6 +113,11 @@ export default function PublishPage() {
           <li key={r.id} data-testid={`receipt-${r.id}`}>
             {r.platform}/{r.account} ·{" "}
             <b data-testid={`receipt-status-${r.id}`}>{r.status}</b>
+            {String((r as Record<string, unknown>).source ?? "fixture") === "backend" ? (
+              <span data-testid={`receipt-source-${r.id}`}> · BE thật</span>
+            ) : (
+              <span data-testid={`receipt-source-${r.id}`}> · DỮ LIỆU MẪU — chưa đăng thật</span>
+            )}
             {r.post_url ? (
               <>
                 {" · "}

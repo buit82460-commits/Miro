@@ -35,6 +35,10 @@ export type FixtureBatch = {
   account: string;
   scheduled_at?: string;
   status: string;
+  // Nguồn batch: "fixture" = DỮ LIỆU MẪU (chưa đăng thật),
+  // "backend" = kết quả thật từ BE POST /threads/publish (dry-run mặc định).
+  source: "fixture" | "backend";
+  backend_detail?: string;
 };
 
 export type FixtureReceipt = {
@@ -45,6 +49,8 @@ export type FixtureReceipt = {
   account: string;
   status: "posted" | "scheduled" | "failed" | "unknown";
   posted_at?: string;
+  // Receipt fixture luôn là DỮ LIỆU MẪU — chưa đăng thật.
+  source: "fixture" | "backend";
 };
 
 const now = () => new Date().toISOString();

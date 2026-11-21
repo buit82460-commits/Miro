@@ -29,6 +29,8 @@ test("threads milestone: subtitle -> render -> approve -> publish -> receipt -> 
 
   // 4. Đăng Threads (batch video×platform×account).
   await page.goto("/publish");
+  // Nhãn mẫu phải luôn nhìn thấy — chống hiểu nhầm "posted" là đăng thật.
+  await expect(page.getByTestId("publish-sample-note")).toContainText("DỮ LIỆU MẪU");
   await page.getByTestId("publish-video").selectOption("p1");
   await page.getByTestId("publish-platform").selectOption("threads");
   await page.getByTestId("publish-account").fill("@miro.demo");
