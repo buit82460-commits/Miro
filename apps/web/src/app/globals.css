@@ -1,0 +1,5 @@
+* { box-sizing: border-box; }
+body { margin: 0; font-family: system-ui, "Segoe UI", Roboto, sans-serif; color: #16161a; background: #f6f6f4; }
+a { color: inherit; }
+button { font: inherit; cursor: pointer; }
+input, textarea, select { font: inherit; }
