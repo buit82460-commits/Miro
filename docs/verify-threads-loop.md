@@ -197,10 +197,29 @@ trong `C:\Miro\apps\backend` → **6 passed** (EXIT=0, oracle gốc chạy thậ
 
 Lệnh: `cd C:\Miro\apps\backend && python -m pytest tests/test_schedule_p1.py -q` → **6 passed**.
 
-## Phần mở (chưa làm, không chặn P1 này)
+## Phần mở (làm ở 64c046a — xem § Scheduler caller bên dưới, ĐẠT)
 
 - Nối caller thật vào `Publisher.run_batch` / worker: check `status == paused` trước `due_slots`, boot máy tắt → tính lại plan theo policy, user pause → tôn trọng không post bù.
-- `reconcile-verified` kết thúc vòng đời slot trong plan ngày (verified → publication, unknown-tiếp → carryover ngày sau do caller quyết) — đáp A dòng 32, chưa có code caller.
+- `reconcile-verified` kết thúc vòng đời slot trong plan ngày (verified → publication, unknown-tiếp → carryover ngày sau do caller quyết) — đáp A dòng 32.
+
+## § Scheduler caller (commit 64c046a, ngày 2026-11-21) — **ĐẠT**
+
+Checker thường trực đọc diff 64c046a + đối chiếu § P1 scheduler phần mở
+(`verify-threads-loop.md:202-203`: paused/due trước Phase A, reconcile-verified
+kết thúc slot) + đáp A/B TD-publisher (paused outrank, boot-vs-pause ở caller,
+verified kết thúc slot) + tự chạy
+`python -m pytest tests/test_schedule_caller.py tests/test_publisher_threads.py tests/test_threads_flow.py tests/test_eye_wiring.py -q`
+trong `C:\Miro\apps\backend` → **35 passed** (EXIT=0).
+
+| Mục | Bằng chứng | Kết quả |
+|---|---|---|
+| Paused chặn trước post | `run_batch` gate `select_due_intents` trước intent; test paused → `defer_reason PAUSED`, `posted False`, `post_once` raise nếu bị gọi | **ĐẠT** |
+| Chỉ slot đến hạn vào Phase A | `test_khong_burst`: 10:00 chỉ slot `a` due, `b` → `NOT_DUE`; intent không slot → `NO_SLOT` | **ĐẠT** |
+| Boot: máy tắt rebuild, user pause respect | `boot_action(False,"active")=rebuild`; `(True,*)=respect`; `(False,"paused")=respect` | **ĐẠT** |
+| Verified kết thúc slot, unknown vào queue | `mark_slot_verified` → state `verified` + ra `reconcile_queue`; unknown → `record_submit_unknown` | **ĐẠT** |
+| Không day_plan vẫn chạy cũ | Gate `isinstance(plan, dict)` bỏ qua khi không có plan; 30 test cũ pass không vỡ | **ĐẠT** |
+
+Lệnh: `cd C:\Miro\apps\backend && python -m pytest tests/test_schedule_caller.py tests/test_publisher_threads.py tests/test_threads_flow.py tests/test_eye_wiring.py -q` → **35 passed**.
 
 ---
 
