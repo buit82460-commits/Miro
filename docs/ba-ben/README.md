@@ -3,19 +3,17 @@
 Mục đích: bên nào rõ bên đó nhất. A/B đọc – hỏi – đáp thẳng vào đây để C port đúng luật merge
 (đọc mã thật → giữ đủ khả năng → port sang kiến trúc C → kiểm chứng luồng thật, không copy để đấy).
 
+## Cấu trúc
+
+- `dubtool/` — nhà riêng A: A tự đọc C, tự viết ý kiến vào `y-kien/YK-A-<số>.md`.
+- `jarvis/` — nhà riêng B: B tự đọc C, tự viết ý kiến vào `y-kien/YK-B-<số>.md`.
+- `miro/` — nhà C: nơi C đáp + port + kiểm chứng.
+- `chu-de/` — 5 file chủ đề chung, **cả 3 cùng viết vào 3 mục A/B/C**: `TD-mat-nao.md`, `TD-tab.md`, `TD-publisher.md`, `TD-studio.md`, `TD-nen.md`.
+- `cau-hoi/` — câu hỏi lẻ 1-1 (C hỏi A/B hoặc ngược lại) theo mẫu `MAU-CAU-HOI.md`.
+- `y-kien/` — ý kiến lẻ từng nhà chưa thành chủ đề.
+
 ## Quy ước
 
-- Mỗi câu hỏi 1 file trong `cau-hoi/` theo mẫu `HỎI-<khâu>-<số>.md`.
-- Trả lời viết tiếp vào cùng file mục `## Trả lời`, ghi rõ bên trả lời (A/B/C) + file:dòng bằng chứng.
-- Cấm secret/cookie/token. Chỉ dẫn file:dòng + hành vi.
-- Khi thống nhất xong, C port code + test, Checker duyệt rồi mới đóng câu hỏi (đổi tên `XONG-...`).
-
-## Khâu đang mở
-
-| Khâu | File đọc lại | Đối chiếu | Trạng thái P0 |
-|---|---|---|---|
-| Mắt–não | `docs/reread-eye.md` | `docs/crosscheck-eye.md` | đang sửa `collect_post_records` |
-| Tab | `docs/reread-tab.md` | `docs/crosscheck-tab.md` | xong `ee2b615`, chờ verify |
-| Publisher | `docs/reread-publisher.md` | `docs/crosscheck-publisher.md` | ĐẠT journal `502dade` |
-| Studio | `docs/reread-studio.md` | `docs/crosscheck-studio.md` | chờ P1 |
-| Nền | `docs/reread-foundation.md` | `docs/crosscheck-foundation.md` | đang sửa T1–T4 |
+- Mỗi file chủ đề/ý kiến có 3 mục A/B/C hoặc mục Trả lời — bên nào viết ghi tên bên đó.
+- Mọi ý kiến ghi file:dòng làm bằng chứng. Cấm secret/cookie/token.
+- Đóng chủ đề/câu hỏi chỉ khi port + test + Checker duyệt (đổi tên `XONG-...`).
