@@ -445,3 +445,77 @@ Nguồn duy nhất B = `D:\JARVIS-Assistant`. Đọc toàn văn: `backend/app/jo
    result chờ resume; shutdown: web-safe RECOVER→QUEUED, browser/desktop giữ terminal.
 6. Connections tài khoản thật: verify profile+actor trước/sau, không fallback/cướp lease,
    không kill Chrome, binding in-memory + snapshot before/after.
+
+---
+
+## 10. Vòng M2 — khép kín luồng Threads: queue duyệt + idempotent giao việc + approval (2026-11-21)
+
+Mục tiêu M2: luồng Threads khép kín trong Miro (intent → queue duyệt → publish → receipt), lấy mẫu an toàn từ JARVIS.
+Nguồn duy nhất: `J:<path>` = `D:\JARVIS-Assistant`; `C:<path>` = `C:\Miro` (Miro chỉ đối chiếu, không sửa code JARVIS).
+
+### 10.1. Job publish/task đi qua đâu (JARVIS)
+
+| Chặng | File:dòng | Hành vi |
+|---|---|---|
+| Nhận việc | `J:backend/app/jobs/manager.py:698–802` `create_job` | Validate theo từng `job_type`; job nội bộ bắt agent dựng sẵn; từ chối input chứa secret (`TASK_CONTAINS_SECRET`, `:736`); lưu `recipe` + `execution = new_execution` + `advance(PLAN)` (`:750–756`) |
+| Chạy một việc tại một thời điểm | `J:backend/app/jobs/manager.py:215–244` slot + contamination | Tối đa 1 job active (`_active_job_id` + `_waiting`); cleanup fail → `mark_slot_contaminated` khóa job mới (`RESOURCE_CLEANUP_UNCLEAN`) |
+| Vòng đời chạy | `J:backend/app/jobs/runner.py:231–491` `_execute_lifecycle` | `queued→running (+job_started)` → chạy dưới `wait_for(timeout)` → timeout → `job_timeout` + `request_stop` + grace → buộc cancel → **cleanup TRƯỚC** → đúng 1 terminal → nhả/khóa slot → terminal event → đóng subscribers |
+| Ưu tiên terminal | `J:backend/app/jobs/runner.py:351–465` | `timeout > user_stop/Cancelled > AgentExecutionError > cleanup fail > success` |
+| Stop 2 pha | `J:backend/app/jobs/runner.py:122–164` `initiate_stop` | Idempotent → `stopping` + `stop_requested` → watchdog `stop_grace_seconds` buộc cancel |
+| Event/journal | `J:backend/app/jobs/manager.py:246–296`, `J:backend/app/jobs/journal.py:20–70` | `emit_event` sequence đơn điệu, fan-out WS non-blocking, subscriber đầy → `overflowed` + cắt để resync; journal append-only `runtime/logs/jobs/<job_id>.jsonl`, lỗi I/O → `JournalWriteError` + đếm, không sập |
+| Không replay mutation mù | `J:backend/app/jobs/manager.py:149–177` `recover_pending` | Chỉ replay nhóm safe; `browser_task/desktop_task` → `BLOCKED/RESULT_UNKNOWN`; chủ cũ chết/không xác minh → `BLOCKED/OWNERSHIP_UNKNOWN` |
+| Snapshot bền | `J:backend/app/jobs/manager.py:143–147,127–141` | `_persist_job` → `atomic_save` (tmp+fsync+replace) sau sanitize; restart đọc lại snapshot, job dở dang → `_pending_recovery` |
+
+### 10.2. `dubtool_tasks.py` — mẫu idempotent + write-ahead cho luồng giao việc
+
+| Hành vi | File:dòng |
+|---|---|
+| `request_id ^[A-Za-z0-9_-]{80}$` + `fingerprint = sha256(canonical JSON)`; cùng id cùng nội dung → trả record cũ; cùng id khác nội dung → `REQUEST_ID_CONFLICT` | `J:backend/app/integrations/dubtool_tasks.py:190–209` (check secret `:190–195`) |
+| Record `task-<hex32>.json`, ghi `tmp + fsync + replace`; bản ghi hỏng → giữ `{needs_attention, pending_mutation:{step:corrupt_record}}`, không chặn backend | `:139–156`, `save :163–176` |
+| `step()`: checkpoint có rồi → dùng lại; chưa có → ghi `pending_mutation` + save **TRƯỚC** side-effect → gọi remote → lưu checkpoint → xóa marker + save | `:295–305` |
+| `resume`: còn `pending_mutation` → `REMOTE_RESULT_UNKNOWN`, bắt kiểm tra Studio trước, không tự gửi lại; chỉ resume `needs_attention` | `:221–230` |
+| `stop`: không dừng render/lịch Dubtool đã nhận (API timeline chưa có cancel) — outcome ghi rõ | `:232–244` |
+| Pipeline lock sequential; preflight read-only; mỗi biên kiểm `revision` (`PROJECT_CHANGED` nếu lệch); render poll ≤3600s; `handoff` re-validate revision; kết thúc `awaiting_dubtool` (chưa xác nhận lịch/đăng) | `:315–417` |
+| HTTP helper `DubtoolHTTP`: loopback cố định, `trust_env=False`, không redirect/proxy; `≥300` → `DUBTOOL_HTTP_<code>`; JSON phải `{success:true, result}` nếu không → `DUBTOOL_CONTRACT_CHANGED` | `:94–121` |
+| Route mỏng: `POST /dubtool-tasks` (202) → submit; `/{id}/resume|stop|refresh`; conflict → 409, not-found → 404 | `J:backend/app/api/routes/dubtool_tasks.py:1–66` |
+
+### 10.3. Approval flow — 2 tầng: classifier nền (đã có) + per-action gate (thiết kế, chưa nối)
+
+| Tầng | File:dòng | Hành vi |
+|---|---|---|
+| Classifier (groundwork, **chưa nối vào luồng chạy**, `:1–3`) | `J:backend/app/approval/__init__.py:35–118` | 8 lớp: `readonly_scoped/readonly_search` → auto-approve; `mutating/exec_capable/control_plane/other/unknown` → cần duyệt (fail-closed); tên lạ → `unknown`; `browser_task` = `mutating`; `desktop_task` phân loại per-command (`:66–94`) |
+| ExecAllowlist glob `allow-always` | `J:backend/app/approval/__init__.py:121–164` | `**/*/?`, Windows normalize `\→/`, lowercase, chống `..` traversal |
+| AuditReceipts non-blocking batch | `J:backend/app/approval/__init__.py:167–218` | Queue + batch write JSONL, queue đầy → đếm `dropped`, không chặn job |
+| Per-action gate desktop (điểm chặn tự nhiên, đã có) | `J:backend/app/api/routes/desktop_task.py:6` + `J:backend/app/integrations/agent_desktop.py:298–382` | Mỗi lệnh = 1 subprocess riêng (`shell=False`, env lọc secret, timeout cứng, terminate tree psutil, envelope JSON) → mốc G gắn approval tại đây mà không patch upstream |
+| Thiết kế per-action browser (CHƯA triển khai — `J:backend/app/policies/browser.py:7` ghi rõ `awaiting_approval` chưa có ở giai đoạn B; `J:docs/design/approval.md:98` xác nhận "no per-action wrapper implemented") | `J:docs/design/approval.md:42–75` | Gate tại `registry.execute_action` SAU parse/validate args, TRƯỚC handler; approval one-shot bound (job ID + approval ID + action fingerprint + page/session binding); duyệt xong recompute fingerprint ở biên thực thi, lệch → reject; deny/expire/cancel/stop → không gọi handler; không auto-approve action thay thế sau retry; pending in-memory, restart → expire |
+| Điều cấm dùng step-hook làm approval | `J:docs/design/approval.md:22–28` | `on_step_start/on_step_end` (đang dùng ở `J:backend/app/agents/browser.py:247–278` cho PID capture + pause) chạy TRƯỚC khi model output tồn tại + bỏ sót initial actions → không phải authorization hook |
+
+### 10.4. Helper HTTP Dubtool (`integrations/dubtool.py`) — mẫu subprocess cho M2 nếu bọc script ngoài
+
+- `DubtoolAgent` (`J:backend/app/integrations/dubtool.py:38–47`): `shell=False, argv` tường minh, env lọc secret, stdin JSON + stdout prefix-framed (`JARVIS_DUBTOOL:`, dòng >1MB → `bad_protocol`), stderr `DEVNULL` (không vào journal), drain khi chạy (`:60–105`).
+- Protocol: `progress{percent 0–100}` → event; `result{data dict}` đúng 1 lần; `error` → `DUBTOOL_WORKER_FAILED`; sai protocol → `DUBTOOL_BAD_PROTOCOL` (`:106–133`).
+- Stop/cleanup: `_terminate` kill cả cây psutil + `wait_procs 2s` (`:49–58`); `request_stop` → flag + terminate; `cleanup` verify PID → `AgentCleanupReport` (`:141–158`). Pause/resume → `CONTROL_NOT_SUPPORTED` (`:135–139`).
+- `validate_source` (`:23–35`): file tuyệt đối local (đuôi video allowlist) hoặc URL http(s) thuộc `allowed_domains`; cấm shell/UNC/ký tự điều khiển.
+
+### 10.5. Hành vi M2 nên lấy từ JARVIS (checklist cho agent viết code + Checker)
+
+Miro hiện đã có (không làm lại): `C:tasks/service.py:57–65` fingerprint + `REQUEST_ID_CONFLICT` ✓; `C:tasks/service.py:85–98` write-ahead + skip-checkpoint ✓; `C:tasks/router.py:86–95` `POST /tasks/{id}/approve|revoke` + `permissions.check` trước `mutate` (`C:tasks/service.py:91–94`) ✓; `C:publishing/publisher.py:514–515` `guard_duplicate` trước post + journal submit/unknown/fail-before-post ✓; `C:studio/handlers.py` queue `awaiting_review` ✓.
+
+M2 lấy thêm từ JARVIS:
+
+- [ ] **Fingerprint bind approval**: khi duyệt (`approve`), lưu fingerprint của payload/intent tại thời điểm duyệt; ở biên thực thi recompute — lệch (intent đổi text/media/owner trong lúc chờ) → reject `PROJECT_CHANGED`, bắt duyệt lại. Mẫu: `J:docs/design/approval.md:64–73` (one-shot bound) + `J:backend/app/integrations/dubtool_tasks.py:197–201` (conflict).
+- [ ] **Per-action gate ở `Publisher.publish`**: chỗ `C:publishing/publisher.py:525–537` (`_pre_post_checks` → `browser.post_once`) là dispatch boundary tương đương `registry.execute_action` — gắn check approval SAU `guard_duplicate` + `verify_actor_contract`, TRƯỚC `post_once`. Read-only (preview/verify/reconcile) auto-approve; `post_once` (mutating) bắt approval còn hiệu lực. Mẫu: `J:backend/app/approval/__init__.py:85–94` + `J:docs/design/approval.md:46`.
+- [ ] **Fail-closed + deny mặc định**: intent không phân loại được → `unknown`, KHÔNG auto-approve; hết hạn/ngắt/đổi actor → deny/expire. Mẫu: `J:backend/app/approval/__init__.py:99–118` + `J:docs/design/approval.md:89–90`.
+- [ ] **Audit receipt batch non-blocking**: ghi receipt quyết định duyệt (ai duyệt, intent gì, fingerprint nào, approved/denied/timeout) ra JSONL batch, queue đầy → đếm dropped, không chặn luồng post. Mẫu: `J:backend/app/approval/__init__.py:180–218`.
+- [ ] **Write-ahead mở rộng sang publish**: bổ sung marker `pending_mutation` + fsync TRƯỚC `post_once`, xóa sau receipt verified; crash giữa chừng → `REMOTE_RESULT_UNKNOWN`, resume bắt đối chiếu ngoài (reconcile profile-readback) thay vì post lại. Mẫu: `J:backend/app/integrations/dubtool_tasks.py:295–305` + `:221–230`.
+- [ ] **Stop 2 pha + watchdog**: `request_stop` tách khỏi `worker_stopped` đã có ở `C:tasks/service.py:140–161` ✓ — bổ sung watchdog buộc hủy khi worker (browser/post) không thoát sau grace, theo `J:backend/app/jobs/runner.py:122–164`.
+- [ ] **Không suy đoán trạng thái đăng**: receipt chỉ verified khi owner + same-record exact — `C:publishing/publisher.py:449–484 verify_receipt` đã đúng hướng ✓; giữ nguyên, không thêm text-fallback. Khớp `J:backend/app/integrations/dubtool_tasks.py:282–293`.
+- [ ] **Secret hygiene**: intent/text/receipt/journal không chứa secret; error chuẩn hóa không stack trace. Mẫu: `J:backend/app/jobs/runner.py:442–460`, `J:backend/app/integrations/dubtool_tasks.py:190–195,178–183`.
+
+### Invariant vòng M2 (Checker dùng)
+
+1. Mutating (`post_once`/apply) không chạy khi chưa có approval còn hiệu lực bound đúng fingerprint + revision; read-only auto-approve.
+2. Cùng `request_id` khác nội dung → `REQUEST_ID_CONFLICT`; duyệt gắn fingerprint, thực thi recompute, lệch → từ chối.
+3. Mọi mutation remote/post có write-ahead marker + fsync trước side-effect; uncertain → BLOCKED/needs_attention + đối chiếu ngoài, không auto-retry/post lại.
+4. Receipt quyết định duyệt ghi batch non-blocking; queue đầy → dropped-count, không chặn job.
+5. Không suy đoán trạng thái đăng (owner + same-record exact); secret không vào journal/receipt/error.
