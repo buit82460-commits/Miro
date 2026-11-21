@@ -1,0 +1,15 @@
+# integrations — phiên bản chốt (khung)
+
+File này chốt phiên bản các integration bên ngoài. Các nhánh nghiệp vụ
+được phép đề xuất nâng, nhưng phải cập nhật file này + lý do.
+
+```yaml
+playwright: "chưa chốt (theo poc-playwright của dubtool)"
+ffmpeg: "system (chưa ghim)"
+youtube_api: "chưa chốt"
+tiktok_api: "chưa chốt (spike only)"
+instagram_api: "chưa chốt (spike only)"
+facebook_api: "chưa chốt"
+```
+
+> Trạng thái thực tế ghi trong `docs/source-freeze.md` (spike vs production).

@@ -1,0 +1,48 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://miro.local/contracts/render.json",
+  "title": "Render — idempotent create",
+  "description": "POST /renders. Gửi lại cùng request_id + cùng nội dung -> replay bản ghi cũ. Cùng request_id + khác nội dung -> 409 Conflict.",
+  "type": "object",
+  "definitions": {
+    "RenderRequest": {
+      "type": "object",
+      "required": ["request_id", "project_id", "expected_revision", "content_hash"],
+      "properties": {
+        "request_id": { "type": "string", "minLength": 1, "description": "Mã幂 đẳng do client cấp, duy nhất mỗi lần tạo render." },
+        "project_id": { "type": "string", "minLength": 1 },
+        "expected_revision": { "type": "integer", "minimum": 0, "description": "Revision project mà render này dựa trên. Server từ chối nếu khác revision hiện tại." },
+        "content_hash": { "type": "string", "minLength": 1, "description": "SHA-256 của spec đã canonicalize. Dùng để phát hiện cùng mã khác nội dung." },
+        "spec": { "type": "object", "description": "Spec render (timeline, template, params).", "default": {} }
+      },
+      "additionalProperties": false
+    },
+    "RenderResponse": {
+      "type": "object",
+      "required": ["render_id", "status"],
+      "properties": {
+        "render_id": { "type": "string" },
+        "status": { "type": "string", "enum": ["queued", "running", "succeeded", "failed"] },
+        "replayed": { "type": "boolean", "default": false, "description": "true khi response là replay của request trước đó." }
+      }
+    },
+    "ConflictError": {
+      "type": "object",
+      "required": ["detail", "existing_render_id"],
+      "properties": {
+        "detail": { "type": "string" },
+        "existing_render_id": { "type": "string" }
+      }
+    }
+  },
+  "x-http": {
+    "method": "POST",
+    "path": "/renders",
+    "responses": {
+      "201": { "description": "Render mới được tạo (hoặc replay: cùng mã + cùng nội dung, kèm replayed=true).", "schema": { "$ref": "#/definitions/RenderResponse" } },
+      "409": { "description": "Cùng request_id nhưng project_id/expected_revision/content_hash khác -> Conflict.", "schema": { "$ref": "#/definitions/ConflictError" } },
+      "422": { "description": "Revision không khớp hoặc schema không hợp lệ." }
+    }
+  },
+  "x-idempotency-rule": "Khóa幂 đẳng = request_id. So sánh (project_id, expected_revision, content_hash): trùng -> 201 replay; lệch -> 409."
+}

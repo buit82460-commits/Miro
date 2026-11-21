@@ -1,0 +1,7 @@
+{
+  "request_id": "fixture-req-1",
+  "project_id": "fixture-proj-1",
+  "expected_revision": 0,
+  "content_hash": "fixture-hash",
+  "spec": {}
+}

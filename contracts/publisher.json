@@ -1,0 +1,40 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://miro.local/contracts/publisher.json",
+  "title": "Publisher — idempotent publish",
+  "description": "POST /publications. Khóa幂 đẳng = cặp (publication_id, attempt_id). Retry cùng cặp -> replay, không đăng trùng.",
+  "type": "object",
+  "definitions": {
+    "PublishRequest": {
+      "type": "object",
+      "required": ["publication_id", "attempt_id", "render_id", "channel"],
+      "properties": {
+        "publication_id": { "type": "string", "minLength": 1, "description": "Mã đợt xuất bản (1 render có thể có nhiều publication)." },
+        "attempt_id": { "type": "string", "minLength": 1, "description": "Mã lần thử trong đợt. Mỗi retry dùng attempt_id mới, trừ khi muốn replay an toàn." },
+        "render_id": { "type": "string", "minLength": 1 },
+        "channel": { "type": "string", "minLength": 1, "description": "Kênh đích: youtube | tiktok | facebook | instagram." }
+      },
+      "additionalProperties": false
+    },
+    "PublishResponse": {
+      "type": "object",
+      "required": ["publication_id", "attempt_id", "status"],
+      "properties": {
+        "publication_id": { "type": "string" },
+        "attempt_id": { "type": "string" },
+        "status": { "type": "string", "enum": ["queued", "running", "succeeded", "failed"] },
+        "replayed": { "type": "boolean", "default": false },
+        "remote_id": { "type": "string", "description": "ID video/post phía nền tảng, khi đã có." }
+      }
+    }
+  },
+  "x-http": {
+    "method": "POST",
+    "path": "/publications",
+    "responses": {
+      "201": { "description": "Attempt mới được nhận (hoặc replay nếu trùng cặp khóa).", "schema": { "$ref": "#/definitions/PublishResponse" } },
+      "404": { "description": "render_id không tồn tại." }
+    }
+  },
+  "x-idempotency-rule": "Khóa幂 đẳng = (publication_id, attempt_id). Trùng khóa -> 201 replay, không tạo job mới phía channel."
+}
