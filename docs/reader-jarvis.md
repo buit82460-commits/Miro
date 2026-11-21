@@ -199,4 +199,37 @@ Vòng 1 gồm 4 nhóm: (1) jobs + `dubtool_tasks` (Task đối chiếu),
 - [ ] Desktop: allowlist đóng, headless, 1 subprocess/lệnh, envelope map lỗi, không pause.
 - [ ] Research: backend pin, 0-LLM bóc, subprocess cô lập, vision strip-trap, public-only.
 
-*Nguồn file:dòng ghi trong từng mục. Vòng sau (khi có tính năng mới): đọc nốt `agent_reach.py` từ dòng 1293, `synthesize.py`, `live_chrome.py` từ dòng 61, routes còn lại, rồi bổ sung dưới mục mới — không sửa các mục đã chốt.*
+*Nguồn file:dòng ghi trong từng mục. Vòng sau (khi có tính năng mới): đọc nốt `agent_reach.py` từ dòng 1293, `live_chrome.py` từ dòng 61, routes còn lại, rồi bổ sung dưới mục mới — không sửa các mục đã chốt.*
+
+---
+
+## 7. Vòng 2 — Studio bọc Pipeline trong C (2026-11-21, định nghĩa merge mới)
+
+Phục vụ Studio bọc Pipeline trong Miro (`apps/backend/src/miro/studio/handlers.py` + `store.py`, `tasks/service.py` + `storage/db.py`).
+Đối chiếu với B = JARVIS (`backend/app/jobs/`, `integrations/dubtool_tasks.py`, `agents/synthesize.py`, `planner/`).
+Ký hiệu: `B:<path>` = file trong `D:\JARVIS-Assistant`; `C:<path>` = file trong `C:\Miro`.
+
+### 7.1. Đối chiếu hiện trạng C với B
+
+- **Write-ahead đã parity.** `C:tasks/service.py:85–98` (`_step`: checkpoint có thì skip → ghi `pending_mutation` + `_save` TRƯỚC `remote.mutate` → lưu checkpoint → xóa marker + save) khớp `B:dubtool_tasks.py:295–305` (`step()`). `resume` chặn khi còn `pending_mutation` (`C:178–183`) khớp `B:221–230` (`REMOTE_RESULT_UNKNOWN`). `restart` hạ in-flight về `NEEDS_ATTENTION` (`C:164–176`) khớp `B:recover_pending` (`manager.py:149–177`) và `B:stop→needs_attention/DELEGATION_INTERRUPTED`.
+- **Stop 2 pha đã có.** `C:request_stop` (→`STOP_REQUESTED`, idempotent) + `acknowledge_worker_stopped` (→`STOPPED`, chỉ khi có request treo) (`C:140–161`) khớp ngữ nghĩa `B:runner.initiate_stop` (idempotent, `stopping` + watchdog grace) — nhưng C chưa có watchdog buộc hủy khi worker không thoát; `acknowledge_*` hiện gọi thủ công.
+- **Revision check đã có 2 nơi.** `C:studio/store.py:34–45` (`check_revision`, sai → 409) + `C:studio/handlers.py:41–45,47–60` (guard trước `work()`, cache-first replay) khớp `B:project()` validate schema+revision mọi biên (`dubtool_tasks.py:307–313`) và `FakeRemote.mutate` check `expected_revision` (`C:tasks/service.py:30–37`).
+- **Khoảng trống C (Studio nên lấy từ B):**
+  1. **Không fingerprint nội dung.** `C:studio/handlers._run_idempotent` (`handlers.py:47–60`) trả cache theo `request_id` mà không kiểm nội dung: cùng `request_id` khác payload vẫn trả kết quả cũ im lặng. B từ chối (`REQUEST_ID_CONFLICT`, `dubtool_tasks.py:197–201`) và Miro tasks đã làm đúng (`service.py:61–65`). Studio C nên copy: `fingerprint = sha256(canonical JSON)` + conflict khi khác nội dung.
+  2. **Không slot đơn / contamination lock.** `C:tasks/service.run` chạy đồng bộ, không giới hạn pipeline đồng thời, không khóa khi cleanup fail. B: 1 slot active (`manager.py:215–229`, hàng đợi `_waiting`, job chờ `PAUSED/CANCELLED` bị loại) + `mark_slot_contaminated` khóa tạo job mới khi cleanup fail (`manager.py:231–244`, runner `471–475`). Studio bọc Pipeline (render nhiều bước, giữ tài nguyên) nên lấy: tối đa 1 pipeline active mỗi project + khóa pipeline mới khi lần trước dọn không sạch.
+  3. **Không retry TRANSIENT có ngân sách.** `C:_step` gọi `mutate` 1 lần, exception lạ (ngoài `TaskConflictError`) thoát ra ngoài không persist terminal. B: `runner.py:218–229` retry chỉ khi `safe_to_retry` (nhóm read-only) + mã transient, `maxAttempts=3` backoff 1→30s (`execution_policy.py:15–26,45–56`); hết budget → BLOCKED giữ checkpoint. Studio nên lấy: retry chỉ bước read-only/idempotent (plan), mutation chưa rõ kết quả → `NEEDS_ATTENTION`, không replay.
+  4. **Không workerOwner liveness.** `B:recover_pending` kiểm tra PID + `create_time` của chủ cũ qua psutil: còn sống → `BLOCKED/OWNERSHIP_UNKNOWN` (`manager.py:155–166`). C `restart` không kiểm chủ cũ — chấp nhận được khi worker là in-process, nhưng khi Studio tách worker tiến trình riêng phải bổ sung.
+  5. **Persist chưa atomic.** B `atomic_save`: tmp + `fsync` + replace, retry `PermissionError` 7 lần (`execution_policy.py:58–73`); marker `pending_mutation` luôn fsync trước side-effect (`dubtool_tasks.py:163–176`). C `TaskStore.upsert_task/append_event` chỉ `execute + commit` (`storage/db.py:47–73`), không fsync — crash giữa `pending_mutation` save và `mutate` có thể mất marker. Studio nên lấy `fsync` (ít nhất cho write-ahead save).
+  6. **Render/synthesize thiếu guard nguồn.** B `SynthesisOutput`: `final_answer ≤8000`, `sources ≤20` và service validate mọi URL thuộc tập bước đã chạy (`planner/models.py:110–137`, `service.py:473–498`); `synthesize` chỉ là bước cuối (`models.py:105–106`); system prompt bắt `insufficient_data/core_requirement_met=false` khi thiếu lõi, không bịa, không thay bằng nội dung liên quan (`service.py:447–456`); web content là DATA trong delimiter. Nếu Studio C thêm bước AI tóm tắt/kế hoạch render, copy nguyên 3 guard này.
+
+### 7.2. Hành vi Studio C nên lấy từ B (checklist cho agent viết code)
+
+- [ ] `request_id` + `fingerprint` (sha256 canonical JSON): cùng id cùng nội dung → trả cũ; cùng id khác nội dung → `REQUEST_ID_CONFLICT`.
+- [ ] Write-ahead `pending_mutation` + fsync trước mọi mutation; checkpoint xong skip; uncertain → `NEEDS_ATTENTION/REMOTE_RESULT_UNKNOWN`, resume thủ công sau đối chiếu ngoài.
+- [ ] Revision check mọi biên (guard trước `work()`, mutate với `expected_revision`); lệch → 409 `PROJECT_CHANGED`.
+- [ ] Slot đơn mỗi project + contamination lock khi cleanup fail; stop 2 pha (request vs worker-thoát) + watchdog buộc hủy.
+- [ ] Terminal duy nhất, ưu tiên timeout > stop > error > cleanup; exception lạ → persist `NEEDS_ATTENTION`, không để task treo không trạng thái.
+- [ ] Retry chỉ bước read-only/idempotent, ngân sách 3 lần backoff; mutation không replay.
+- [ ] Bước tổng hợp (nếu có): schema `final_answer/sources/insufficient_data/missing/core_requirement_met/core_gap`, sources validate thuộc tập bước đã chạy, không bịa.
+
+*Nguồn B file:dòng ghi trong từng mục; nguồn C: `apps/backend/src/miro/{studio/handlers.py:47–60,studio/store.py:34–51,tasks/service.py:30–37,85–98,140–188,storage/db.py:47–73}`. Vòng sau bổ sung tiếp dưới mục mới — không sửa mục đã chốt.*
