@@ -1,0 +1,10 @@
+{
+  "root": "C:\\Miro",
+  "launcher": 26192,
+  "services": {
+    "be": 26016
+  },
+  "ports": {
+    "be": 8770
+  }
+}

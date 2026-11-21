@@ -54,7 +54,9 @@ def test_stop_distinguishes_requested_from_worker_stopped(tmp_path):
 async def test_restart_shows_correct_state(tmp_path):
     svc = make_service(tmp_path)
     record = svc.submit(payload())
-    svc.permissions.grant(record["id"], 0, "edit", revision=svc.remote.revision)
+    # import/track/assemble bump the remote 1->4, so apply runs at revision 4:
+    # approval must bind to exactly that revision.
+    svc.permissions.grant(record["id"], 0, "edit", revision=4)
     done = await svc.run(record["id"])
     assert done["status"] == "completed"
     # restart on terminal task: unchanged
@@ -74,7 +76,7 @@ async def test_restart_shows_correct_state(tmp_path):
     remote.fail_unknown_on = "apply"
     svc3 = make_service(tmp_path / "third", remote)
     rec3 = svc3.submit(payload(request_id="req-3"))
-    svc3.permissions.grant(rec3["id"], 0, "edit", revision=remote.revision)
+    svc3.permissions.grant(rec3["id"], 0, "edit", revision=4)
     out3 = await svc3.run(rec3["id"])
     assert out3["status"] == "needs_attention"
     assert out3["pending_mutation"]["step"] == "apply"
