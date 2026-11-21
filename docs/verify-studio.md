@@ -168,3 +168,16 @@ tràn = 2.5+2.0-3.0 = 1.5s).
 
 - Lệnh: `python -m pytest tests/test_studio_p1.py -q` (trong `C:\Miro\apps\backend`)
 - Kết quả: `6 passed, 1 skipped`
+
+## P1 leftover 3 — test render-preview thật (d10b4fe)
+
+**ĐẠT** — test cũ tự skip (`test_render_video_preview_boolean`) được thay bằng
+`test_render_video_preview_that_20s_640`: dựng fixture 60s 1280x720 bằng lavfi
+(testsrc+sine) → `render_video(preview=True)` → assert file tồn tại,
+`probe_duration <= 20.5s`, ffprobe `width == 640`. Đúng shape A
+(`render_video(preview=True)` → `-t 20 -vf scale=640:-1`). Ghi nhận:
+`editor_render` vẫn giữ đường `_concat_ranges` riêng (kẹp 20s theo ranges),
+không gọi `render_video(preview=True)` — nối hai đường là việc riêng, không chặn.
+
+- Lệnh: `python -m pytest tests/test_studio_p1.py -q` (trong `C:\Miro\apps\backend`)
+- Kết quả: `7 passed` (0 skipped — test preview thật chạy luôn)
