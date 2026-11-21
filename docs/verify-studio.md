@@ -105,3 +105,45 @@ Checker đối chiếu diff 4 file (100 insertions) + đọc 3 test mới C10–
 
 **Module Studio được tính "xong" theo định nghĩa merge mới (16 passed, luồng thật trong C,
 guard A + cơ chế B đã đóng). Live render/upload YouTube đầu tiên vẫn qua runbook dubtool.**
+
+---
+
+# VERIFY vòng P1 studio (commit d0a4232, ngày 2026-11-21) — KẾT LUẬN: **ĐẠT** (4 ghi nhận không chặn)
+
+Checker đối chiếu diff 3 file (+204/-9: `pipeline.py`, `store.py`, test mới
+`test_studio_p1.py`), tự chạy trong `C:\Miro\apps\backend`:
+
+`python -m pytest tests/test_studio_p1.py tests/test_studio_idempotency.py tests/test_studio_real_pipeline.py tests/test_studio_p0_t3t4.py -q`
+→ **24 passed, 1 skipped** (skip duy nhất: `test_render_video_preview_boolean` tự skip vì cần
+video thật — xem ghi nhận 3).
+
+| Tiêu chí P1 (đáp A+B TD-studio) | Đối chiếu | Kết quả |
+|---|---|---|
+| `recover_jobs` + sleep NGOÀI pool | `store.recover_jobs()` không hề `sleep`; retry/backoff nằm ở orchestrator、`_guarded` pipeline (step-level, có sẵn từ vòng trước), đúng "khong sleep trong worker" | **ĐẠT** |
+| Chủ cũ sống → owned, không replay mù | `_owner_alive` check pid + `create_time` (chống pid tái sử dụng); fail-closed (không có psutil → coi như sống → giữ slot); `owned` giữ nguyên slot, không requeue | **ĐẠT** |
+| Slot mở không chủ + còn budget → requeued; hết budget → blocked | `tries < max_retries` → `requeued` (+1 budget); hết → pop slot + pop owner → `blocked`; boot (`__init__` → `_load` → `recover_jobs`, đúng A `_recover_jobs :48-81`) | **ĐẠT** — test `het_budget_blocked` assert `blocked` + hết slot |
+| Mix áp atempo theo speed (A `ffmpeg_utils :16-27` + `mix :31-61`) | `atempo_chain` tách chuỗi 0.5–2.0 đúng; `_sped_clip` chỉ gọi ffmpeg khi `speed != 1`, speed=1 đọc wav trực tiếp; bed vẫn đủ `total`, tràn thì gắn cờ `overflow` (đúng A `:57-60` cắt im lặng + C ghi cờ để UI báo) | **ĐẠT** — test `mix_ap_speed_khop_slot` (2s @2x vào bed 3s không tràn) |
+| Preview boolean thay `preview_secs` chết (A `start_render`: out temp/, kẹp 20s, scale 640) | `render_video(preview: bool=False)`; `preview=True` → `-t 20 -vf scale=640:-1`, đúng shape A | **ĐẠT** (hình thức) — xem ghi nhận 3 |
+| Logo có `-i` riêng (A `overlay.py :92-107`) | Mỗi logo type có `path` được thêm 1 `-i` theo đúng thứ tự | **ĐẠT** (hình thức) — xem ghi nhận 4 |
+
+## Ghi nhận không chặn (phần mở, làm ở vòng sau)
+
+1. **`_recoveries` không reset khi job xong.** `release_slot`/`acquire_slot` không xóa
+   budget cũ → video chạy xong nhiều lần, mỗi lần restart + recover sẽ cộng dồn và có thể
+   `blocked` oan. Sửa: reset `recoveries[video_id]` trong `release_slot` (xong việc budget
+   hết hiệu lực) + test.
+2. **Overflow chỉ gắn cờ boolean, chưa log timing_exact.** `mix()` set
+   `entry["overflow"]=True` trong `try/except pass` im lặng — không ghi tràn từ giây nào,
+   dài bao nhiêu, seg nào. Khi UI cần báo chính xác ("seg 3 tràn 0.42s từ 12.30s") phải bổ
+   sung `overflow_from/overflow_secs` + test assert số.
+3. **Preview boolean ở `render_video` chưa có caller thật.** `handlers.editor_render`
+   (đường preview production hiện tại) tự kẹp 20s + dùng `_concat_ranges` riêng, không gọi
+   `render_video(preview=True)`; test preview tự skip. Cần: hoặc nối `editor_render`
+   vào `render_video(preview=True)`, hoặc test render-preview thật (video fixture + assert
+   duration ≤20s + scale 640).
+4. **Logo `-i` hiện là code chết + `audio_map` cứng `"1:a"` sẽ sai khi logo sống lại.**
+   `_overlay_filter` raise `OVERLAY_UNSUPPORTED` với mọi kind khác `box` (kể cả `logo`) —
+   nên nhánh logo `-i` không bao giờ tới được ffmpeg. Khi bổ sung overlay logo thật, phải
+   đồng thời: (a) filter `overlay=` dùng đúng `[{n}:v]`, (b) tính index input mix động thay
+   vì `audio_map="1:a"` cứng (logo chen input vào giữa → `1:a` trỏ nhầm vào ảnh logo →
+   `RENDER_FAILED`). Hiện không chặn vì logo raise trước, chưa có đường lỗi production.
