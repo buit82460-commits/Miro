@@ -749,6 +749,22 @@ class Publisher:
         Abort ca batch voi DUPLICATE_TAGS khi 2 item cung #dub (:779-786).
         """
         results: list[dict] = []
+        # --- scheduler gate (P1 caller): paused/due truoc khi cham intent ---
+        plan = getattr(self, "day_plan", None)
+        if isinstance(plan, dict):
+            from miro.scheduling.schedule import select_due_intents as _select_due
+            from datetime import datetime as _dt, timezone as _tz, timedelta as _td
+            _now = _dt.now(_tz(_td(hours=7))).isoformat()
+            _due, _deferred = _select_due(plan, intents, _now)
+            _deferred_ids = {id(d["intent"]) for d in _deferred}
+            for d in _deferred:
+                results.append({"posted": False,
+                                "receipt": "DEFERRED_TO_GROUP_RECONCILE",
+                                "shortcode": d["shortcode"],
+                                "defer_reason": d["reason"]})
+            intents = [i for i in intents if id(i) not in _deferred_ids]
+            if not intents:
+                return results
         # --- prep + duplicate-tag guard (legacy :762-786) ---
         prepped: list[dict] = []
         for intent in intents:
@@ -883,6 +899,7 @@ class Publisher:
                 journal = load_json_if_exists(journal_path, {})
                 rec = group_receipts.get(sc)
                 verified = verify_receipt(rec, p["intent"], p["post_ids"]) if rec else None
+                plan = getattr(self, "day_plan", None)
                 if verified:
                     match_seen = time.time()
                     entry = {"shortcode": sc, "status": "published",
@@ -899,6 +916,9 @@ class Publisher:
                         "ack_response_url": journal.get("ack_response_url")})
                     _merge_publication(self.base, {k: v for k, v in entry.items()
                                                    if k != "timeline"}, p["intent"].owner)
+                    if isinstance(plan, dict):
+                        from miro.scheduling.schedule import mark_slot_verified as _verified
+                        _verified(plan, p["intent"].intent_id)
                     ack_seen = p["timeline"].get("ack_seen") or batch_started
                     results.append({"posted": True,
                                     **{k: v for k, v in entry.items() if k != "timeline"},
@@ -910,6 +930,9 @@ class Publisher:
                         "at": p["timeline"].get("post_clicked", batch_started),
                         "hint": "UNCONFIRMED_NO_REPLAY",
                         "ack_post_codes": p["post_ids"]})
+                    if isinstance(plan, dict):
+                        from miro.scheduling.schedule import record_submit_unknown as _unknown
+                        _unknown(plan, p["intent"].intent_id)
                     results.append({"posted": True, "receipt": "UNCONFIRMED_NO_REPLAY",
                                     "shortcode": sc})
         return results

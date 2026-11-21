@@ -115,3 +115,59 @@ def consecutive_unknowns(results: list[str]) -> int:
 
 def should_auto_pause(results: list[str], threshold: int = 2) -> bool:
     return consecutive_unknowns(results) >= threshold
+
+
+# ---- caller wiring (P1 phan mo): paused/due/boot o caller, khong trong module
+def boot_action(was_clean_shutdown: bool, policy_status: str) -> str:
+    """Caller quyet (nguyen tac B): boot may tat (shutdown khong sach) ->
+    tinh lai plan theo policy; user pause -> ton trong, khong post bu.
+
+    Tra "rebuild" (tinh lai plan) hay "respect" (giu nguyen, khong post bu).
+    """
+    if str(policy_status or "active").lower() == "paused":
+        return "respect"
+    if not was_clean_shutdown:
+        return "rebuild"
+    return "respect"
+
+
+def select_due_intents(plan: dict, intents: list, now_iso: str) -> tuple[list, list]:
+    """Loc intents theo plan ngay: (due, deferred).
+
+    - plan paused -> tat ca deferred ly do PAUSED (paused outrank moi slot).
+    - slot khong pending / chua den han -> deferred (khong burst).
+    - Khop intent <-> slot qua intent_id == task_id; intent khong co slot ->
+      deferred ly do NO_SLOT.
+    """
+    deferred: list[dict] = []
+    if str((plan or {}).get("status", "active")).lower() == "paused":
+        for intent in intents or []:
+            iid = getattr(intent, "intent_id", "?")
+            deferred.append({"intent": intent, "shortcode": getattr(
+                intent, "shortcode", "") or iid, "reason": "PAUSED"})
+        return [], deferred
+    due_ids = {s.get("task_id") for s in due_slots(plan or {}, now_iso)}
+    slot_state = {s.get("task_id"): s.get("state") for s in (plan or {}).get("slots", [])}
+    due, deferred = [], deferred
+    for intent in intents or []:
+        iid = getattr(intent, "intent_id", None)
+        sc = getattr(intent, "shortcode", "") or iid or "?"
+        if iid in due_ids:
+            due.append(intent)
+        else:
+            reason = "NOT_DUE" if iid in slot_state else "NO_SLOT"
+            if iid in slot_state and slot_state.get(iid) != "pending":
+                reason = "SLOT_" + str(slot_state.get(iid)).upper()
+            deferred.append({"intent": intent, "shortcode": sc, "reason": reason})
+    return due, deferred
+
+
+def mark_slot_verified(plan: dict, task_id: str) -> dict:
+    """reconcile-verified ket thuc vong doi slot: verified, ra khoi queue."""
+    for slot in (plan or {}).get("slots", []):
+        if slot.get("task_id") == task_id:
+            slot["state"] = "verified"
+    queue = (plan or {}).setdefault("reconcile_queue", [])
+    if task_id in queue:
+        queue.remove(task_id)
+    return plan
