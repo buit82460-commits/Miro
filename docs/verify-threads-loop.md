@@ -52,3 +52,27 @@ mặc định, fake managed tab khi post); chưa Chrome thật, chưa media vide
 2. Worker: `DUPLICATE_TAGS` + phase B group reconcile + `disconnect` trong finally.
 3. Quyết định media: port hoặc tách milestone M-media có ghi rõ.
 4. 1 lần chạy trên Chrome remote-debugging thật (read-only trước).
+
+---
+
+# VERIFY vòng 2 (commit 5ef059b + 49bea2e, ngày 2026-11-21) — KẾT LUẬN: **ĐẠT có điều kiện** (lõi khép kín; HTTP publish + Chrome thật còn mở)
+
+Checker đối chiếu diff 2 commit + chạy `test_threads_flow.py` → **7 passed**,
+full suite → **119 passed**.
+
+| Điểm vòng 1 | Fix | Kết quả |
+|---|---|---|
+| §4.2 Worker thiếu `DUPLICATE_TAGS` | Guard tag-trùng cả batch đầu `run_batch`, 0 post khi trùng (giống `Publisher.run_batch :650-657`) | **ĐẠT** (logic; test cover ở `Publisher.run_batch`, worker-guard là bản sao — chấp nhận) |
+| §4.2 Worker thiếu phase B group reconcile | Sau vòng post: gom `posted` → 1 pass `read_group_receipts` read-only → `reconcile` từng pending → append `phase: B-group-reconcile` | **ĐẠT**. Đúng A §8.1 (1 lần read-only sau phase A) |
+| §4.2 finally thiếu `disconnect` | `finally`: `release()` + gọi `page.disconnect()` nếu có (nuốt lỗi) | **ĐẠT** (fake có/không disconnect đều qua; live phải implement) |
+| §4.4 Media chưa đi hết luồng | `_media_gate`: text-only pass; file thật tồn tại → `media_for` + `check_video` pass → cho qua tới `post_once`; sha256-không-file → `MEDIA_UNVERIFIED` fail-closed; gate fail → `FAILED_BEFORE_POST` (cả `publish` lẫn `run_batch` prep) | **ĐẠT**. Test realdata cập nhật đúng hành vi mới: file thật → `attempts==1`, `posts==0` (browser dry-run raise sau gate); file mất → `attempts==0` + `FAILED_BEFORE_POST`. Không còn `MEDIA_NOT_PORTED` chặn cứng |
+| §4.1 `POST /threads/publish` chưa chạy worker | **Chưa sửa** — router vẫn chỉ queue `publications.publish(...)`, không gọi worker | **CHƯA ĐẠT, chuyển thành điều kiện mở** (xem dưới) |
+| §4.5 Audit `dropped` chưa test | Chưa bổ sung assert | Nhẹ, nợ test nhỏ — không chặn |
+
+## Điều kiện còn mở (không chặn lõi, bắt buộc trước live)
+
+1. **`POST /threads/publish` vẫn đứt khỏi worker** — luồng khép kín qua HTTP chưa hoàn tất ở chặng publish (queue rồi trả về, không post/reconcile). Entry point kiểm chứng M2 hiện tại là `worker.run_batch` trực tiếp (test), không phải HTTP. Trước live phải nối (dry-run mặc định, `allow_post` + approval từ body) + test HTTP khép kín.
+2. **Chưa chạy trên Chrome thật lần nào** (cả M1 và M2). Ack 3 đường, composer, eye-readback vẫn là fake `submit()`/`read_eye()`. Trước publish live: 1 lần `ManagedChromeSession.open` + acquire + read trên Chrome remote-debugging thật.
+3. Stop 2 pha/watchdog worker, scheduler auto-pause — đã chuyển sang M3 theo reader §9.
+
+**Module Threads được tính "xong" ở mức lõi C (gate/journal/reconcile/approval/media-gate thật trên manifest A, 0 post thật). Live post đầu tiên vẫn qua runbook dubtool + reconcile read-only.**
