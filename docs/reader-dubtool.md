@@ -139,6 +139,89 @@ Mẫu chung (instagram/shopee/chatgpt/flow + youtube guarded-mutation): `_enforc
 - `_generate_live_chrome` (`:396-432`): journal BEFORE Generate click (`:398`); `_wait_render_done` event-based, timeout `RENDER_TIMEOUT_S` (`:245-280`); xong → download MP4 + `sha256_of` (`:138-144`) → journal `verified + url/sha256` + merge; không receipt → `UNCONFIRMED_NO_REPLAY`; prompt ≤4000 chars, `_apply_cheapest_settings` (`:301-313`).
 - `reconcile_one` (`:545-565`) read-only mở trang video Flow qua tab `RESEARCH`; `download_one` (`:575-605`) tải remote file; `verify_profile` journaled (`:607-633`).
 
+## 6. Vòng 2 (2026-11-21) — Studio bọc Pipeline.run thật (merge mới)
+
+Phạm vi vòng 2: `core/pipeline.py::Pipeline.run` + 8 step + cache/invalidation +
+`core/cache.py` (đã ghi chi tiết ở §1 vòng 1 — vòng 2 chỉ bổ sung góc nhìn Studio gọi),
+và `app.py` các tab Studio gọi pipeline thế nào. Kết luận quan trọng: **`app.py`
+KHÔNG có request_id/revision/guard kiểu Studio** — đó là cơ chế của
+`core/studio_store.py` + `core/studio_service.py` (timeline nhiều clip), còn pipeline
+dub 8 bước dùng `project.json/steps_done + *.done + signature`, hai hệ guard khác nhau,
+nối với nhau duy nhất qua `create_from_dubtool` / `handoff`.
+
+### 6.1 Cách `app.py` gọi pipeline (file:dòng)
+- `_pipeline()` (`app.py:22-23`): mỗi handler tạo `Pipeline()` mới (đọc `config.yaml`,
+  `configure_env(offline=True)`, tạo `cache/output/temp`). Không có singleton, không có
+  request_id — idempotency dựa vào `video_id + *.done + signature` trong cache.
+- Tab Nhập — `do_download` (`app.py:42-62`): `p.run(src, steps=["download"])`; sau đó
+  tự `ffprobe` lấy duration hiển thị (không qua pipeline). `state_video` (gr.State) giữ
+  `video_id` cho các tab sau.
+- Tab Nhập — `do_run_to_translate` (`app.py:65-82`): `p.run(src, src_lang, tgt_lang,
+  default_voice, steps=["download","audio","stt","translate"])`; trả `rows`
+  `[id,start,end,src_text,tgt_text,flags]` cho Dataframe tab Phụ đề.
+- Tab Phụ đề — `save_segments` (`app.py:106-123`): ghi `segments.json` trực tiếp rồi
+  **tự xóa marker downstream** `tts/sync/mix/render` (`done_path(video_id, step)`,
+  `core/cache.py`) + cắt `steps_done` — cùng pattern với
+  `Pipeline.revoice_segment` nhưng KHÔNG qua `_mark_step` (không xóa marker cùng-step
+  khác-hash, không đụng tới `download/audio/stt/translate`). Invariant: sửa text =
+  chạy lại từ `tts`.
+- Tab Phụ đề — `do_tts_mix_render` (`app.py:126-142`): `p.run(source or
+  proj["source"], src_lang/proj, tgt_lang/proj, default_voice/chọn, steps=["tts",
+  "sync","mix","render"])`. Nguồn lấy từ textbox, fallback `project.json:source`.
+- Tab Giọng — `revoice` (`app.py:154-167`): parse `seg_id` int (lỗi → `gr.Error`) rồi
+  `p.revoice_segment(video_id, seg_id, new_voice, progress_cb)` — xóa marker
+  tts→render + file `tts/{seg}_*.wav` rồi `run(steps=[tts,sync,mix,render])`.
+- Tab Hình — `add_overlay` (`app.py:195-209`): append `project.overlays[]`
+  `{type,x,y,w,h,t_start,t_end,text,font}` + `save_project` + **chỉ xóa marker
+  `render`** (overlay không ảnh hưởng audio → không đụng tts/sync/mix). Invariant:
+  overlay đổi = render lại duy nhất.
+- Tab Xuất — `do_final_render` (`app.py:213-229`): như `do_tts_mix_render` nhưng thêm
+  `overlays=proj.overlays, burn_subtitles=burn`.
+- Tab Đưa sang YouTube — `submit_studio` (`app.py:257-266`): `YouTubeStudio().submit(
+  video_id, title, description, tags)` → trả `{productionId}` + thông điệp "hàng chờ
+  duyệt, CHƯA tải lên YouTube". Tab Timeline — `open_multitrack` (`app.py:343-352`):
+  `get_studio_service().create_from_dubtool(video_id)` → link `/timeline?project=...`.
+
+### 6.2 Guard kiểu Studio (revision) — `core/studio_store.py`, `core/studio_service.py`
+- `studio_store._expect` (`studio_store.py:116-119`): mọi mutation so
+  `expected_revision` với `state.project.revision`; lệch → `ConflictError("Dự án đã
+  thay đổi ở phiên khác. Nạp lại...")`. Mỗi `_replace` (`:121-128`) bump
+  `revision+1`, push undo (giới hạn `HISTORY_LIMIT`), xóa redo.
+- Render dedupe + stale (`studio_service._start_render :259-281`): hàng đợi tối đa 4
+  job (`queued+running`); job trùng `(project_id, revision, preview)` đang active →
+  trả job cũ (không render lại). `_run_render` (`:289-349`): checkpoint receipt
+  `(output,audio,segments)+hashes` còn đủ file thì dùng lại; recover render sang
+  `attempt-<n>/` mới (encoder mồ côi không ghi đè); trước render và sau render đều so
+  `_signature(project)` (`:293, :327`) — timeline đổi giữa chừng → job `stale`, không
+  được handoff YouTube.
+- `handoff` (`studio_service.py:449-497`): đòi `export.signature == _signature(project)`
+  + digest 3 file khớp export, transcript thật (không tự bịa), rồi chép
+  `mix.wav/segments.json/render.done/plan.json` vào `cache/timeline-<project>/editor/
+  <job>/` + `project.json {editor_pending:False, editor_export:{output,audio,segments,
+  marker,plan_hash}}` và `render.done {signature}` — chính là cầu nối để bản timeline
+  đi tiếp qua `YouTubeStudio().submit` như một "video dubtool".
+
+### 6.3 Cầu `create_from_dubtool` — `studio_service.py:411-447`
+- Guard vào (`:413-418`): `video_id` khớp `[A-Za-z0-9_-]{1,160}`; đọc
+  `cache/<vid>/project.json` qua `_bounded` (chặn path traversal); đòi
+  `not editor_pending` và `render.done` tồn tại else conflict "Render bản cuối trước".
+- Dựng project Studio mới theo đúng w/h probe từ `output`, import output làm asset,
+  map `segments.json → cues` (cắt theo duration, giữ `src/tgt/flags`), thêm track
+  video + 1 clip full-duration, ghi `dubtool-sources.json {asset: {video_id,
+  synthetic}}` giữ provenance media tổng hợp.
+
+### 6.4 Invariant bổ sung vòng 2 (Studio bọc Pipeline trong C)
+1. Giữ nguyên ngữ nghĩa `steps` subset + `_hydrate` (`pipeline.py:392-412, :420-448`):
+   chạy riêng bước sau phải nạp lại wav/segments/timeline từ cache, không đòi chạy
+   lại từ đầu.
+2. Sửa phụ đề/text (`save_segments`, `revoice_segment`) → invalidate từ `tts`;
+   thêm overlay → invalidate chỉ `render`. Không gộp hai đường này.
+3. Hai hệ guard không thay thế nhau: pipeline dùng `*.done + signature + steps_done`;
+   Studio timeline dùng `revision + signature + render.done`. Cầu nối duy nhất là
+   `create_from_dubtool` (dub→timeline) và `handoff` (timeline→duyệt YouTube); C phải
+   giữ cả hai cửa với cùng điều kiện conflict.
+4. `submit_studio` chỉ đưa vào hàng chờ duyệt — cấm bọc thành "đăng luôn YouTube".
+
 ## 5. Invariant bắt buộc Miro phải giữ khi bọc lại
 1. Thứ tự STEPS + invalidation downstream của `_mark_step` (kể cả khi nội dung giống nhau); `revoice_segment` chỉ xóa marker tts→render.
 2. JSON runtime qua `load_json/atomic_save`; publication là source of truth account/caption; caption/account từ manifest, không hard-code.
