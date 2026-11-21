@@ -53,9 +53,41 @@ b) **Match lỏng hơn legacy, phá vỡ same-record rule**: port `match_eye_rec
 - `_verify_threads_actor` + tab acquisition/lease single-owner (dòng 646-668): port ủy thác cho `browser` inject, không verify actor `@username` trước Post. Test hiện tại không cover. Cần ít nhất 1 assertion/contract `browser` phải verify actor.
 - `atomic_save` tự viết lại (mất UTF-8 no-BOM + tmp+replace semantics đã kiểm chứng của `shared/execution_policy`) và `load_json_if_exists` mất chịu BOM của `shared/json_io.load_json`. Liên quan điều kiện số 1.
 
-## 8. Việc cần làm trước khi được chữ ĐẠT
+## 8. Việc cần làm trước khi được chữ ĐẠT (vòng 1 — đã xử lý ở vòng 2, xem dưới)
 
 1. Sửa 3b (two-phase đúng legacy) + 4a (duplicate-tag guard) + 5a (known_ids plumbing) + 5b (siết same-record) + 3 (single-path re-raise hoặc khai báo lệch).
 2. Quyết định scope media gate + integrity guard + actor verify (port hay ghi rõ cấm).
 3. Bổ sung test chạm code cũ: ít nhất import `threads_post_one.caption_for/guard_duplicate` + `rea_eye.match_eye_records` làm oracle (ví dụ property-test `caption_for` port == legacy trên fixture manifest thật; `match_eye_records` port vs eye gốc trên cùng records). Không cần live Post.
 4. Cập nhật docstring module liệt kê đúng 7 mục trên (đang thiếu là xong điều kiện số 3).
+
+---
+
+# VERIFY vòng 2 (commit 8cb993a, ngày 2026-11-21) — KẾT LUẬN: **ĐẠT**
+
+Checker đã đối chiếu `publisher.py` mới (776 dòng) với `C:\dubtool\scripts\threads_post_one.py` + `core/rea_eye.py`, chạy `python -m pytest apps/backend/tests/test_publisher_threads.py -q` → **15 passed**, và kiểm tra import code cũ trực tiếp (`shared.json_io`, `shared.execution_policy`, `core.rea_eye` → OK).
+
+## 0. Ba điều kiện bắt buộc
+
+| # | Điều kiện | Vòng 2 |
+|---|-----------|--------|
+| 1 | Gọi code cũ thật qua biên rõ | **ĐẠT** — `_legacy` import thật `shared.execution_policy.atomic_save`, `shared/json_io.load_json(_if_exists)`, `core.rea_eye.match_eye_records/normalize_tag`, `threads_post_one.caption_for/guard_duplicate` (2 đường `threads_post_one` / `scripts.threads_post_one`). `atomic_save`/`load_json_if_exists` ủy thác cho code cũ khi import được; fallback copy local chỉ khi `C:\dubtool` không mount được và có ghi rõ. `match_eye_records` ủy thác eye gốc trước, fallback exact-local sau. |
+| 2 | Test chạm code cũ, không mock 100% | **ĐẠT** — `test_legacy_caption_oracle` (port == legacy trên 4 fixture), `test_legacy_guard_duplicate_oracle` (so trực tiếp với `legacy_guard`, có trỏ `_lt.ATTEMPTS_DIR` sang tmp cho công bằng), `test_legacy_eye_match_oracle` (port vs eye gốc cùng records). Không skip (15 passed, 0 skipped). Mock browser chỉ thay thế CDP/browser-that (out-of-scope đã khai báo). |
+| 3 | Ghi rõ nguồn + phần thiếu | **ĐẠT** — docstring module liệt kê đủ mapping dòng legacy (caption :128-168, guard :228, batch :744-901, single :670-700, eye :31-53, reconcile :1019, media :171-225, integrity :93-105, actor :251-268/:646-668) + mục "Scope cam" cấm rõ 2 điểm. |
+
+## Từng mục vòng 1
+
+1. **caption_for/unique_tag — ĐẠT** (giữ nguyên, + oracle test).
+2. **Layout journal/publication — ĐẠT** (giữ nguyên).
+3. **failed-before-post vs UNKNOWN — ĐẠT.** `publish()` re-raise lỗi sau click, journal giữ `submit`; `run_batch` caller ghi `unknown` + dừng. Test `test_crash_after_post_journal_keeps_submit_and_reraise` assert cả journal `submit`, journal batch `unknown`, và guard không replay.
+4. **Two-phase batch — ĐẠT.** (a) Duplicate-tag guard abort `DUPLICATE_TAGS` đúng :779-786, có test. (b) Phase A chỉ ack (`submitted-awaiting-group-reconcile` + milestones/timeline/`ack_post_codes`), merge publication chỉ ở Phase B sau `verify_receipt` — test assert `b2` unknown không merge, `b1` có timeline `profile_match_seen` + `ack_to_match_s`. (c) Stop policy: disconnect/ambiguous-sau-click dừng, `before_submit` tiếp tục — test `test_batch_before_submit_error_continues`.
+5. **Receipt priority — ĐẠT.** `known_ids` plumbing từ `journal.ack_post_codes` vào cả `reconcile()` và Phase B (`verify_receipt(rec, intent, post_ids)`), test `test_known_ids_plumbing_from_journal`. Same-record exact: bỏ substring/prefix-60/text-fallback, ủy thác eye gốc trước; test `test_same_record_strictness_no_substring`.
+6. **Claim nguyên tử — ĐẠT** (giữ nguyên + test 2-thread).
+7. **Scope cấm — ĐẠT.** Media: `media_for/check_video/probe_video` đã port đầy đủ; `publish()` từ chối `MEDIA_NOT_PORTED` (FAILED_BEFORE_POST) khi có media — cấm post "chay". Integrity: `enforce_adapter_integrity` fail-closed khi baseline tồn tại + test. Actor: `verify_actor_contract` (`verify_actor()`/`declared_actor`, mismatch → before_submit refuse) + test; browser thật out-of-scope đã ghi rõ. `MIRO_REQUIRE_ACTOR=1` cho mode fail-closed tuyệt đối.
+
+## Ghi nhận (không chặn, API khác legacy có chủ ý)
+
+- `run_batch` trả về `list` thay vì dict legacy `{"batch","account","count","two_phase",...}` — khác hình thức API Miro (class `Publisher`), semantics phase/guard/stop giữ nguyên. Chấp nhận.
+- `verify_receipt` dict-path chấp nhận `post_id in url + tag exact` ngoài `known_ids` — chặt hơn vòng 1 (đòi tag exact), không phá same-record. Chấp nhận.
+- `guard_duplicate` thêm param `attempts_dir` (legacy dùng global `ATTEMPTS_DIR`) — hợp lệ cho lib, oracle test đã xử lý.
+
+**Module publisher được tính "xong" ở mức port không-browser-that. Live Post đầu tiên vẫn phải qua runbook dubtool + reconcile read-only, UNKNOWN không replay.**
