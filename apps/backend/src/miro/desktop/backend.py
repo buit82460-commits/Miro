@@ -106,9 +106,13 @@ def run_cli(args, stdin_text=None, use_session=True, timeout=120):
         return {"ok": False, "error": "COMMAND_NOT_ALLOWED", "command": cmd}
     t0 = time.time()
     env = scrubbed_env(_SESSION_ID if use_session else None)
-    proc = subprocess.run(
-        [BIN] + args, capture_output=True, text=True, timeout=timeout,
-        input=stdin_text, env=env)
+    try:
+        proc = subprocess.run(
+            [BIN] + args, capture_output=True, text=True, timeout=timeout,
+            input=stdin_text, env=env)
+    except (OSError, ValueError) as exc:
+        # CLI chua cai / khong chay duoc: fail-closed, khong crash server.
+        return {"ok": False, "error": "CLI_UNAVAILABLE", "detail": str(exc)[:200]}
     try:
         payload = json.loads(proc.stdout) if proc.stdout.strip() else {}
     except json.JSONDecodeError:

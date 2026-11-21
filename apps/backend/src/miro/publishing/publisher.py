@@ -759,6 +759,15 @@ class Publisher:
             _merge_publication(self.base,
                                {k: v for k, v in entry.items() if k != "match"},
                                intent.owner)
+            plan = getattr(self, "day_plan", None)
+            if isinstance(plan, dict):
+                try:
+                    from miro.scheduling.store import touch_verified
+                    touch_verified(plan, intent.intent_id)
+                except Exception:
+                    from miro.scheduling.schedule import (
+                        mark_slot_verified as _verified)
+                    _verified(plan, intent.intent_id)
             return {"reconciled": True, **entry}
         return {"reconciled": False, "shortcode": intent.shortcode or intent.intent_id,
                 "hint": "UNCONFIRMED_NO_REPLAY"}
@@ -945,8 +954,13 @@ class Publisher:
                     _merge_publication(self.base, {k: v for k, v in entry.items()
                                                    if k != "timeline"}, p["intent"].owner)
                     if isinstance(plan, dict):
-                        from miro.scheduling.schedule import mark_slot_verified as _verified
-                        _verified(plan, p["intent"].intent_id)
+                        try:
+                            from miro.scheduling.store import touch_verified
+                            touch_verified(plan, p["intent"].intent_id)
+                        except Exception:
+                            from miro.scheduling.schedule import (
+                                mark_slot_verified as _verified)
+                            _verified(plan, p["intent"].intent_id)
                     ack_seen = p["timeline"].get("ack_seen") or batch_started
                     results.append({"posted": True,
                                     **{k: v for k, v in entry.items() if k != "timeline"},
@@ -959,8 +973,13 @@ class Publisher:
                         "hint": "UNCONFIRMED_NO_REPLAY",
                         "ack_post_codes": p["post_ids"]})
                     if isinstance(plan, dict):
-                        from miro.scheduling.schedule import record_submit_unknown as _unknown
-                        _unknown(plan, p["intent"].intent_id)
+                        try:
+                            from miro.scheduling.store import touch_unknown
+                            touch_unknown(plan, p["intent"].intent_id)
+                        except Exception:
+                            from miro.scheduling.schedule import (
+                                record_submit_unknown as _unknown)
+                            _unknown(plan, p["intent"].intent_id)
                     results.append({"posted": True, "receipt": "UNCONFIRMED_NO_REPLAY",
                                     "shortcode": sc})
         return results

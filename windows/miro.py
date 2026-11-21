@@ -66,20 +66,60 @@ HEALTH_PATHS = {
 
 
 class RestartBudget:
-    """Bounded crash-restart decisions (stdlib only; no legacy imports)."""
+    """Bounded crash-restart decisions (stdlib only; no legacy imports).
 
-    def __init__(self, maximum: int = 3, window: float = 600.0) -> None:
+    L2: history persist xuong STATE_DIR (restart-budget-<name>.json) de
+    crash-loop xuyen-launcher van bi chan — launcher restart khong reset budget.
+    Doc chiu duoc file hong (bo qua, bat dau lich su moi).
+    """
+
+    def __init__(self, maximum: int = 3, window: float = 600.0,
+                 name: str = "worker", state_dir=None) -> None:
         self.maximum = maximum
         self.window = window
+        self.name = name
+        self.state_dir = Path(state_dir) if state_dir else STATE_DIR
         self.history: deque[float] = deque()
+        self._load()
+
+    def _file(self) -> Path:
+        safe = "".join(c if (c.isalnum() or c in "-_") else "_" for c in self.name)
+        return self.state_dir / f"restart-budget-{safe}.json"
+
+    def _load(self) -> None:
+        try:
+            raw = self._file().read_text(encoding="utf-8-sig")
+        except OSError:
+            return
+        try:
+            data = json.loads(raw)
+        except ValueError:
+            return
+        if isinstance(data, list):
+            now_wall = time.time()
+            self.history = deque(float(t) for t in data
+                                 if isinstance(t, (int, float))
+                                 and 0 < now_wall - float(t) < self.window + 3600)
+
+    def _save(self) -> None:
+        try:
+            self.state_dir.mkdir(parents=True, exist_ok=True)
+            tmp = self._file().with_suffix(".tmp")
+            tmp.write_text(json.dumps(list(self.history)), encoding="utf-8")
+            tmp.replace(self._file())
+        except OSError:
+            pass
 
     def next_delay(self) -> float:
-        now = time.monotonic()
-        while self.history and now - self.history[0] >= self.window:
+        now_mono = time.monotonic()
+        now_wall = time.time()
+        while self.history and now_wall - self.history[0] >= self.window:
             self.history.popleft()
         if len(self.history) >= self.maximum:
             raise RuntimeError("WORKER_RESTART_EXHAUSTED: fix the worker before restarting")
-        self.history.append(now)
+        self.history.append(now_wall)
+        self._save()
+        _ = now_mono
         return min(30.0, 2.0 ** (len(self.history) - 1))
 
 
@@ -298,7 +338,8 @@ def cmd_start(only: list[str] | None = None, open_browser: bool = True) -> int:
     base_env["PYTHONUTF8"] = "1"
     processes: list[subprocess.Popen] = []
     handles = []
-    budgets = [RestartBudget() for _ in specs]
+    budgets = [RestartBudget(name=name, state_dir=STATE_DIR)
+               for name, _cmd, _cwd, _extra in specs]
     flags = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
     try:
         for name, cmd, cwd, extra in specs:
