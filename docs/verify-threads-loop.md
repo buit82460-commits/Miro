@@ -216,3 +216,28 @@ trong `C:\Miro\apps\backend` → **20 passed** (EXIT=0).
 | Test bật env assert rõ env đang bật | `test_actor_contract_relaxation_only_with_explicit_env`: assert `!= "1"` trước (bắt leak env giữa test), `monkeypatch.setenv("MIRO_ALLOW_UNVERIFIED_ACTOR", "1")` rồi assert `== "1"` sau | **ĐẠT** (đúng ý B: test nới lỏng assert rõ trạng thái env) |
 | Test không-env chứng minh fail-closed | `test_actor_contract_missing_everything_blocks_by_default`: không set env, bare browser không verify → `FAILED_BEFORE_POST`, `post_once` raise nếu bị gọi | **ĐẠT** (production mặc định deny, không che đường production) |
 | Không đổi production code | Diff chỉ chạm `tests/test_publisher_threads.py` (+11/-1), logic `verify_actor_contract` giữ nguyên | **ĐẠT** |
+
+---
+
+## § Mắt thật đấu dây (commit 6b0bcc8, ngày 2026-11-21) — **ĐẠT**
+
+Checker thường trực đọc diff 6b0bcc8 + đối chiếu `C:\dubtool\core\rea_eye.py :59-61`
+(adapter không chạy locator riêng, gọi eye lấy records rồi match trên data)
++ phần mở P0 (§ P0 mắt: collect_post_records chưa được worker dùng, 1 collect → match offline)
++ tự chạy `python -m pytest tests/test_eye_wiring.py tests/test_publisher_threads.py tests/test_eye_collect_p0.py tests/test_threads_flow.py -q`
+trong `C:\Miro\apps\backend` → **40 passed** (EXIT=0).
+
+| Mục | Bằng chứng | Kết quả |
+|---|---|---|
+| Locator nằm trong eye port | `publisher.py:461+` `collect_post_records(page, ...)` là nơi duy nhất gọi `page.locator(...)`; `threads_page.py` không chứa `locator`, chỉ truyền `self._page` vào eye port rồi nhận records | **ĐẠT** (đúng luật A rea_eye :59-61) |
+| Phase B 1-collect | `worker.py` `read_group_receipts`: page có `collect_records(owner)` → 1 call, `match_eye_records` offline từng intent; test `test_worker_1_collect_chi_quet_1_lan` assert `calls["n"] == 1` | **ĐẠT** |
+| Fallback page cũ | Page không có `collect_records` (hoặc collect lỗi) → rớt xuống loop `read_eye` cũ, semantics giữ nguyên | **ĐẠT** |
+| verify_actor khớp/lệch | `test_verify_actor_khop_va_lech`: `alice`→True, `@ALICE`→True (lower + lstrip @), `bob`→False | **ĐẠT** |
+| submit vẫn raise (chưa đấu dây post) | `submit` raise `AssertionError` "chưa đấu dây"; worker chỉ read-only/reconcile (kiểm trực tiếp: raise OK) | **ĐẠT** |
+
+Lệnh: `cd C:\Miro\apps\backend && python -m pytest tests/test_eye_wiring.py tests/test_publisher_threads.py tests/test_eye_collect_p0.py tests/test_threads_flow.py -q` → **40 passed**.
+
+## Phần mở (chưa làm, không chặn milestone này)
+
+- Live-read Chrome thật: đấu dây `ManagedThreadsPage` vào `ManagedChromeSession`/worker Phase B production + 1 lần đọc Chrome thật (kế thừa B4/B8 P0: locator hẹp + author verify qua acquire).
+- Adapter submit thật qua composer Threads (hiện `submit` raise có chủ ý) — xong mới hết read-only.
