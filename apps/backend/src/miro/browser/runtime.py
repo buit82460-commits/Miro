@@ -31,7 +31,27 @@ from miro.browser.errors import (
 )
 from miro.browser.lease_store import LeaseStore, tab_resource
 
-_DEFAULT_TTL = 300
+_DEFAULT_TTL = 180  # khớp JARVIS worker ttl; acquire vượt quá phải truyền tường minh
+
+
+def chrome_endpoint(user_data_dir: str) -> str:
+    """Đọc DevToolsActivePort -> ws endpoint. Chrome chưa bật
+    remote-debugging -> CDP_UNAVAILABLE, không tự mở Chrome thay thế."""
+    import os
+
+    port_file = os.path.join(user_data_dir, "DevToolsActivePort")
+    try:
+        with open(port_file, "r", encoding="utf-8") as handle:
+            lines = handle.read().splitlines()
+    except OSError:
+        raise RegistryError(
+            "CDP_UNAVAILABLE: Chrome remote-debugging chưa bật; "
+            "không tự mở browser thay thế") from None
+    port = (lines[0] if lines else "").strip()
+    route = (lines[1] if len(lines) > 1 else "").strip()
+    if not port.isdigit() or not route.startswith("/devtools/"):
+        raise RegistryError("CDP_UNAVAILABLE: DevToolsActivePort không hợp lệ")
+    return f"ws://127.0.0.1:{port}{route}"
 
 
 @dataclass
@@ -73,6 +93,7 @@ class BrowserRuntime:
     store: LeaseStore
     allowed_origins: tuple[str, ...] = ()
     account_providers: dict = field(default_factory=dict)
+    verify_actor: object = None  # async (page, record) -> account_id; inject per-task
     profiles: dict = field(default_factory=dict)
     pages: dict = field(default_factory=dict)  # targetId -> page
     closed: bool = False
@@ -94,13 +115,26 @@ class BrowserRuntime:
 
     def close(self) -> None:
         self.closed = True
+        for record in self.store.list("tab"):
+            if record.get("browserInstanceId") == self.instance_id:
+                record.update(status="disconnected")
+                self.store.put("tab", record["id"], record)
+                with suppress(RegistryError):
+                    self.store.invalidate(
+                        tab_resource(self.instance_id, record.get("targetId", "")))
+
+    async def disconnect(self) -> None:
+        """Mất kết nối CDP: đánh dấu disconnected + invalidate lease, dừng mọi
+        worker (WorkerStopped), KHÔNG tự reconnect, KHÔNG replay UNKNOWN."""
+        self.close()
 
     def _ensure_live(self) -> None:
         if self.closed:
-            raise RegistryError("BROWSER_DISCONNECTED")
+            raise RegistryError("BROWSER_DISCONNECTED: no auto-reconnect; rebind required")
         connected = getattr(self.browser, "is_connected", None)
         if callable(connected) and not connected():
-            raise RegistryError("BROWSER_DISCONNECTED")
+            self.close()
+            raise RegistryError("BROWSER_DISCONNECTED: no auto-reconnect; rebind required")
 
     def _check_lease(self, lease: dict) -> None:
         try:
@@ -171,24 +205,42 @@ class BrowserRuntime:
         return {"activeUpload": False, "dirtyForm": False}
 
     # -- account verify (pattern JARVIS: trước + sau) ----------------------
-    async def _verify_account(self, page, record: dict) -> str:
+    async def _verify_actor(self, page, record: dict, lease: dict | None = None) -> str:
+        """Verify actor 2 lớp: callback `verify_actor` inject theo task được
+        ưu tiên, fallback `account_providers[platform]` (7 cách dubtool §7:
+        FB USER_ID, IG @username+ds_user_id, TikTok avatar/audience,
+        Threads/ChatGPT/Flow/Shopee body/URL).
+        Mismatch -> invalidate lease (worker cũ mất quyền) + WorkerStopped."""
         platform_id = record.get("platformId")
-        provider = self.account_providers.get(platform_id)
+        provider = self.verify_actor
+        if provider is None:
+            provider = self.account_providers.get(platform_id)
+        if provider is None:
+            raise RegistryError("ACCOUNT_VERIFIER_UNAVAILABLE: sensitive operations denied")
         try:
-            if provider is not None:
-                actual = str(await provider(page))
-            else:
-                raise RegistryError("ACCOUNT_VERIFIER_UNAVAILABLE: sensitive operations denied")
-        except RegistryError:
+            try:
+                result = provider(page, record)
+            except TypeError:
+                result = provider(page)
+            if asyncio.iscoroutine(result):
+                result = await result
+            actual = str(result)
+        except (WorkerStopped, RegistryError):
             raise
         except Exception as error:
             raise RegistryError("ACCOUNT_MISMATCH: " + type(error).__name__) from None
         expected = str(record.get("expectedAccountId") or "")
-        if expected and actual != expected:
-            raise RegistryError("ACCOUNT_MISMATCH: page account does not match task account")
-        if not actual:
-            raise RegistryError("ACCOUNT_MISMATCH: could not verify page account")
+        mismatch = (expected and actual != expected) or (not actual)
+        if mismatch:
+            if lease is not None:
+                with suppress(LeaseLost, RegistryError):
+                    self.store.invalidate(lease["resource"])
+            raise WorkerStopped(
+                "WORKER_STOPPED: ACCOUNT_MISMATCH: page account does not match task account")
         return actual
+
+    async def _verify_account(self, page, record: dict, lease: dict | None = None) -> str:
+        return await self._verify_actor(page, record, lease)
 
     # -- acquire -----------------------------------------------------------
     async def acquire_tab(self, request: dict, caller: str) -> AcquiredTab:
@@ -209,11 +261,23 @@ class BrowserRuntime:
                       and r.get("browserInstanceId") == self.instance_id
                       and r.get("platformId") == platform_id
                       and r.get("status") == "open"]
+        channel_id = request.get("channelId")
+        flag = request.get("flag")
         if url:
             exact = [r for r in candidates if r.get("url") == url]
             candidates = exact or candidates
+
+        def _rank(record: dict) -> tuple:
+            exact_url = 0 if (url and record.get("url") == url) else 1
+            exact_channel = 0 if (channel_id is not None
+                                  and record.get("channelId") == channel_id) else 1
+            flag_match = 0 if (flag is not None
+                               and record.get("flag") == flag) else 1
+            return (exact_url, exact_channel, flag_match,
+                    float(record.get("lastUsedAt", 0)))
+
         saw_busy = False
-        for record in sorted(candidates, key=lambda r: r.get("lastUsedAt", 0)):
+        for record in sorted(candidates, key=_rank):
             resource = tab_resource(self.instance_id, record["targetId"])
             if self.store.is_locked(resource):
                 saw_busy = True
@@ -264,7 +328,7 @@ class BrowserRuntime:
         current_url = getattr(page, "url", None)
         if isinstance(current_url, str) and current_url != record.get("url"):
             raise RegistryError("TAB_ORIGIN_CHANGED: tab moved away; validate/reassign role")
-        await self._verify_account(page, record)
+        await self._verify_actor(page, record, acquired.lease)
         try:
             content = await page.evaluate(
                 "(limit)=>({url:location.href,title:document.title,"
@@ -275,7 +339,7 @@ class BrowserRuntime:
         if isinstance(content, dict) and isinstance(content.get("url"), str) \
                 and content["url"] != record.get("url"):
             raise RegistryError("TAB_CHANGED_DURING_READ: tab moved away mid-read")
-        await self._verify_account(page, record)  # đổi account giữa chừng -> dừng
+        await self._verify_actor(page, record, acquired.lease)  # đổi account giữa chừng -> dừng
         record["lastUsedAt"] = time.time()
         self.store.put("tab", record["id"], record)
         return {"tab": record, "content": content, "leaseFence": acquired.lease["fence"]}
@@ -283,6 +347,7 @@ class BrowserRuntime:
     async def navigate_tab(self, acquired: AcquiredTab, url: str) -> dict:
         self._ensure_live()
         self._check_lease(acquired.lease)
+        await self._verify_actor(acquired.page, acquired.record, acquired.lease)
         state = await self._inspect_page_state(acquired.page)
         if state.get("activeUpload") or state.get("dirtyForm") or acquired.record.get("flagWatch"):
             raise TabProtected(
@@ -293,7 +358,71 @@ class BrowserRuntime:
         except Exception as error:
             raise RegistryError("NAVIGATE_FAILED: " + type(error).__name__) from None
         self._check_lease(acquired.lease)
+        await self._verify_actor(acquired.page, acquired.record, acquired.lease)
         acquired.record["url"] = url
         acquired.record["lastUsedAt"] = time.time()
         self.store.put("tab", acquired.record["id"], acquired.record)
         return acquired.record
+
+
+@dataclass
+class ManagedChromeSession:
+    """MỘT đường truy cập Chrome duy nhất cho cả batch (merge dubtool
+    acquire_managed_tab + JARVIS live_chrome worker).
+
+    - open(): đọc DevToolsActivePort -> đúng 1 connect_over_cdp suốt batch;
+      cuối batch close() = disconnect CDP (KHÔNG tắt Chrome).
+    - Adapter và REA chỉ nhận tab/dữ liệu qua session này, không tự connect.
+    - Disconnect giữa chừng -> BROWSER_DISCONNECTED/UNKNOWN, không reconnect,
+      không replay; reconnect thủ công phải open() session mới.
+    """
+
+    runtime: BrowserRuntime
+    endpoint: str
+    closed: bool = False
+
+    @classmethod
+    async def open(cls, connect, user_data_dir: str, database,
+                   **kwargs) -> ManagedChromeSession:
+        endpoint = chrome_endpoint(user_data_dir)
+        connect_calls = getattr(connect, "calls", None)
+        before = len(connect_calls) if isinstance(connect_calls, list) else None
+        runtime = await BrowserRuntime.open(connect, endpoint, database, **kwargs)
+        session = cls(runtime=runtime, endpoint=endpoint)
+        if isinstance(connect_calls, list) and len(connect_calls) - (before or 0) != 1:
+            raise RegistryError("CONNECT_ONCE: one connect_over_cdp per batch")
+        return session
+
+    async def acquire_managed_tab(self, *, platform_id: str, url: str,
+                                  caller: str, channel_id: str | None = None,
+                                  flag: str = "PUBLISH", lease_ttl: int = _DEFAULT_TTL,
+                                  **extra) -> AcquiredTab:
+        """Cổng duy nhất adapter/REA lấy tab: tái dùng theo rank
+        (exact_url, exact_channel, flag_match, lastUsedAt); TAB_BUSY không
+        tạo tab mới; hết candidate -> NO_MATCHING_TAB (không tự tạo)."""
+        if self.closed:
+            raise RegistryError("BROWSER_DISCONNECTED: session closed; open a new one")
+        request = {"platformId": platform_id, "url": url,
+                   "profileBindingId": extra.get("profileBindingId", ""),
+                   "channelId": channel_id, "flag": flag,
+                   "leaseTtl": lease_ttl, **extra}
+        if "profileBindingId" not in extra:
+            profiles = list(self.runtime.profiles.values())
+            verified = [p for p in profiles if p.get("status") == "verified"]
+            if len(verified) != 1:
+                raise ProfileUnverified(
+                    "PROFILE_UNVERIFIED: bind exactly one live profile first")
+            request["profileBindingId"] = verified[0]["id"]
+        return await self.runtime.acquire_tab(request, caller)
+
+    async def close(self) -> None:
+        if self.closed:
+            return
+        self.closed = True
+        disconnect = getattr(self.runtime.browser, "disconnect", None)
+        if callable(disconnect):
+            with suppress(Exception):
+                result = disconnect()
+                if asyncio.iscoroutine(result):
+                    await result
+        self.runtime.close()
