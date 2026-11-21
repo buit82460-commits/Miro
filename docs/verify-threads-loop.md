@@ -201,3 +201,18 @@ Lệnh: `cd C:\Miro\apps\backend && python -m pytest tests/test_schedule_p1.py -
 
 - Nối caller thật vào `Publisher.run_batch` / worker: check `status == paused` trước `due_slots`, boot máy tắt → tính lại plan theo policy, user pause → tôn trọng không post bù.
 - `reconcile-verified` kết thúc vòng đời slot trong plan ngày (verified → publication, unknown-tiếp → carryover ngày sau do caller quyết) — đáp A dòng 32, chưa có code caller.
+
+---
+
+## § P1 env-guard (commit 76ee9b7, ngày 2026-11-21) — **ĐẠT**
+
+Checker thường trực đọc diff 76ee9b7 + đối chiếu B soi (`TD-publisher.md:25`: test nới lỏng
+phải assert rõ env đang bật + có test không-env chứng minh fail-closed) + A đồng ý (`:35-37`)
++ tự chạy `python -m pytest tests/test_publisher_threads.py -q`
+trong `C:\Miro\apps\backend` → **20 passed** (EXIT=0).
+
+| Mục | Bằng chứng | Kết quả |
+|---|---|---|
+| Test bật env assert rõ env đang bật | `test_actor_contract_relaxation_only_with_explicit_env`: assert `!= "1"` trước (bắt leak env giữa test), `monkeypatch.setenv("MIRO_ALLOW_UNVERIFIED_ACTOR", "1")` rồi assert `== "1"` sau | **ĐẠT** (đúng ý B: test nới lỏng assert rõ trạng thái env) |
+| Test không-env chứng minh fail-closed | `test_actor_contract_missing_everything_blocks_by_default`: không set env, bare browser không verify → `FAILED_BEFORE_POST`, `post_once` raise nếu bị gọi | **ĐẠT** (production mặc định deny, không che đường production) |
+| Không đổi production code | Diff chỉ chạm `tests/test_publisher_threads.py` (+11/-1), logic `verify_actor_contract` giữ nguyên | **ĐẠT** |
