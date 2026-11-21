@@ -165,3 +165,33 @@
 ### Ket luan
 
 **91aac73 DAT** (P4/P5 DAT: profile_path that + nhanh realpath co hieu luc, revoke noi LeaseStore that + guard khac-account + fail-open; 20/20 test pass ke ca test cu). P4/P5 o verify-foundation dong lai. **Chua push.**
+
+
+## Verify Desktop D1+D2 + Launcher L1 + Tasks T5 (commit 841e5ab) — 2026-11-21
+
+- Commit kiem tra: `841e5ab` — "Desktop D1+D2 + Launcher L1 + Tasks T5: window-lock chung + select-tab + stop-cat-backoff + RECOVER-auto"
+- Docs doi chieu: `docs/reread-foundation.md` §2 D1 (:55, sai chinh), D2 (:61, thieu chinh), §3 L1 (:82), T5 (:47, nhe) + `docs/crosscheck-foundation.md` §2-3 (xac nhan D1/D2/L1/T5 dung)
+- Code goc doi chieu: `C:\dubtool\shared\desktop_dispatch.py:130` (default `ensure_state_dir()/"window-locks"`), `scripts\desktop_act.py:140-162` (`ensure_selected_by_ref`: get_states + click ≤4 + probe + sleep 0.5), `core\studio_service.py:67-70` (snapshot + retryCount < maxAttempts-1 -> queued/RECOVER), `shared\execution_policy.py:52-55` (TRANSIENT + budget `maxAttempts-1` -> RECOVER)
+- Lenh: `python -m pytest tests -q` (trong `C:\Miro\apps\backend`) — **214 passed**
+- Ngay kiem tra: 2026-11-21. **Chi ghi file verify + commit, KHONG push** (theo yeu cau).
+
+### Ket qua tung muc (DAT / CHUA DAT)
+
+| # | Muc (theo nhiem vu) | Ket qua | Can cu |
+|---|---|---|---|
+| D1 | window-lock default ve state-dir chung, caller van truyen rieng duoc; 2 job khac base chung window serialize that | **DAT** | `dispatch.py:124` default `ensure_state_dir()/"window-locks"` (giong A `:130` tu chu); truyen `window_lock_dir` rieng van duoc; test `test_d1_window_lock_mac_dinh_chung_state_dir` (2 thread giu lock 1s, b vao sau khi a ra, sai so 0.05s) + `test_d1_caller_van_truyen_rieng_duoc` (lock file tao duoi custom dir) |
+| D2 | ensure_selected_by_ref (get_states + click ≤4 + probe) truoc moi write trong lock; tab khong select duoc -> stage select-tab, KHONG write | **DAT** | `act.py::ensure_selected_by_ref` port dung A `:140-162` (get_states truoc, click semantic 2 lan dau + headed 2 lan sau, probe lai get_states + find, sleep 0.5/vong); `_write` goi ngay dau trong lock, fail -> `{"ok": False, "stage": "select-tab"}` khong cham find/write; test: click-reselect khi chua selected, already-selected khong click thua, DeadClick -> select-tab + khong co call `write:` |
+| L1 | backoff sleep theo nhip 0.2s + kiem tra CONTROL, stop cat ngang duoc; terminate_owned con nguyen | **DAT** | `windows/miro.py::_sleep_interruptible` (deadline + vong 0.2s, check `_control_stop_requested` moi nhip) thay `time.sleep(delay)` o `cmd_start:334`; `terminate_owned` khong doi (diff giu nguyen); test `test_l1_stop_cat_ngang_backoff` (stop sau 3 nhip, calls < 30/0.2) |
+| T5 | job sach + chu chet + con budget -> queued + retry_count+=1 + event task_recovered; pending_mutation/chu song/het budget van NEEDS_ATTENTION | **DAT** | `service.py::RECOVER_BUDGET=3` (= A `POLICY maxAttempts`) + `_recoverable` (pending_mutation -> False; owner song -> False; retry_count >= 2 -> False; can `snapshot_signature`) + `restart()` nhanh RECOVER (retry+=1, QUEUED, error None, snapshot moi, emit `task_recovered`); test: auto (queued/retry 1/task_recovered), het budget (retry 2 -> RESTARTED), pending_mutation (REMOTE_RESULT_UNKNOWN), chu song (OWNERSHIP_UNKNOWN), recover xong `run()` completed |
+| T-cu | test cu cap nhat dung hanh vi moi, khong giau loi | **DAT** | `test_tasks.py` (restart -> queued/retry 1 thay vi NEEDS_ATTENTION; chu song doi project tranh dedupe T2 — dung vi rec2 da QUEUED sau RECOVER; idempotent test -> queued + error None, seq van tang don dieu) + `test_tasks_m3.py::test_restart_owner_dead_recovers_auto` + `test_desktop_m3.py::FakeOps` them get_states/click (selected san, giu hanh vi cu pass) — tat ca phan anh dung spec T5/D2 moi |
+
+### Ghi nhan lech nho (chap nhan duoc, khong tinh loi)
+
+- D2 C nhan `ops` lam tham so + guard `hasattr(ops,"get_states")` + `TypeError` fallback khi `click` khong co `headed` (A goi truc tiep module backend). Thich nghi dung kien truc Miro (ops inject), ngu nghia giu nguyen.
+- D2 C goi ensure trong `_write` (A goi trong `_full_op :421-444` truoc ca read lan write). Miro `act()` chi read/write/append qua `_write`; read trong C van s fragmentation ngoai lock — giu cach C hien tai, khong mo rong scope commit nay.
+- T5 C dung `snapshot_signature` hien co tu T1 (A dung `project_snapshot`); nguong `retry_count >= RECOVER_BUDGET-1` tuong duong A `retryCount < maxAttempts-1`. Dung.
+- L1 `cmd_start` van giu check `CONTROL` sau sleep (redundant nhung vo hai — `_sleep_interruptible` da check moi nhip).
+
+### Ket luan
+
+**841e5ab DAT** (D1/D2/L1/T5 DAT: window-lock chung serialize that + select-tab truoc write + stop cat backoff + RECOVER-auto dung budget; 214/214 test pass ke ca test cu da cap nhat dung spec). **Chua push.**
