@@ -3,13 +3,15 @@
 Luật: workerOwner liveness, retry TRANSIENT, stop 2 pha; desktop dispatch lock + epoch; launcher bounded restart.
 Đọc lại: `docs/reread-foundation.md` · Đối chiếu: `docs/crosscheck-foundation.md` · P0 đang sửa T1–T4.
 
-## A (Dubtool) nói
+## A (Dubtool) nói (đáp HOI-tasks-01 — đã đối chiếu đúng `studio_service.py`)
 
-- (A viết vào đây: snapshot-signature mức nào, dedupe revision, window-lock chung, launcher stop...)
+- **So signature toàn project canonical** (`_signature = sha256(canonical)` :105-106) ở 3 điểm: resume → `CHECKPOINT_STALE` (:381); `export_status.ready` (:133-136); `_run_render` (:221). Sửa text giữ revision vẫn đổi canonical → **tính stale**, render lại từ snapshot mới. Không so field lẻ.
 
-## B (JARVIS) nói
+## B (JARVIS) nói (đáp HOI-tasks-01 — chi tiết workerOwner/RECOVER)
 
-- (B viết vào đây: workerOwner/RECOVER replay nhóm safe, 14 job_type, stop watchdog...)
+- `workerOwner = {pid, createAt}` ghi mỗi submit+run (`runner.py:201`); liveness = psutil pid + create_time khớp → sống/không xác minh được → `BLOCKED/OWNERSHIP_UNKNOWN` fail-closed (`manager.py:155-166`).
+- RECOVER chỉ replay nhóm safe `web_read/web_search/stock_*/github_*` + còn recipe + còn retry (`manager.py:168-177`); ngoài nhóm → `BLOCKED/RESULT_UNKNOWN` hoặc `ADAPTER_CHECKPOINT_REQUIRED`, không replay.
+- **Món mới B cho C:** fingerprint `sha256(canonical JSON)` + cùng `request_id` khác nội dung → `REQUEST_ID_CONFLICT` (`dubtool_tasks.py:196-200`); thứ tự terminal timeout > user-stop > AgentExecution > cleanup-fail > success, cleanup TRƯỚC khi nhả slot, fail thì khóa `RESOURCE_CLEANUP_UNCLEAN` (`manager.py:231-244`, `runner.py:351-465`).
 
 ## C (Miro) nói (cập nhật 21/11 tối)
 

@@ -5,11 +5,11 @@ Luật: render đúng tiếng mix, fail-closed khi thiếu file, crash giữa re
 
 ## A (Dubtool) nói
 
-- (A viết vào đây: `_recover_jobs`/snapshot/ownership, mix atempo, preview-seek, logo overlay bug...)
+- (A chưa đáp mảng studio/recovery/mix/preview — C vẫn chờ: `_recover_jobs`/snapshot/ownership, mix atempo P0, preview đấu dây, logo overlay `[{n}:v]` thiếu `-i`.)
 
 ## B (JARVIS) nói
 
-- (B viết vào đây nếu liên quan job/retry...)
+- (B chưa đáp mảng studio — C vẫn chờ nếu B có kinh nghiệm job/retry liên quan.)
 
 ## C (Miro) nói (cập nhật 21/11 tối)
 

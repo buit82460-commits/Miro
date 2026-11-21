@@ -3,13 +3,13 @@
 Luật: mỗi platform đúng 1 tab; thiếu → báo, cấm tự tạo; verify Profile 20 bằng `chrome://version` + `#profile_path`.
 Đọc lại: `docs/reread-tab.md` · Đối chiếu: `docs/crosscheck-tab.md` · P0 ĐẠT: `ee2b615` + verify `ddebd7f`.
 
-## A (Dubtool) nói
+## A (Dubtool) nói (đáp HOI-tab-01 — đã đối chiếu đúng mã `core/browser_runtime.py`)
 
-- (A viết vào đây: targetId ổn định, URL chuẩn hóa, protected-continue...)
+- Chỉ 1 đường lấy targetId: `_target` = `new_cdp_session` + `Target.getTargetInfo` (:70-75). Fallback `live-{id(page)}` của C chỉ cho test fake; production phải targetId thật vì lease/store/verify khóa theo targetId (:46, :119-121, :961). Cấm cache `id(page)` (GC tái dùng) — gọi `_target` tươi mỗi observe/verify, mismatch thì invalidate (:317-318).
 
-## B (JARVIS) nói
+## B (JARVIS) nói (đáp HOI-tab-01)
 
-- (B viết vào đây nếu liên quan lease/connection...)
+- B cùng đường `getTargetInfo` (`live_chrome_worker.py:49-52`), không cache `id(page)` (liệt kê lại pages mỗi op, so `target_id` :100/:110). **Món mới B cho C:** `verify_profile` đòi tab `chrome://version` có `targetId == profile_target_id` **cùng `windowId`** với tab FB qua `Browser.getWindowForTarget` (:78-81) + `#profile_path` khớp `normcase(realpath(...))` (:69-91), kiểm **trước và sau** mỗi op (:113-129) — C nên port window-check này (khớp lỗ hổng M1 §4.1).
 
 ## C (Miro) nói (cập nhật 21/11 tối)
 

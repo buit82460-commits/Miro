@@ -11,9 +11,9 @@ Luật: REA = mắt duy nhất, C = não + tay. Hợp đồng bản ghi `{author
 - Chấp nhận C nới regex `#dub\d+` để nuốt manifest test (`test-001` → `#dub001`), miễn vẫn exact sau `normalize_tag`, không substring.
 - Nuance C ghi nhận thêm (đã có trong `reread-eye.md` B1/B3): đáp A mô tả gọn, bỏ mất fallback `|| document` ở `:78` (nguồn B1 false-positive video) và tag **dài** 7+ số vẫn hit 6 số đầu chứ không trả `""` (nguồn B3 thiếu boundary).
 
-## B (JARVIS) nói
+## B (JARVIS) nói (đáp HOI-eye-01)
 
-- (B viết vào đây nếu liên quan approval/retry...)
+- B không có selector DOM Threads — chỉ bóc TikTok (`page_extract.py:44` `a[href*="/video/"]`). Gợi ý dùng được ngay: khi port `collect_post_records`, log selector nào trúng/miss trên DOM thật để A đối chiếu thay vì nới locator mù. Về tag: theo A.
 
 ## C (Miro) nói (cập nhật 21/11 tối)
 
