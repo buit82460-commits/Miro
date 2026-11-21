@@ -332,7 +332,44 @@ class LocalEngine:
         with wave.open(str(path), "rb") as wav:
             return wav.getnframes() / float(wav.getframerate() or 1)
 
-    # -- mix: stdlib PCM placement + gain + normalize (A core/mix shape) --
+    # -- mix: stdlib PCM placement + gain + normalize + atempo (A mix.py:31-61) --
+    @staticmethod
+    def atempo_chain(speed: float) -> str:
+        """Port A ffmpeg_utils.atempo_chain :16-27 (atempo chi 0.5-2.0)."""
+        parts: list[str] = []
+        s = float(speed)
+        while s > 2.0:
+            parts.append("atempo=2.0")
+            s /= 2.0
+        while s < 0.5:
+            parts.append("atempo=0.5")
+            s /= 0.5
+        parts.append(f"atempo={s:.6g}")
+        return ",".join(parts)
+
+    def _sped_clip(self, seg_wav: Path, speed: float, rate: int) -> "array.array":
+        """Doc wav + ap atempo khi speed != 1 bang ffmpeg file tam."""
+        import shutil
+        import subprocess
+        import tempfile
+
+        if abs(float(speed or 1.0) - 1.0) < 1e-6:
+            with wave.open(str(seg_wav), "rb") as wav:
+                return array.array("h", wav.readframes(wav.getnframes()))
+        ffmpeg = shutil.which("ffmpeg")
+        if not ffmpeg:
+            raise PipelineError("FFMPEG_MISSING: khong ap atempo duoc.")
+        with tempfile.TemporaryDirectory() as td:
+            tmp = Path(td) / "sped.wav"
+            cmd = [ffmpeg, "-y", "-v", "error", "-i", str(seg_wav), "-af",
+                   self.atempo_chain(float(speed)), "-ar", str(rate), "-ac", "1",
+                   "-c:a", "pcm_s16le", str(tmp)]
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+            if result.returncode or not tmp.is_file():
+                raise PipelineError(f"ATEMPO_FAILED: {result.stderr[-300:]}")
+            with wave.open(str(tmp), "rb") as wav:
+                return array.array("h", wav.readframes(wav.getnframes()))
+
     def mix(self, timeline: list[dict], tts_dir: Path, orig_wav: str,
             total: float, orig_gain_db: float = -18.0) -> array.array:
         rate = self.SAMPLE_RATE
@@ -359,25 +396,33 @@ class LocalEngine:
             seg_wav = Path(entry.get("tts_path") or "")
             if not seg_wav.is_file():
                 continue
-            with wave.open(str(seg_wav), "rb") as wav:
-                raw = wav.readframes(wav.getnframes())
-            seg = array.array("h", raw)
+            speed = float(entry.get("speed") or 1.0)
+            seg = self._sped_clip(seg_wav, speed, rate)
             off = int(entry["start"] * rate)
             m = min(len(seg), n - off)
             for i in range(max(0, m)):
                 j = off + i
                 bed[j] = int(max(-32768, min(32767, bed[j] + seg[i])))
+            # A build_dub_track:57-60 cat im lang phan tran — C ghi co de UI bao.
+            if off + len(seg) > n:
+                try:
+                    entry["overflow"] = True
+                except Exception:
+                    pass
         peak = max([abs(s) for s in bed] + [1])
         if peak > 30000:
             scale = 30000.0 / peak
             bed = array.array("h", (int(s * scale) for s in bed))
         return bed
 
-    # -- render via ffmpeg (A: pipeline.py:357-389 shape) --
+    # -- render via ffmpeg (A: pipeline.py:357-389 shape + studio preview boolean) --
     # Filter output label is [v]: callers map [v] + audio input 1:a.
+    # Logo overlay: moi logo 1 input -i rieng theo dung thu tu [{n}:v] (A overlay.py
+    # :92-107 — thieu la loi caller). preview_secs chet -> thay bang preview boolean
+    # (A start_render: out temp/, duration min 20s, kẹp 20s, scale 640).
     def render_video(self, video_path: str, mix_wav: str, out_path: Path,
                      overlays: list | None = None, subtitles: str | None = None,
-                     preview_secs: float | None = None) -> str:
+                     preview: bool = False) -> str:
         ffmpeg = self._require_ffmpeg()
         filt = self._overlay_filter(overlays or [])
         if subtitles:
@@ -385,10 +430,16 @@ class LocalEngine:
         use_mix = bool(mix_wav) and Path(mix_wav).is_file()
         audio_map = "1:a" if use_mix else "0:a"
         cmd = [ffmpeg, "-y", "-v", "error", "-i", str(video_path)]
+        # Logo input rieng (A overlay.py): overlay type logo co "path" -> -i theo thu tu.
+        logo_paths = [ov.get("path") for ov in (overlays or [])
+                      if isinstance(ov, dict) and ov.get("type") == "logo" and ov.get("path")]
+        for lp in logo_paths:
+            if Path(lp).is_file():
+                cmd += ["-i", str(lp)]
         if use_mix:
             cmd += ["-i", str(mix_wav)]
-        if preview_secs:
-            cmd += ["-t", str(preview_secs), "-vf", "scale=480:-1",
+        if preview:
+            cmd += ["-t", "20", "-vf", "scale=640:-1",
                     "-map", "0:v", "-map", audio_map]
         elif filt:
             cmd += ["-filter_complex", f"[0:v]{filt}[v]", "-map", "[v]",

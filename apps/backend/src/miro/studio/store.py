@@ -75,16 +75,21 @@ class IdempotentStore:
         # Single active pipeline per video_id (B: 1 slot). video_id -> request_id.
         self._active: dict[str, str] = {}
         self._contaminated: set[str] = set()
+        self._worker_owner: dict[str, dict] = {}  # video_id -> {pid, created_at}
+        self._recoveries: dict[str, int] = {}  # video_id -> so lan recover (budget)
         self._persist_dir = Path(persist_dir) if persist_dir else None
         if self._persist_dir:
             self._load()
+            self.recover_jobs()  # P1: boot phuc hoi nhu A _recover_jobs :48-81
 
     # ---- snapshot ----
     def _snapshot(self) -> dict:
         return {"results": self._results, "fingerprints": self._fingerprints,
                 "revisions": self._revisions,
                 "contaminated": sorted(self._contaminated),
-                "active": dict(self._active)}
+                "active": dict(self._active),
+                "worker_owner": dict(self._worker_owner),
+                "recoveries": dict(self._recoveries)}
 
     def _load(self) -> None:
         path = self._persist_dir / "idempotency.json"
@@ -101,6 +106,63 @@ class IdempotentStore:
         # Active in-flight tu lan chay truoc: giu nguyen de tranh 2 pipeline
         # cung video sau restart (B: recover_pending chi replay nhom web-safe).
         self._active = dict(data.get("active", {}))
+        self._worker_owner = dict(data.get("worker_owner", {}))
+        self._recoveries = {k: int(v) for k, v in
+                            (data.get("recoveries", {}) or {}).items()}
+
+    def _current_owner(self) -> dict:
+        """workerOwner hien tai (port JARVIS runner workerOwner={pid, createdAt})."""
+        import os
+        import time
+
+        pid = os.getpid()
+        try:
+            import psutil
+            created_at = float(psutil.Process(pid).create_time())
+        except Exception:
+            created_at = float(time.time())
+        return {"pid": pid, "created_at": created_at}
+
+    def _owner_alive(self, owner: dict | None) -> bool:
+        """Chu cu con song? Fail-closed: khong xac minh duoc -> con song."""
+        if not owner:
+            return False
+        try:
+            import psutil
+        except Exception:
+            return True
+        try:
+            proc = psutil.Process(int(owner["pid"]))
+            return bool(proc.is_running()) and float(proc.create_time()) == float(owner["created_at"])
+        except Exception as exc:
+            return "NoSuchProcess" not in type(exc).__name__
+
+    def recover_jobs(self, max_retries: int = 3) -> dict:
+        """P1: phuc hoi sau restart (port A _recover_jobs :48-81).
+
+        - Chu cu con song/khong xac minh duoc -> giu slot, danh dau owner de
+          caller thay OWNERSHIP_UNKNOWN (khong replay mu).
+        - Slot mo khong chu + con budget -> queued (cho caller chay lai ngoai pool).
+        - Het budget -> blocked/CHECKPOINT_UNAVAILABLE.
+        Retry/backoff thuoc orchestrator (sleep NGOAI pool), khong sleep trong worker.
+        """
+        summary = {"requeued": [], "owned": [], "blocked": []}
+        with self._guard:
+            for video_id, request_id in list(self._active.items()):
+                owner = self._worker_owner.get(video_id)
+                if owner and self._owner_alive(owner):
+                    summary["owned"].append(video_id)
+                    continue
+                tries = int(self._recoveries.get(video_id, 0))
+                if tries < max(0, max_retries):
+                    self._recoveries[video_id] = tries + 1
+                    summary["requeued"].append(video_id)
+                else:
+                    self._active.pop(video_id, None)
+                    self._worker_owner.pop(video_id, None)
+                    summary["blocked"].append(video_id)
+            self._save()
+        return summary
 
     def _save(self) -> None:
         if self._persist_dir:
@@ -179,12 +241,14 @@ class IdempotentStore:
                 raise SlotBusy(
                     f"Pipeline {video_id} dang chay (slot don); cho xong roi chay lai.")
             self._active[video_id] = request_id
+            self._worker_owner[video_id] = self._current_owner()
             self._save()
 
     def release_slot(self, video_id: str, request_id: str) -> None:
         with self._guard:
             if self._active.get(video_id) == request_id:
                 del self._active[video_id]
+                self._worker_owner.pop(video_id, None)
                 self._save()
 
     def mark_contaminated(self, video_id: str) -> None:
