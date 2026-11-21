@@ -33,7 +33,7 @@ CREATE TABLE IF NOT EXISTS events (
 class TaskStore:
     def __init__(self, path: Path):
         path.parent.mkdir(parents=True, exist_ok=True)
-        self._db = sqlite3.connect(str(path))
+        self._db = sqlite3.connect(str(path), check_same_thread=False)
         self._db.row_factory = sqlite3.Row
         self._migrate()
 
