@@ -8,15 +8,15 @@
 
 | Platform | Adapter chuẩn (MAINTAINED) | Nguồn port | Trạng thái |
 |---|---|---|---|
-| Threads | `miro.adapters.threads` + `live.make_live_page(page,"threads")` + `core.PlatformWorker` + `publisher` (guard/journal/reconcile) | `C:\dubtool\scripts\threads_post_one.py` | Code+test ĐẠT (246 passed); live qua inject, chưa bấm Post thật |
-| Facebook | `miro.adapters.facebook` + `live` + `PlatformWorker` | `C:\dubtool\scripts\facebook_post_one.py` | Code+test ĐẠT — live qua inject (upload Next x2), chưa bấm Post thật |
-| TikTok | `miro.adapters.tiktok` + `live` + `PlatformWorker` | `C:\dubtool\scripts\tiktok_post_one.py` | Code+test ĐẠT — live qua inject (Studio upload + caption/audience/AI-label check), chưa bấm Post thật |
-| YouTube | `miro.adapters.youtube` + `youtube_api.upload_video` (Data API, không browser click) | `C:\dubtool\scripts\youtube_post_one.py` | Code+test ĐẠT — live qua API + token, chưa upload thật |
-| Instagram | `miro.adapters.instagram` + `live` + `PlatformWorker` | `C:\dubtool\scripts\instagram_post_one.py` | Code+test ĐẠT — live qua inject, chưa bấm Post thật |
+| Threads | `miro.adapters.threads` (download_one, run_reconcile, resolve_post_url, sha256) + `live` + `core.PlatformWorker` + `publisher` | `C:\dubtool\scripts\threads_post_one.py` (31 hàm) | Đủ: composer/submit/ack/reconcile/download — Code+test ĐẠT (254 passed); live qua inject, chưa bấm Post thật |
+| Facebook | `miro.adapters.facebook` (caption_for_item, verify_reel, reconcile_candidates) + `live` + `PlatformWorker` | `C:\dubtool\scripts\facebook_post_one.py` + `social_facebook_reels.py` + `facebook_receipt.py` | Đủ: upload/Next-x2/Post/receipt/candidate-diff — Code+test ĐẠT; live qua inject, chưa bấm Post thật |
+| TikTok | `miro.adapters.tiktok` (run_draft, check_preflight, discover 5 kinds) + `live` + `PlatformWorker` | `C:\dubtool\scripts\tiktok_post_one.py` + `publish_maoziqi59_tiktok.py` | Đủ: upload/draft/preflight/discover — Code+test ĐẠT; live qua inject, chưa bấm Post thật |
+| YouTube | `miro.adapters.youtube` + `youtube_api` (upload/set_visibility/update_metadata/schedule/delete/reconcile/token-refresh/channel-match) — Data API, không browser click | `C:\dubtool\scripts\youtube_post_one.py` (23 hàm) | Đủ full CRUD API — Code+test ĐẠT; live qua API + token, chưa upload thật |
+| Instagram | `miro.adapters.instagram` (download_one per-reel, validate_pre_browser, response-payload/created-media, delete + 3 stub UNSUPPORTED) + `live` | `C:\dubtool\scripts\instagram_post_one.py` + `instagram_download_one.py` | Đủ — Code+test ĐẠT; live qua inject, chưa bấm Post thật |
 | Platform mới | Thêm **1 module** `apps/backend/src/miro/adapters/<platform>.py` bind `SPECS` + `make_worker()`, đăng ký vào bảng này | Mẫu mục 3 | CẤM file lẻ `post_<batch>.py` |
-| Shopee | `miro.adapters.shopee` + `live` — BLOCKED live (onboarding Seller Centre 1/5) | `C:\dubtool\scripts\shopee_post_one.py` | Code+test ĐẠT — KHÔNG test live |
-| ChatGPT | `miro.adapters.chatgpt` + `live` (Send + wait streaming-done) | `C:\dubtool\scripts\chatgpt_post_one.py` | Code+test ĐẠT — live qua inject, chưa gửi thật |
-| Flow | `miro.adapters.flow` + `live` (Generate 1 lần + poll ≤600s) | `C:\dubtool\scripts\flow_post_one.py` | Code+test ĐẠT — live qua inject, chưa Generate thật |
+| Shopee | `miro.adapters.shopee` (validate_product, update_profile, read_orders, research_product shopee.vn) + `live` — BLOCKED live (onboarding 1/5) | `C:\dubtool\scripts\shopee_post_one.py` (22 hàm) | Đủ (trừ live Seller) — Code+test ĐẠT; KHÔNG test live |
+| ChatGPT | `miro.adapters.chatgpt` (extract_reply, reply_record, read/new/rename/delete/model/verify) + `live` (Send + wait streaming-done) | `C:\dubtool\scripts\chatgpt_post_one.py` (26 hàm) | Đủ full CRUD hội thoại — Code+test ĐẠT; live qua inject, chưa gửi thật |
+| Flow | `miro.adapters.flow` (resolve/download/reconcile/verify/cheapest-settings) + `live` (Generate 1 lần + poll ≤600s) | `C:\dubtool\scripts\flow_post_one.py` (30 hàm) | Đủ — Code+test ĐẠT; live qua inject, chưa Generate thật |
 | Điều phối tab dùng chung (Chrome Profile 20) | `miro.adapters.core.PlatformWorker` inject `page` (`submit_once`/`reconcile`/`release`) + `miro.browser.runtime.BrowserRuntime` + `miro.browser.live_chrome` (read-only) | `C:\dubtool\core\tab_acquisition.py` + `core\browser_runtime.py` | ĐẠT offline (mock page); live qua inject |
 | Điều khiển Windows (EXPERIMENTAL) | `miro.desktop.act` + `miro.desktop.dispatch` + `miro.desktop.gate` + `miro.desktop.backend` | dubtool `shared/desktop_*.py` | ĐẠT D1/D2 |
 
