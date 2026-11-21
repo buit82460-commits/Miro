@@ -78,3 +78,30 @@ thuần (không quote JSON); test persist-sống-restart; (nếu làm 3b) test c
 4. (Nhẹ) test render-queue đầy → 409; ghi rõ khác biệt nhỏ còn lại: `src=auto` mặc định
    `en` (A đọc `stt_info.detected_language`), không check voice `lang==tgt_lang` (chưa có
    voices dir) — chấp nhận cho local engine nhưng phải ghi vào docstring.
+
+---
+
+# VERIFY vòng 2 (commit d6413eb, ngày 2026-11-21) — KẾT LUẬN: **ĐẠT** (1 ghi nhận không chặn)
+
+Checker đối chiếu diff 4 file (100 insertions) + đọc 3 test mới C10–C12, chạy
+`test_studio_real_pipeline.py + test_studio_idempotency.py` → **16 passed**.
+
+| Điểm vòng 1 | Fix | Kết quả |
+|---|---|---|
+| §2 bug `dub.srt` JSON-quoted | Xóa dòng `atomic_write_json(... "dub.srt", srt_string)` trong `_step_translate`; `_save_segments` (đã `write_text` đúng) là đường ghi duy nhất | **ĐẠT** — C10 assert file mở đầu `1\n`, chứa text dịch, không quote JSON |
+| §3a contamination mất khi restart | `_snapshot`/`_load` thêm `contaminated` + `active`; mọi `acquire/release/mark/clear` đều `_save()` | **ĐẠT** — C11: restart BE (store mới cùng `persist_dir`) vẫn 409, mở khóa thủ công xong hết. `active` persist tránh 2 pipeline cùng video sau restart (đúng B `recover_pending`) |
+| §3b stop/watchdog | `PipelineCancelled` + `request/clear/check_cancel` (check mỗi bước trong `run`); handlers bắt `PipelineCancelled` trước `PipelineError` → persist `cancelled`, tha slot, **không** contamination; `cancel_pipeline()` API | **ĐẠT** — C12: cancel → run raise `PipelineCancelled`, `clear_cancel` xong `translate` chạy ngay được (slot đã tha) |
+| §4 nhẹ (queue đầy 409, khác biệt engine) | Chưa làm | Ghi nhận, không chặn (xem dưới) |
+
+## Ghi nhận không chặn
+
+- **Cancel là cooperative giữa các step, chưa kill ffmpeg giữa render.** `_check_cancel`
+  đặt ở đầu mỗi vòng step; render ffmpeg 900s đang chạy thì cancel phải đợi render xong
+  mới dừng. Đúng ngữ nghĩa "step kế tiếp dừng, không contamination" nhưng chưa bằng B
+  (terminate tree + verify PID như `agent_desktop`). Chấp nhận cho local engine hiện tại;
+  **khi render dài/thật hơn phải bổ sung kill subprocess + test.**
+- Mục nhẹ vòng 1 (§5.4: queue đầy → 409, `src=auto→en`, không check voice lang) vẫn mở —
+  chuyển thành nợ tài liệu, không chặn merge Studio.
+
+**Module Studio được tính "xong" theo định nghĩa merge mới (16 passed, luồng thật trong C,
+guard A + cơ chế B đã đóng). Live render/upload YouTube đầu tiên vẫn qua runbook dubtool.**
