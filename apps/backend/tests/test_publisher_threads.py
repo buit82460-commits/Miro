@@ -215,6 +215,59 @@ def test_batch_two_phase_ack_then_group_reconcile(tmp_path):
     assert "ack_to_match_s" in pub1[0]
 
 
+def test_batch_deferred_no_journal_retry_next_batch(tmp_path):
+    """P0 fix: batch dung giua chung -> item chua submit KHONG journal,
+    post lai duoc o batch sau; item unknown van bi guard chan."""
+    import json
+    pub, base, attempts = make_pub(tmp_path)
+    ok = Intent(intent_id="threads-p1", shortcode="p1", owner="alice",
+                text="one #dub000031", tag="#dub000031")
+    bad = Intent(intent_id="threads-p2", shortcode="p2", owner="alice",
+                 text="two #dub000032", tag="#dub000032")
+    deferred = Intent(intent_id="threads-p3", shortcode="p3", owner="alice",
+                      text="three #dub000033", tag="#dub000033")
+
+    class SeqBrowser:
+        def __init__(self):
+            self.calls: list[str] = []
+
+        def verify_actor(self, owner):
+            return True
+
+        def post_once(self, intent):
+            self.calls.append(intent.intent_id)
+            if intent.intent_id == "threads-p1":
+                return {"ack_post_codes": ["PP1"], "ack_via": "network"}
+            raise RuntimeError("simulated ambiguous ack after click")
+
+        def read_receipt(self, intent):
+            if intent.intent_id == "threads-p1":
+                return {"owner": "alice",
+                        "url": "https://www.threads.com/@alice/post/PP1",
+                        "post_id": "PP1", "tag": "#dub000031", "has_video": True}
+            return None
+
+    seq = SeqBrowser()
+    res = pub.run_batch([ok, bad, deferred], seq)
+    assert seq.calls == ["threads-p1", "threads-p2"]
+    got = [r for r in res if r.get("shortcode") == "p3"]
+    assert got and got[0].get("receipt") == "DEFERRED_TO_GROUP_RECONCILE"
+    # item chua submit: KHONG co journal
+    assert not (attempts / "threads-p3.json").exists()
+    # item unknown: co journal unknown, batch sau bi guard chan
+    j2 = json.loads((attempts / "threads-p2.json").read_text(encoding="utf-8-sig"))
+    assert j2["status"] == "unknown", j2
+    out2 = pub.run_batch([bad], MockBrowser())
+    assert out2 and out2[0].get("skipped") == "UNRECONCILED_ATTEMPT"
+    # item deferred: batch sau post lai duoc
+    out3 = pub.run_batch([deferred], MockBrowser(receipts={
+        "threads-p3": {"owner": "alice",
+                       "url": "https://www.threads.com/@alice/post/PP3",
+                       "post_id": "PP3", "tag": "#dub000033",
+                       "has_video": True}}))
+    assert any(r.get("shortcode") == "p3" and r.get("posted") for r in out3), out3
+
+
 def test_batch_before_submit_error_continues(tmp_path):
     """Khop _run_batch_legacy :937-941: loi before_submit thi tiep tuc item sau."""
     pub, base, attempts = make_pub(tmp_path)

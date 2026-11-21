@@ -695,10 +695,9 @@ class Publisher:
             intent = p["intent"]
             sc = p["shortcode"]
             if stopped:
-                journal_path = journal_path_for(self.attempts, intent)
-                atomic_save(journal_path, {"shortcode": sc, "account": intent.owner,
-                                           "status": UNKNOWN, "at": time.time(),
-                                           "hint": "UNCONFIRMED_NO_REPLAY; stopped submitting, group reconcile only"})
+                # P0 fix (A run_batch :840-856 break): item chua attempt thi KHONG
+                # journal — de batch sau guard_duplicate cho post lai binh thuong.
+                # Chi journal submit/unknown SAU click; deferred tra ve ro rang.
                 results.append({"posted": False, "receipt": "DEFERRED_TO_GROUP_RECONCILE",
                                 "shortcode": sc})
                 continue
