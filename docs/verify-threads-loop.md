@@ -170,3 +170,34 @@ Lệnh: `cd C:\Miro\apps\backend && python -m pytest tests/test_eye_collect_p0.p
 - M2/M3 N-read: `ThreadsWorker._ReadOnlyBrowser.read_group_receipts` vẫn loop `read_eye` mỗi intent + `reconcile` từng item gọi `read_receipt` lại — `collect_post_records` mới port chưa được worker dùng (1 collect → match offline). Nối ở milestone sau.
 - S1/S4/S5: S1 lọc author trước (thắt chặt có lợi, chệch A — chấp nhận có ghi); S4 `Intent.from_item` `#dub\d+` vs alphabet 6-số (slot C HOI-eye-01 chấp nhận nuốt manifest test, exact sau normalize); S5 `want_text` tham số chết — chưa bỏ/ghi rõ, dọn sau.
 - Preview đấu dây: `collect_post_records` mới chưa đấu vào `ManagedChromeSession`/worker Phase B — production path vẫn fake `read_eye`. Đấu dây + 1 lần live-read Chrome thật ở milestone sau.
+
+---
+
+## § P1 scheduler (commit 3247d2c, ngày 2026-11-21) — **ĐẠT**
+
+Checker thường trực đọc diff 3247d2c + đối chiếu gốc
+(`C:\dubtool\core\posting_schedule.py`: `build_day_plan :55-90`,
+`due_slots :93-103`, `record_submit_unknown :106-114`,
+`consecutive_unknowns/should_auto_pause :117-128`)
++ đáp A+B (`docs\ba-ben\chu-de\TD-publisher.md`: đáp A suất UNKNOWN tính cap
++ đáp B caller boot/pause) + tự chạy
+`python -m pytest tests/test_schedule_p1.py -q`
+trong `C:\Miro\apps\backend` → **6 passed** (EXIT=0, oracle gốc chạy thật, không skip).
+
+| Mục | Bằng chứng | Kết quả |
+|---|---|---|
+| Port nguyên 6 hàm | `schedule.py` 117 dòng: `_tz`, `_parse_hhmm`, `build_slot_times`, `build_day_plan`, `due_slots`, `record_submit_unknown`, `consecutive_unknowns`, `should_auto_pause` — logic trùng từng dòng gốc (cap cắt `[:cap]`, slot giữ state, `due_slots` chỉ `pending`, queue append-only) | **ĐẠT** |
+| Carryover giữ task_id, không vượt cap | `test_carryover_giu_task_id_cap_khong_vuot`: old1 carryover đứng slot 0, storage = `[n2, n3]` | **ĐẠT** |
+| UNKNOWN giữ slot + vào reconcile_queue + due_slots loại | `test_unknown_giu_slot_tinh_cap_khong_chay_lai`: state → `unknown_pending_reconcile`, queue `["a"]`, due chỉ còn `["b"]` | **ĐẠT** (đúng đáp A: suất tính cap, không giải phóng) |
+| Late-boot không burst | `test_due_slots_khong_burst_late_boot`: boot sớm 0 slot, boot muộn chỉ slot đến hạn | **ĐẠT** |
+| Auto-pause 2 UNKNOWN liên tiếp | `test_auto_pause_2_unknown_lien_tiep` | **ĐẠT** |
+| Caller boot vs pause (nguyên tắc B) | `test_caller_boot_vs_pause`: module chỉ giữ flag `status`, không thêm nhánh boot/pause — phân biệt nằm ở caller (đúng đáp A dòng 49-51) | **ĐẠT** |
+| Oracle so thẳng hàm gốc | `test_oracle_goc_khi_mount_duoc`: port vs `core.posting_schedule.build_day_plan` cùng input → slots + storage bằng nhau | **ĐẠT** (chạy thật, không skip) |
+| Không requeue toàn cục | `reconcile_queue` append-only trong plan ngày, module không tự requeue (đúng ý B dòng 42) | **ĐẠT** |
+
+Lệnh: `cd C:\Miro\apps\backend && python -m pytest tests/test_schedule_p1.py -q` → **6 passed**.
+
+## Phần mở (chưa làm, không chặn P1 này)
+
+- Nối caller thật vào `Publisher.run_batch` / worker: check `status == paused` trước `due_slots`, boot máy tắt → tính lại plan theo policy, user pause → tôn trọng không post bù.
+- `reconcile-verified` kết thúc vòng đời slot trong plan ngày (verified → publication, unknown-tiếp → carryover ngày sau do caller quyết) — đáp A dòng 32, chưa có code caller.
