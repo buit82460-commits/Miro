@@ -308,3 +308,148 @@ release()` rồi raise (IG `:273-275`, FB `:89-91`, threads `:665-666`), không 
   (`:147-184, :203-216`) giữ 1 owner duy nhất cho CDP; adapter production không gọi
   trực tiếp mà qua `owner_request`/`run_live` (`social_live_chrome.py:177-179`). C giữ
   nguyên tắc: 1 owner/1 lease tại một thời điểm, stale-lock thu hồi theo PID.
+
+## 8. Vòng M2 (2026-11-21) — Luồng Threads khép kín (Studio→Library→Renders→Publications→worker→adapter→lịch sử)
+
+Nguồn duy nhất `C:\dubtool`. Threads KHÔNG đi qua `app.py` submit (app chỉ có tab
+"YouTube"): text/media đi từ manifest `download.json` trong batch dir → adapter
+→ publication + journal. Tab Studio/Library/Renders/Publications/worker đều read-only
+đối với Threads (chỉ YouTube Studio `submit`/`handoff` mới ghi hàng chờ duyệt).
+
+### 8.1 Hai-phase batch — `scripts/threads_post_one.py:run_batch` (`:744-901`)
+- Chuẩn bị (`:762-786`): từng item `guard_duplicate` (skip, không ném) →
+  `caption_for` (`:135-168`, MAX_TEXT=500, tag `#dubNNNNNN` từ `unique_tag :128-132`)
+  + `media_for` (`:171-185`, chỉ `.mp4/.mov/.jpg/.jpeg/.png/.webp`, video qua
+  `check_video :206-225` ≤100MB/≤300s). Tag trùng giữa các item → dừng cả batch
+  `DUPLICATE_TAGS` (`:779-786`), không đăng item nào.
+- Phase A — submit từng video, MỖI item journal TRƯỚC click (`:804-809` status
+  `submit` + `text_sha256`; journal path `ATTEMPTS_DIR/(threads-<shortcode>).json`,
+  `job_id_for :108-109`). 1 kết nối CDP + 1 tab cho cả batch: item đầu
+  `_acquire_threads_tab` (`:646-666`, `platform_id=threads`,
+  `destination=https://www.threads.com/@<user>`, `channel_id=username`,
+  `flag=PUBLISH`, `caller=threads_post_one`, `creation_reason=threads_post_publish`
+  + `bring_to_front` + `_verify_threads_actor :251-268` goto profile, body chứa
+  username; lỗi → `release` rồi raise, `:660-666`), item sau `acq.renew(ttl=300)` +
+  `CONNECTION_REUSE` (`:811-817, :924-929`).
+- Ack mỗi item = `_post_phase` (`:346-473`): 4 mốc `post_clicked → posting_seen
+  (optional) → ack_seen → ready_next` (`:360-361`). `ack_seen` chỉ khi (a) toast
+  `Posted/đã đăng` MỚI (baseline trừ trước click, loại `Posting...` `:399-412`),
+  hoặc (b) response URL khớp `_is_post_ack_url` (`:70-73`, graphql/media-configure/
+  media/upload|/api/v1/|broadcast|create_thread), hoặc (c) composer đóng + không
+  còn nút Post enabled (fallback, log rõ). Xong phase A ghi journal
+  `submitted-awaiting-group-reconcile` kèm `milestone_*`, `ack_via`,
+  `ack_response_url`, `ack_post_codes` (`_extract_post_codes :76-81`, hiện luôn
+  `[]` ở `:471` — nối `post_ids` cho phase B), `observed_toasts/responses[:10]`
+  (`:826-836`; mẫu 11:35 20/11 `threads-7696940881491889440.json`).
+- Dừng submit khi mơ hồ: `LiveChromeError` sau-submit hoặc disconnect/exception
+  (`_is_disconnect :84-90`) → journal `unknown` + `UNCONFIRMED_NO_REPLAY` vào
+  `ambiguous[]`, `break` — item sau KHÔNG submit (`:840-856`).
+- Phase B — `_reconcile_group` (`:562-601`): eye `collect_post_records(page,
+  username, limit=40)` đọc 1 lần/pass, `match_eye_records` so khớp; pending map
+  `{shortcode: {want=text[:120] norm, tag=#dub..., post_ids[]}}` (`:571-578`);
+  goto profile 1 lần + reload tối đa 6 pass (`max_reloads=6`, `:599`). Khớp →
+  journal `verified` + `_merge_publication` (`:241-248`, thay entry cùng
+  shortcode, set `account`, `atomic_save`) + result `ack_to_match_s =
+  profile_match_seen − ack_seen` (`:862-884`); không khớp → journal `unknown` +
+  `UNCONFIRMED_NO_REPLAY` (`:885-890`).
+- `_run_batch_legacy` (`:904-954`, khi `two_phase=False`): submit + reconcile từng
+  item qua `_post_live_chrome_on_page` (`:670-700`: journal `submit` → `_submit_once`
+  (`:476-537`, chờ composer đóng/network ack, không toast watcher) →
+  `_reconcile_profile` (`:604-636`: quét trang hiện tại → event-wait tag ≤15s →
+  reload profile ≤3) → `verified`+merge hoặc `unknown`; `FAILED_BEFORE_POST` khi
+  `before_submit=True` (`:682-687`)). Lỗi `before_submit=False` → dừng batch
+  (`:940-941`); disconnect → `UNKNOWN`, dừng (`:943-947`).
+
+### 8.2 Đơn lẻ + đối soát — `run_shortcode` (`:703-741`), `run_reconcile` (`:1006-1049`)
+- `run_shortcode`: guard → caption/media → 1 CDP + 1 tab (`task_id=threads-<sc>`)
+  → `_post_live_chrome_on_page` → published thì merge, trả `{posted:True}`.
+  `LiveChromeError` → `{error, hint}`; finally `release + browser.close()`
+  (`DISCONNECT_CLOSE`), không reconnect.
+- `run_reconcile` (read-only, không post): đọc caption từ manifest + `known_ids`
+  từ journal (`ack_post_codes`, `:1019`) → tab `threads-reconcile-<sc>` →
+  `_reconcile_profile` → khớp: journal `{**journal cũ, verified, verifiedAt}` +
+  entry `reconciledReadOnly:true` + merge publication (bỏ `match`,
+  `:1038-1041`); không khớp: `{reconciled:False, UNCONFIRMED_NO_REPLAY}`.
+
+### 8.3 Guard trùng + journal shape (file:dòng)
+- `guard_duplicate` (`:228-238`): publication cùng base có
+  `shortcode+status(submitted|published)+url` → `ALREADY_IN_PUBLICATION`;
+  journal `reports/social-attempts/threads-<shortcode>.json` tồn tại →
+  `UNRECONCILED_ATTEMPT` ("reconcile read-only, never replay"). Không guard bằng
+  `status` journal — journal `submitted-awaiting-group-reconcile` vẫn chặn replay
+  cho tới khi reconcile xong ghi `verified/unknown`.
+- Shape journal: `submit {shortcode,account,status,at,text_sha256}` (`:806-809`);
+  `submitted-awaiting-group-reconcile {+milestone_*,ack_via,ack_response_url,
+  ack_post_codes,observed_toasts,observed_responses}` (`:826-836`);
+  `verified {+url,post_id,has_video,text_sha256,timeline}` (`:874-877`);
+  `unknown {+hint:UNCONFIRMED_NO_REPLAY[,cause]}` (`:886-888, :841-844`);
+  `failed-before-post` (`:683-685`). Sau verify, publication entry
+  `{shortcode,status:published,url,post_id[,has_video],text_sha256}` + account
+  ở top-level (`:869-872`; batch mẫu `threads-20261120-2p` còn
+  `reconciledReadOnly:true, manual_verify:true, evidence`).
+- `_merge_publication` ghi đè entry cùng shortcode — journal `verified` cũ không
+  ngăn ghi entry mới sau reconcile lại; chống trùng thật nằm ở `guard_duplicate`
+  đọc publication (có url) + journal tồn tại.
+
+### 8.4 Publish mặt đất: composer/actor/download/media
+- `_fill_composer` (`:271-343`): mở composer (`a[href="/new"]`, `button:has-text
+  (New thread|Start a thread)`, `[aria-label*=New]`, fallback phím `n`);
+  textbox (`[role=textbox]`, `contenteditable`, `data-lexical-editor`); gắn file
+  qua `input[type=file].set_input_files` (`.mp4/.mov/.jpg/.png/.webp`, `:314-318`);
+  nút Post chỉ khi đúng 1 label `Post/Đăng` visible+enabled trong dialog scope
+  (`:325-337`); không thấy → `LiveChromeError(before_submit=True)`, item lỗi,
+  batch tiếp tục.
+- `_verify_threads_actor` (`:251-268`): URL phải `threads.com` host else refuse;
+  `goto @user` + body chứa username. Yếu hơn IG/FB (không check cookie/id) —
+  C giữ nguyên, không "tăng cường" verify.
+- `download` (`:975-1003`, read-only yt-dlp): `resolve_post_url :957-964`
+  (URL hoặc ID → `https://www.threads.com/t/<code>/`); meta `--dump-single-json`
+  trước, tải sau (`--max-filesize 300M`), file `threads-<code>.<ext>` + `.sha256`
+  (`sha256_of :967-972`).
+- CLI (`main :1052-1086`): `<sc> [batch_dir] [account]` · `--batch [base]
+  [account] [--limit N]` · `reconcile <sc> [base] [account]` · `download
+  <url_or_id> [dest]`. Integrity gate `_enforce_adapter_integrity` (`:93-105`)
+  fail-closed mọi side-effect (reconcile/download không qua gate — download là
+  read-only yt-dlp, reconcile chỉ acquire tab + readback).
+
+### 8.5 Lịch đăng — `core/posting_schedule.py` (không nhắc threads theo tên)
+- Module thuần hàm, clock inject (`:26-31` TZ Asia/Ho_Chi_Minh|Bangkok → +07).
+  Không có nhánh `threads` (`grep threads → 0 hit`): chính sách nằm ở
+  `schedules/<platform>/<account>/{policy.json,plans/<ngày>.json}`.
+- Bất biến liên quan M2: source of truth chống trùng vẫn là
+  `publication-*.json` + journal, module chỉ index (`:10`); UNKNOWN sau submit →
+  `record_submit_unknown` (`:106-114`) chuyển slot sang `unknown_pending_reconcile`
+  + vào `reconcile_queue`, GIỮ slot, không bao giờ re-post (`:12`); `paused`
+  outrank mọi slot (`:14`); `should_auto_pause` khi ≥2 unknown liên tiếp
+  (`:127-128`, threshold default 2).
+
+### 8.6 Luồng Studio→Library→Renders→Publications→worker→adapter→lịch sử (Threads)
+- `app.py`: tab submit duy nhất là YouTube (`submit_studio :257-266` →
+  `YouTubeStudio().submit` = hàng chờ duyệt, CHƯA tải lên; `open_multitrack
+  :343-352` → `create_from_dubtool`). Threads không có tab/handoff trong app —
+  C KHÔNG được "bọc" Threads vào `submit_studio`/timeline/handoff YouTube.
+- Batch dir (`reports/resource-batches/threads-20261120/`) = mặt đất thật:
+  `download.json {source,account,count,saved[{shortcode,text,caption}]}` →
+  `publication-threads.json {account,items[]}`. Không có Library/Renders/
+  Publications trung gian cho Threads trong dubtool hiện tại.
+- Worker/lịch sử: `run_batch` giữ 1 CDP + 1 tab (`CONNECT_NEW` 1 lần,
+  `DISCONNECT_CLOSE` cuối, `:794-798, :891-895`); `BATCH_DONE total_s/
+  submitted/ambiguous/reloads` (`:896-898`); lịch sử đọc lại qua publication +
+  journal (`verifiedAt`, `timeline`, `ack_to_match_s`), UNKNOWN chỉ reconcile.
+
+### 8.7 Invariant bắt buộc M2 (C + Checker phải giữ)
+1. Journal TRƯỚC click mỗi item (kể cả two-phase); UNKNOWN/`submitted-awaiting`
+   không replay — chỉ `run_reconcile` read-only; dừng submit sau ack mơ hồ đầu
+   tiên, item sau không submit.
+2. Guard 2 lớp (`ALREADY_IN_PUBLICATION` + `UNRECONCILED_ATTEMPT`) trước mọi
+   side-effect; tag `#dub` duy nhất trong batch (trùng → dừng cả batch).
+3. 1 CDP + 1 managed tab `threads/PUBLISH` cả batch (`renew`, không acquire mới
+   mỗi item); verify actor qua profile body; disconnect → UNKNOWN, không
+   reconnect/restart Chrome; `release + browser.close()` trong finally.
+4. Ack 3 đường (`toast Posted mới`/`network ack URL`/`composer-closed fallback`
+   có log); phase B eye đọc 1 lần/pass (`limit=40`, reload ≤6), match cùng-record
+   (author+tag/post_id, không trộn article), `post_id` trước, `#dub` sau, text
+   cuối; publication chỉ merge khi có `url` readback.
+5. Lịch: UNKNOWN giữ slot + vào `reconcile_queue`, auto-pause ≥2 unknown liên
+   tiếp; Threads không đi qua `app.py submit_studio`/timeline/handoff — giữ
+   đường manifest→adapter→publication+journal nguyên trạng.
