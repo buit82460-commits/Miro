@@ -260,3 +260,23 @@ Lệnh: `cd C:\Miro\apps\backend && python -m pytest tests/test_eye_wiring.py te
 
 - Live-read Chrome thật: đấu dây `ManagedThreadsPage` vào `ManagedChromeSession`/worker Phase B production + 1 lần đọc Chrome thật (kế thừa B4/B8 P0: locator hẹp + author verify qua acquire).
 - Adapter submit thật qua composer Threads (hiện `submit` raise có chủ ý) — xong mới hết read-only.
+
+## § Mắt B4+B8 (commit fbd81bb, ngày 2026-11-21) — **ĐẠT**
+
+Checker thường trực đọc diff fbd81bb + đối chiếu phần mở P0
+(B4 log hit/miss + đếm link/article; B8 author live) + contract `PostRecord`
+(`C:\dubtool\core\rea_eye.py :6-8`: author/tag/url/post_id/has_video/text)
++ tự chạy `python -m pytest tests/test_eye_wiring.py tests/test_eye_collect_p0.py tests/test_publisher_threads.py tests/test_threads_flow.py tests/test_schedule_caller.py -q`
+trong `C:\Miro\apps\backend` → **47 passed** (EXIT=0).
+
+| Mục | Bằng chứng | Kết quả |
+|---|---|---|
+| B4 diag dict riêng, giữ contract cũ | `collect_post_records(page, username, limit, diag=None)`: `diag.update(scan)` cuối hàm; không còn append `{"_diagnostic": ...}` vào kết quả; test assert `len(raw) == 1` chỉ record thật | **ĐẠT** |
+| B4 đủ 6 đếm | `scan = links/articles/skipped_no_article/skipped_no_pid/dupes/errors`; test assert `links == 2, articles == 2, dupes == 1`; `skipped_no_article` đếm trước khi vẫn đọc text (article-check trước innerText) | **ĐẠT** |
+| B8 author live từ href | `_author_of_href(href)` regex `/@user/` quan sát được; `live_author or f"@{user}"` fallback; test `raw[0]["author"] == "@alice"` | **ĐẠT** |
+| Não vẫn từ chối khi lệch tab | `match_eye_records` lọc `author != owner → continue` cả 2 nhánh (legacy + fallback); test bob vs alice → `None` | **ĐẠT** |
+| Fake P0/wiring đúng shape mới | `test_eye_collect_p0.py`: FakeLink `closest('article')` check trước innerText, FakeLocator thêm `count()`; `test_eye_wiring.py` fake `article → count()`; locator calls = 2 (links + article) | **ĐẠT** |
+
+Nhỏ (không chặn): `skipped_no_article` hiện chỉ đếm, link ngoài article vẫn được thu record (đúng A fallback `parentElement`, không mù như B4 gợi ý cắt cứng) — chấp nhận có chủ ý.
+
+Lệnh: `cd C:\Miro\apps\backend && python -m pytest tests/test_eye_wiring.py tests/test_eye_collect_p0.py tests/test_publisher_threads.py tests/test_threads_flow.py tests/test_schedule_caller.py -q` → **47 passed**.
