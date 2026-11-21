@@ -24,10 +24,14 @@ class FakeLocator:
 
 
 class FakePage:
+    _counter = [100]
+
     def __init__(self, url, profile_path=""):
         self.url = url
         self._profile_path = profile_path
         self._closed = False
+        FakePage._counter[0] += 1
+        self.target_id = f"target-{FakePage._counter[0]}"
 
     def is_closed(self):
         return self._closed

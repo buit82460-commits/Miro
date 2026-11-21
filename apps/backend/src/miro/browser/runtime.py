@@ -19,6 +19,7 @@ import time
 import uuid
 from contextlib import suppress
 from dataclasses import dataclass, field
+from urllib.parse import parse_qsl, urlsplit
 
 from miro.browser.errors import (
     LeaseBusy,
@@ -71,6 +72,32 @@ def _check_origin(url: str, allowed_origins: tuple[str, ...] | list[str]) -> Non
             return
     raise RegistryError(
         "URL_NOT_REGISTERED: URL lech policy origin (scheme/host/port)")
+
+
+_IGNORED_QUERY_KEYS = frozenset({
+    "fbclid", "utm_source", "utm_medium", "utm_campaign",
+    "utm_term", "utm_content", "_rdc", "_rdr",
+})
+"""Query tracking bo qua khi so destination (port tu A `browser_runtime`)."""
+
+
+def _urls_same_destination(first: str, second: str) -> bool:
+    """Cung destination: scheme/host/port + path (strip `/` cuoi) + query
+    khong tracking bang nhau. Parse loi -> False."""
+    try:
+        a = urlsplit(str(first))
+        b = urlsplit(str(second))
+    except Exception:
+        return False
+    if not a.scheme or not b.scheme or not a.hostname or not b.hostname:
+        return False
+    if ((a.scheme or "").lower(), (a.hostname or "").lower(), a.port,
+            a.path.rstrip("/")) != ((b.scheme or "").lower(),
+            (b.hostname or "").lower(), b.port, b.path.rstrip("/")):
+        return False
+    qa = sorted((k, v) for k, v in parse_qsl(a.query) if k not in _IGNORED_QUERY_KEYS)
+    qb = sorted((k, v) for k, v in parse_qsl(b.query) if k not in _IGNORED_QUERY_KEYS)
+    return qa == qb
 
 
 def default_user_data_dir() -> str:
@@ -335,11 +362,13 @@ class BrowserRuntime:
         channel_id = request.get("channelId")
         flag = request.get("flag")
         if url:
-            exact = [r for r in candidates if r.get("url") == url]
+            exact = [r for r in candidates
+                     if _urls_same_destination(r.get("url", ""), url)]
             candidates = exact or candidates
 
         def _rank(record: dict) -> tuple:
-            exact_url = 0 if (url and record.get("url") == url) else 1
+            exact_url = 0 if (url and _urls_same_destination(
+                record.get("url", ""), url)) else 1
             exact_channel = 0 if (channel_id is not None
                                   and record.get("channelId") == channel_id) else 1
             flag_match = 0 if (flag is not None
@@ -348,6 +377,7 @@ class BrowserRuntime:
                     float(record.get("lastUsedAt", 0)))
 
         saw_busy = False
+        saw_protected = False
         for record in sorted(candidates, key=_rank):
             resource = tab_resource(self.instance_id, record["targetId"])
             if self.store.is_locked(resource):
@@ -367,15 +397,14 @@ class BrowserRuntime:
                 continue
             page_url = getattr(page, "url", None)
             current = page_url if isinstance(page_url, str) else record.get("url")
-            needs_nav = bool(url and current != url)
+            needs_nav = bool(url and not _urls_same_destination(current or "", url))
             if needs_nav:
                 state = await self._inspect_page_state(page)
                 if state.get("activeUpload") or state.get("dirtyForm") or record.get("flagWatch"):
                     with suppress(LeaseLost):
                         self.store.release(lease)
-                    raise TabProtected(
-                        "TAB_PROTECTED_NO_NAVIGATE: active upload, unsaved form, "
-                        "or Flag-watched region preserved")
+                    saw_protected = True
+                    continue
             if needs_nav:
                 with suppress(LeaseLost):
                     self.store.release(lease)
@@ -385,6 +414,10 @@ class BrowserRuntime:
             return AcquiredTab(page=page, record=record, lease=lease, runtime=self, reused=True)
         if saw_busy:
             raise TabBusy("TAB_BUSY: matching tab is currently leased; no duplicate tab created")
+        if saw_protected:
+            raise TabProtected(
+                "TAB_PROTECTED_NO_NAVIGATE: active upload, unsaved form, "
+                "or Flag-watched region preserved")
         raise RegistryError(
             "TAB_REQUIRED_OPEN_FIRST: mo san 1 tab cua platform "
             f"'{platform_id}' trong Chrome truoc; "
@@ -400,7 +433,8 @@ class BrowserRuntime:
         if getattr(page, "is_closed", lambda: True)():
             raise RegistryError("TAB_CLOSED: rediscover; do not reuse another target ID")
         current_url = getattr(page, "url", None)
-        if isinstance(current_url, str) and current_url != record.get("url"):
+        if isinstance(current_url, str) and not _urls_same_destination(
+                current_url, record.get("url", "")):
             raise RegistryError("TAB_ORIGIN_CHANGED: tab moved away; validate/reassign role")
         await self._verify_actor(page, record, acquired.lease)
         try:
@@ -411,7 +445,7 @@ class BrowserRuntime:
             raise RegistryError("READ_FAILED: " + type(error).__name__) from None
         self._check_lease(acquired.lease)  # hết quyền giữa chừng -> dừng, không trả dữ liệu
         if isinstance(content, dict) and isinstance(content.get("url"), str) \
-                and content["url"] != record.get("url"):
+                and not _urls_same_destination(content["url"], record.get("url", "")):
             raise RegistryError("TAB_CHANGED_DURING_READ: tab moved away mid-read")
         await self._verify_actor(page, record, acquired.lease)  # đổi account giữa chừng -> dừng
         record["lastUsedAt"] = time.time()

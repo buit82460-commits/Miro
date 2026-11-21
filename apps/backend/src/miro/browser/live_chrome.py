@@ -24,7 +24,7 @@ import time
 from pathlib import Path
 
 from miro.browser.errors import RegistryError
-from miro.browser.runtime import ManagedChromeSession
+from miro.browser.runtime import ManagedChromeSession, _urls_same_destination
 
 PROFILE_DIRECTORY = "Profile 20"
 THREADS_ORIGIN = "https://www.threads.com/"
@@ -67,7 +67,56 @@ async def threads_actor(page, record=None) -> str:
     return match.group(1)
 
 
-def register_live_tab(session: ManagedChromeSession, url: str, *,
+async def _cdp_target_id(session: ManagedChromeSession, page) -> str:
+    """targetId CDP that (kieu A `browser_runtime._target`).
+
+    Thu tuu: attr `target_id` tren page -> CDP
+    `context.new_cdp_session(page)` + `Target.getTargetInfo` -> "" (caller
+    fallback key on dinh theo object)."""
+    target = getattr(page, "target_id", None)
+    if isinstance(target, str) and target:
+        return target
+    if callable(target):
+        try:
+            resolved = target()
+            if asyncio.iscoroutine(resolved):
+                resolved = await resolved
+            if resolved:
+                return str(resolved)
+        except Exception:
+            pass
+    for context in list(getattr(session.runtime.browser, "contexts", []) or []):
+        if page not in list(getattr(context, "pages", []) or []):
+            continue
+        factory = getattr(context, "new_cdp_session", None)
+        if not callable(factory):
+            break
+        cdp = factory(page)
+        if asyncio.iscoroutine(cdp):
+            cdp = await cdp
+        try:
+            info = cdp.send("Target.getTargetInfo")
+            if asyncio.iscoroutine(info):
+                info = await info
+            target_id = ((info or {}).get("targetInfo") or {}).get("targetId")
+            if target_id:
+                return str(target_id)
+        except Exception:
+            break
+        finally:
+            detach = getattr(cdp, "detach", None)
+            if callable(detach):
+                try:
+                    out = detach()
+                    if asyncio.iscoroutine(out):
+                        await out
+                except Exception:
+                    pass
+        break
+    return ""
+
+
+async def register_live_tab(session: ManagedChromeSession, url: str, *,
                       platform_id: str, profile_id: str,
                       expected_account: str = "") -> dict:
     """Đăng ký tab Chrome có sẵn đang mở đúng URL vào store để acquire.
@@ -92,16 +141,18 @@ def register_live_tab(session: ManagedChromeSession, url: str, *,
         if page is None or getattr(page, "is_closed", lambda: True)():
             for candidate in session.runtime._all_pages():
                 current = getattr(candidate, "url", None)
-                if isinstance(current, str) and current == record.get("url"):
+                if isinstance(current, str) and _urls_same_destination(
+                        current, record.get("url", "")):
                     session.runtime.pages[record["targetId"]] = candidate
                     break
         record["lastUsedAt"] = time.time()
         return store.put("tab", record["id"], record)
-    pages = session.runtime._all_pages()
-    for index, page in enumerate(pages):
+    for page in session.runtime._all_pages():
         current = getattr(page, "url", None)
-        if isinstance(current, str) and current == url:
-            target_id = f"live-{index}"
+        if isinstance(current, str) and _urls_same_destination(current, url):
+            target_id = await _cdp_target_id(session, page)
+            if not target_id:
+                target_id = f"live-{id(page):x}"
             session.runtime.pages[target_id] = page
             record = {
                 "id": f"{session.runtime.instance_id}:{target_id}",
@@ -134,7 +185,7 @@ async def read_url_once(*, connect=connect_over_cdp, user_data_dir: str,
     stop_pw = None
     try:
         profile = await session.runtime.bind_profile(user_data_dir, profile_directory)
-        register_live_tab(session, url, platform_id=platform_id,
+        await register_live_tab(session, url, platform_id=platform_id,
                            profile_id=profile["id"],
                            expected_account=expected_account)
         acquired = await session.acquire_managed_tab(
