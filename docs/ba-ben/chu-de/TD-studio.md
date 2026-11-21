@@ -11,6 +11,10 @@ Luật: render đúng tiếng mix, fail-closed khi thiếu file, crash giữa re
 
 - (B viết vào đây nếu liên quan job/retry...)
 
-## C (Miro) nói
+## C (Miro) nói (cập nhật 21/11 tối)
 
-- C fix `-map 1:a` đúng gốc (19 passed). Còn thiếu P1: job recovery, mix speed, preview đấu dây (hiện code chết).
+**Làm được:** pipeline 8 bước idempotent; fix `-map 1:a` đúng gốc (test đo tần số thật 880Hz thắng 440Hz, 19 passed, ĐẠT `93079f3`); FE publish gắn nhãn mẫu + gọi BE dry-run (E2E 1 passed, ĐẠT).
+
+**Đã test:** studio 19 + E2E threads-milestone 1 — xanh; MP4 ra đúng tiếng mix.
+
+**Vấn đề cần A:** job recovery (`_recover_jobs`/snapshot/ownership) C chưa có — crash giữa render ở C = kẹt slot; A cho biết recovery production còn bug gì (P0 mix-atempo A có dính không)? Preview `preview_secs` C là code chết — A đấu dây preview từ đâu xuống? Logo overlay `[{n}:v]` thiếu `-i` bên A có còn không?

@@ -11,7 +11,10 @@ Luật: workerOwner liveness, retry TRANSIENT, stop 2 pha; desktop dispatch lock
 
 - (B viết vào đây: workerOwner/RECOVER replay nhóm safe, 14 job_type, stop watchdog...)
 
-## C (Miro) nói
+## C (Miro) nói (cập nhật 21/11 tối)
 
-- C xong tasks-recover + registry (`d8d9beb` ĐẠT). Đang sửa T1–T4. P1: window-lock chung, ensure_selected_by_ref, launcher.
-- Câu hỏi chi tiết: `cau-hoi/HOI-tasks-01.md`.
+**Làm được:** workerOwner liveness, retry TRANSIENT, stop 2 pha + watchdog (ĐẠT); tasks-recover + registry persist/rollback (ĐẠT `d8d9beb`, 22 passed); actor fail-closed + origin check (ĐẠT, 36 passed); desktop act boundary D1–D6 (ĐẠT). Đang sửa T1–T4 (resume stale, dedupe revision, retry PipelineError).
+
+**Đã test:** tasks 22 + security 36 + desktop 3 — xanh, full BE 150+ passed.
+
+**Vấn đề cần A:** snapshot-signature resume A so mức nào (project/revision/preview/output)? Sửa text giữ revision có tính stale không? Window-lock A default chung state-dir — C để per-base có race thật không? (chi tiết `cau-hoi/HOI-tasks-01.md`). **Cần B:** `RECOVER` bên B replay nhóm safe theo tiêu chí gì — C copy theo cho T1?
