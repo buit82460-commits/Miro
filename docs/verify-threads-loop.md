@@ -131,3 +131,42 @@ trong `C:\Miro\apps\backend` → **24 passed** (EXIT=0).
 Nhỏ (không chặn, ghi nhận chênh với A): A nhánh disconnect (`:850-855`) không ghi journal
 unknown (chỉ `ambiguous.append` + `break`), còn port ghi `unknown` cho cả disconnect —
 an toàn hơn (guard chặn replay), chấp nhận có chủ ý.
+
+---
+
+## § P0 mắt (commit 05195dc, ngày 2026-11-21) — **ĐẠT**
+
+Checker thường trực đọc diff 05195dc + đối chiếu A (`C:\dubtool\core\rea_eye.py`
+locator `:67-68`, `TAG_RE :18`, match `:45-51`) + đáp A/B + slot C
+(`docs\ba-ben\cau-hoi\HOI-eye-01.md`) + `docs\reread-eye.md` (S2/S3/B1-B8)
++ tự chạy `python -m pytest tests/test_eye_collect_p0.py tests/test_publisher_threads.py -q`
+trong `C:\Miro\apps\backend` → **30 passed** (10 P0 mắt + 20 publisher_threads, EXIT=0).
+
+| Mục | Bằng chứng | Kết quả |
+|---|---|---|
+| Locator hẹp 2 pattern (đáp A HOI-eye-01) | `test_locator_hep_2_pattern`: 1 call, selector chứa `/@alice/post/` + `/@alice/t/`; port `publisher.py` `_EYE_LINK_SELECTOR` giữ nguyên 2 pattern A `:67-68`, không mở rộng mù | **ĐẠT** |
+| Same-record không ghép chéo | `test_same_record_2_article_khong_ghep_cheo`: 2 article → 2 record đúng tag/link/video riêng (A match `:45-51` post_id-first rồi tag-exact cùng record) | **ĐẠT** |
+| B1 video không lan document | `test_b1_video_khong_article_khong_lan_document` + code `el.closest('article') ? ... : false` (A `:77-78` dùng `\|\| document` gây false-positive) | **ĐẠT** |
+| B2 post_id cắt query/fragment | `test_b2_post_id_cat_query_fragment`: `/@alice/post/abc123?x=1...#frag` → `abc123` (A `:80` split mù dính query) | **ĐẠT** |
+| B3 TAG boundary 6 số | `test_b3_tag_dai_khong_hit_6_so_dau`: `#dub1234567` → `""`, `#dub123456` → hit; `TAG_RE = #dub\d{6}(?!\d)` (A `:18` không boundary) | **ĐẠT** |
+| B6 dedup + limit theo record | `test_b6_dedup_limit_theo_record`: P1 trùng query dedup, limit=2 → `[P1, P2]` (A `:69` cắt theo link, không dedup) | **ĐẠT** |
+| B7 preview giữ tag cuối | `test_b7_preview_giu_tag_cuoi_caption_dai`: caption 280x + tag cuối → preview vẫn chứa tag (A `:87` `text[:300]` cắt mất tag) | **ĐẠT** |
+| S2 bỏ passthrough match=post_id | `test_s2_bo_passthrough_match_post_id_tu_khai`: receipt tự khai `match=post_id` + tag sai + pid ngoài known → `None`; pid trong known → published (xóa `receipt.get("match") == "post_id"`) | **ĐẠT** |
+| S3 eye record key author | `test_s3_eye_record_key_author_duoc_chap_nhan`: `{"author": "@alice", ...}` → published (`owner or author`) | **ĐẠT** |
+| B5 đếm lỗi thay vì nuốt câm | `errors` counter + `_diagnostic eye-errors` record khi có lỗi (A `suppress` câm) | **ĐẠT** (logic; chưa có test riêng đếm errors — nhẹ) |
+
+Red-test có thật (đã kiểm): code cũ fail cả 4 — (1) C cũ không có `collect_post_records`
+(M1: import fail); (2) A `TAG_RE` cũ hit 6 số đầu của `#dub1234567` (xác minh bằng
+`re` trực tiếp: old hit=True); (3) `verify_receipt` cũ chấp nhận `match == "post_id"`
+passthrough (dòng bị xóa trong diff); (4) A `:77-78` fallback `document` lan video
+sang article-missing.
+
+Lệnh: `cd C:\Miro\apps\backend && python -m pytest tests/test_eye_collect_p0.py tests/test_publisher_threads.py -q` → **30 passed**.
+
+## Phần mở (chưa làm, không chặn P0 này)
+
+- B4 (locator hẹp, DOM đổi là mù): giữ hẹp theo đáp A, chưa có log trúng/miss + đếm link/article (gợi ý B từ TikTok `page_extract.py:44`). Thêm khi live-read thật.
+- B8 (author hardcode từ param): docstring ghi caller đảm bảo qua acquire/verify — chấp nhận ở P0 fake-DOM; live thật phải đọc author/Page URL quan sát được để não từ chối khi lệch tab.
+- M2/M3 N-read: `ThreadsWorker._ReadOnlyBrowser.read_group_receipts` vẫn loop `read_eye` mỗi intent + `reconcile` từng item gọi `read_receipt` lại — `collect_post_records` mới port chưa được worker dùng (1 collect → match offline). Nối ở milestone sau.
+- S1/S4/S5: S1 lọc author trước (thắt chặt có lợi, chệch A — chấp nhận có ghi); S4 `Intent.from_item` `#dub\d+` vs alphabet 6-số (slot C HOI-eye-01 chấp nhận nuốt manifest test, exact sau normalize); S5 `want_text` tham số chết — chưa bỏ/ghi rõ, dọn sau.
+- Preview đấu dây: `collect_post_records` mới chưa đấu vào `ManagedChromeSession`/worker Phase B — production path vẫn fake `read_eye`. Đấu dây + 1 lần live-read Chrome thật ở milestone sau.
