@@ -91,3 +91,48 @@ Checker đã đối chiếu `publisher.py` mới (776 dòng) với `C:\dubtool\s
 - `guard_duplicate` thêm param `attempts_dir` (legacy dùng global `ATTEMPTS_DIR`) — hợp lệ cho lib, oracle test đã xử lý.
 
 **Module publisher được tính "xong" ở mức port không-browser-that. Live Post đầu tiên vẫn phải qua runbook dubtool + reconcile read-only, UNKNOWN không replay.**
+
+---
+
+# VERIFY vòng 3 (định nghĩa merge mới, ngày 2026-11-21) — KẾT LUẬN: **CHƯA ĐẠT** (thiếu kiểm chứng luồng thật trong C)
+
+Định nghĩa mới: port/viết lại trong kiến trúc C là ĐÚNG, miễn (1) giữ đủ khả năng + quy tắc gốc, (2) chỗ trùng chọn cách tốt nhất (ghi rõ chọn bên nào, vì sao), (3) kiểm chứng bằng luồng thực tế chạy trong C (dry-run chạm code/tool thật hoặc fixture dữ liệu thật từ A/B), không mock tự-pass.
+
+## 1. Vai trò B (JARVIS) với Publisher: KHÔNG có gì để lấy
+
+Đã grep `D:\JARVIS-Assistant\backend\app\integrations` với `threads|THREADS|caption_for|unique_tag|publication-threads`: chỉ 3 match chữ "dubtool" trong helper HTTP (`dubtool.py` — `call_soon_threadsafe(queue.put_nowait...)`), không có logic Threads nào (caption, tag, journal, receipt, reconcile). B mạnh ở jobs/write-ahead/recovery (đã đọc trong `reader-jarvis.md` §1-2), nhưng Publisher C đã có tương đương qua journal-claim + guard + run_batch dừng-khi-ambiguous, nên không cần lấy thêm.
+→ **Lựa chọn: A thuần cho toàn bộ Publisher. Ghi rõ để khỏi ai đi tìm B lần nữa.**
+
+## 2. Đối chiếu từng khả năng gốc A → C (tiêu chí 1 + 2)
+
+| Khả năng gốc A (`threads_post_one.py` + `core/rea_eye.py`) | C có chưa | Giữ đủ quy tắc? | Chọn bên nào / vì sao |
+|---|---|---|---|
+| `caption_for`/`unique_tag` (:128-168, MAX 500, `#dub` tail, truncate giữ tag) | Có, giống hệt | Đủ (oracle test == legacy trên fixture) | **A** (nguồn duy nhất; B không có) |
+| Journal layout `threads-<sc>.json`, status `submit/verified/unknown/failed-before-post/submitted-awaiting-group-reconcile` + `UNCONFIRMED_NO_REPLAY` | Có | Đủ (re-raise giữ `submit`, caller ghi `unknown` — đúng :670-700) | **A** |
+| `guard_duplicate` 2 lớp (publication+url / journal-tồn-tại) :228 | Có | Đủ; C cải tiến hợp lệ: `attempts_dir` param thay global + `claim_attempt` O_EXCL đóng TOCTOU (tốt hơn A, đã khai báo) | **A + C tốt hơn ở claim** |
+| Two-phase batch: Phase A ack-only + timeline, Phase B group-reconcile 1 lần; duplicate-tag abort :779-786; stop khi ambiguous/disconnect, before_submit tiếp tục (:937-941) | Có | Đủ (vòng 2 đã sửa cả 3) | **A** |
+| Receipt: post_id-first trong `known_ids=ack_post_codes` (:1019), tag exact same-record (`rea_eye.py` :31-53, không text fallback) | Có (+ ủy thác eye gốc trước, fallback exact-local) | Đủ (oracle test + strictness test) | **A; C kết hợp**: ưu tiên gọi eye gốc khi import được, fallback exact-local khi `C:\dubtool` không mount — vì C phải chạy độc lập |
+| `media_for/check_video/probe_video` gate (:171-225) | Có port đầy đủ, `publish` cấm `MEDIA_NOT_PORTED` | Đủ ở mức cấm (attach bytes out-of-scope, đã ghi rõ) | **A** (quy tắc), **C** (cấm rõ thay vì im lặng) |
+| `_enforce_adapter_integrity` fail-closed (:93-105) | Có (`enforce_adapter_integrity`, baseline-file → refuse) | Đủ tương đương (C không pack baseline dubtool nên check file-do-người-vận-hành-cấp + env `MIRO_ADAPTER_BASELINE`) | **A** (quy tắc) theo cách **C** (không copy baseline lạ vào repo) |
+| `_verify_threads_actor` + tab lease (:251-268/:646-668) | Có contract (`verify_actor()`/`declared_actor`, mismatch → before_submit refuse; `MIRO_REQUIRE_ACTOR=1` fail-closed tuyệt đối) | Đủ ở mức contract — browser thật out-of-scope, đã ghi rõ | **A** (quy tắc phải verify actor) + **B** (triết lý: verify trước/sau op, uncertain → không retry — khớp `reader-jarvis.md` §3 invariant worker) |
+| JSON runtime UTF-8 no-BOM/tmp+replace (`execution_policy.atomic_save`), đọc chịu BOM (`json_io`) | Có (ủy thác code cũ, fallback copy semantics) | Đủ | **A** (cách làm tốt nhất → C chuẩn hóa dùng chung; không phát minh cách ghi JSON thứ ba) |
+
+Tiêu chí (1)+(2): **ĐẠT** — đủ khả năng, chỗ trùng đã chọn và ghi lý do. Không yêu cầu import/call code cũ nữa (định nghĩa mới bãi bỏ tiêu chí cũ).
+
+## 3. Cái còn thiếu theo tiêu chí (3): luồng thực tế trong C chưa được kiểm chứng
+
+Test vòng 2 (`test_publisher_threads.py`, 15 passed) có chạm code cũ (caption/guard/eye oracle) nhưng fixture đều **tự bịa** (`"Hello"`, `"abc123456"`, records `P1/P2` viết tay) + browser mock 100%. Dưới định nghĩa mới, các luồng thực tế sau trong C **chưa có test nào chạy**:
+
+a) **Caption/guard trên manifest thật của A**: `C:\dubtool\reports\resource-batches\threads-20261120\download.json` (item `test-001`, account `haodaojrk5`) + `publication-threads.json` (đã `published`). Chưa có test nào trong C: `caption_for(saved[0])` ra text gì, `guard_duplicate` trên batch copy có skip `ALREADY_IN_PUBLICATION` đúng không.
+b) **Reconcile từ journal thật của A**: `C:\dubtool\reports\social-attempts\threads-test-001.json` (status `published`, `post_id Df8vGSCkUXp`, `reconciledReadOnly`). Chưa có test nào trong C đọc journal thật này (parse status/url/post_id, verify `text_sha256` khớp publication) — dry-run read-only, không side-effect.
+c) **Batch trên dữ liệu thật**: copy `download.json` + attempts thật vào tmp, chạy `Publisher.run_batch` với browser stub chỉ đọc (không post) → chứng minh guard/reconcile hoạt động trên shape dữ liệu production, không chỉ dict bịa.
+d) **B port check**: `media_for` trên file video thật (nếu còn trong batch) hoặc assert `MEDIA_NOT_PORTED` khi item có `media_path` trỏ file thật không gate được — hiện chỉ test path không tồn tại.
+
+## 4. Test bổ sung cần viết (xong mới ĐẠT vòng 3)
+
+1. `test_real_manifest_caption_guard`: đọc `download.json` + `publication-threads.json` thật từ A (skip nếu không mount), assert `caption_for(saved[0])` chứa text gốc và `guard_duplicate` → `ALREADY_IN_PUBLICATION` khi publication đã có url.
+2. `test_real_journal_reconcile_readonly`: đọc `threads-test-001.json` thật, assert `Publisher.reconcile` (với browser stub trả receipt khớp `post_id`/`url` trong journal) → `reconciled True` mà `posts == 0`; và journal `unknown` thật (nếu còn, vd `threads-7679492543322557728.json`) → guard `UNRECONCILED_ATTEMPT`, không replay.
+3. `test_real_batch_dryrun`: dựng batch tmp từ copy manifest thật, `run_batch` với stub read-only, assert không post + guard đúng trên từng item.
+4. Ghi rõ trong test khi nào `pytest.skip` (A không mount) — skip vì thiếu dữ liệu là hợp lệ, nhưng CI có A mount thì phải chạy (không được skip toàn bộ nhóm mới).
+
+**Kết luận vòng 3: CHƯA ĐẠT — không phải do code sai (logic đã đúng theo vòng 2), mà do thiếu kiểm chứng trên dữ liệu thật của A ngay trong C. Viết xong 4 test trên (hoặc tương đương) + pass thì được chữ ĐẠT theo định nghĩa mới.**
