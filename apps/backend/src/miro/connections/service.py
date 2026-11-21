@@ -136,6 +136,40 @@ def set_revoke_hook(fn) -> None:
     _revoke_hook = fn
 
 
+def bind_revoke_to_leases(store, instance_id: str = "") -> None:
+    """P5: noi production revoke -> LeaseStore that cua worker.
+
+    Khi account bi revoke, invalidate moi lease dang active tren tab cua dung
+    account do (khop expectedAccountId) — worker cu mat quyen ngay lap tuc
+    (validate/renew sau do -> LeaseLost), khong doi het TTL. Neu khong tim
+    duoc store/tab thi bo qua am (revoke status van co hieu luc).
+    """
+    from miro.browser.lease_store import tab_resource
+
+    def _hook(item: dict) -> None:
+        try:
+            tabs = store.list("tab")
+        except Exception:
+            return
+        for tab in tabs or []:
+            if not isinstance(tab, dict):
+                continue
+            if instance_id and tab.get("browserInstanceId") != instance_id:
+                continue
+            if str(tab.get("expectedAccountId") or "") != str(item.get("account_id") or ""):
+                continue
+            target = str(tab.get("targetId") or "")
+            if not target:
+                continue
+            try:
+                store.invalidate(tab_resource(
+                    str(tab.get("browserInstanceId") or ""), target))
+            except Exception:
+                continue
+
+    set_revoke_hook(_hook)
+
+
 def _notify_revoked(item: dict) -> None:
     if _revoke_hook is None:
         return
@@ -251,12 +285,21 @@ async def verify_via_browser(account_id: str, runtime, tab_record: dict,
                 observed = ""
         if not observed:
             raise RegistryError("ACCOUNT_MISMATCH: khong doc duoc observed identity tu tab")
+        # P4: lay profile_path that tu Browser M1 (bind_profile evidence),
+        # truyen ca truoc/sau de nhanh realpath PROFILE_MISMATCH co hieu luc
+        # trong duong verify that (read khong navigate nen 2 snapshot bang nhau
+        # khi profile on dinh; lech -> PROFILE_MISMATCH).
+        profile = (getattr(runtime, "profiles", {}) or {}).get(
+            request["profileBindingId"]) or {}
+        profile_path = str(profile.get("profilePath") or "")
         ev = VerifyEvidence(
             tab_id=tab_record.get("targetId", ""),
             platform_id=item["platform"],
             profile_binding_id=request["profileBindingId"],
             observed_account_id=observed,
             target_id=tab_record.get("targetId", ""),
+            profile_path=profile_path,
+            profile_path_after=profile_path,
         )
         return verify_account(item_key, ev)
     finally:
