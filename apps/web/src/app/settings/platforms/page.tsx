@@ -56,9 +56,12 @@ export default function PlatformsPage() {
       capabilities: [],
     },
   });
-  const accountsField = useFieldArray({ control: form.control, name: "accounts" });
-  const capsField = useFieldArray({ control: form.control, name: "capabilities" });
+  const capsField = useFieldArray<PlatformUpsertInput, "capabilities", "id">({
+    control: form.control,
+    name: "capabilities",
+  });
   const [accountDraft, setAccountDraft] = useState("");
+  const accountList = form.watch("accounts") ?? [];
 
   const rollbackForm = useForm<{ version: number }>({
     resolver: zodResolver(rollbackSchema),
@@ -134,7 +137,7 @@ export default function PlatformsPage() {
           ) : null}
 
           <div>
-            <b>Tài khoản ({accountsField.fields.length}/20)</b>
+            <b>Tài khoản ({accountList.length}/20)</b>
             <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
               <input
                 data-testid="platform-account-draft"
@@ -147,7 +150,9 @@ export default function PlatformsPage() {
                 data-testid="platform-account-add"
                 onClick={() => {
                   if (!accountDraft.trim()) return;
-                  accountsField.append(accountDraft.trim());
+                  form.setValue("accounts", [...accountList, accountDraft.trim()], {
+                    shouldValidate: true,
+                  });
                   setAccountDraft("");
                 }}
               >
@@ -155,10 +160,19 @@ export default function PlatformsPage() {
               </button>
             </div>
             <ul data-testid="platform-accounts">
-              {accountsField.fields.map((f, i) => (
-                <li key={f.id} data-testid={`platform-account-${i}`}>
+              {accountList.map((a, i) => (
+                <li key={`${a}-${i}`} data-testid={`platform-account-${i}`}>
                   <input {...form.register(`accounts.${i}` as const)} />
-                  <button type="button" onClick={() => accountsField.remove(i)}>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      form.setValue(
+                        "accounts",
+                        accountList.filter((_, j) => j !== i),
+                        { shouldValidate: true },
+                      )
+                    }
+                  >
                     Xóa
                   </button>
                 </li>

@@ -116,7 +116,9 @@ function seedProject(id: string, title: string): FixtureProject {
 }
 
 // Module-level store: tồn tại suốt dev-server / E2E webServer.
-const store: {
+// Dùng globalThis để mọi route API chung 1 instance (Next dev bundle mỗi
+// route riêng, import module thường sẽ tạo store rời nhau).
+type FixtureStore = {
   tasks: FixtureTask[];
   projects: FixtureProject[];
   batches: FixtureBatch[];
@@ -125,43 +127,47 @@ const store: {
   seq: number;
   platforms: FixturePlatform[];
   registryVersion: number;
-} = {
-  tasks: [
-    { id: "task-1", title: "Dựng video Threads mở đầu", status: "awaiting_review", revision: 2, updated_at: now() },
-  ],
-  projects: [seedProject("p1", "Video Threads mở đầu"), seedProject("p2", "Video kho thứ hai")],
-  batches: [],
-  receipts: [],
-  history: [{ at: now(), event: "seed", detail: "fixture khởi tạo" }],
-  seq: 100,
-  platforms: seedPlatforms(),
-  registryVersion: 1,
 };
 
-export function getStore() {
-  return store;
+declare global {
+  // eslint-disable-next-line no-var
+  var __miroFixtureStore: FixtureStore | undefined;
+}
+
+function initStore(): FixtureStore {
+  return {
+    tasks: [
+      { id: "task-1", title: "Dựng video Threads mở đầu", status: "awaiting_review", revision: 2, updated_at: now() },
+    ],
+    projects: [seedProject("p1", "Video Threads mở đầu"), seedProject("p2", "Video kho thứ hai")],
+    batches: [],
+    receipts: [],
+    history: [{ at: now(), event: "seed", detail: "fixture khởi tạo" }],
+    seq: 100,
+    platforms: seedPlatforms(),
+    registryVersion: 1,
+  };
+}
+
+export function getStore(): FixtureStore {
+  if (!globalThis.__miroFixtureStore) {
+    globalThis.__miroFixtureStore = initStore();
+  }
+  return globalThis.__miroFixtureStore;
 }
 
 export function nextId(prefix: string) {
+  const store = getStore();
   store.seq += 1;
   return `${prefix}-${store.seq}`;
 }
 
 export function pushHistory(event: string, detail: string) {
-  store.history.unshift({ at: now(), event, detail });
+  getStore().history.unshift({ at: now(), event, detail });
 }
 
 export function resetFixture() {
-  store.tasks = [
-    { id: "task-1", title: "Dựng video Threads mở đầu", status: "awaiting_review", revision: 2, updated_at: now() },
-  ];
-  store.projects = [seedProject("p1", "Video Threads mở đầu"), seedProject("p2", "Video kho thứ hai")];
-  store.batches = [];
-  store.receipts = [];
-  store.history = [{ at: now(), event: "seed", detail: "fixture khởi tạo" }];
-  store.seq = 100;
-  store.platforms = seedPlatforms();
-  store.registryVersion = 1;
+  globalThis.__miroFixtureStore = initStore();
 }
 
 export function ok<T>(result: T, status = 200) {

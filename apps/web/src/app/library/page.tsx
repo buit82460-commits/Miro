@@ -19,7 +19,9 @@ export default function LibraryPage() {
             <div key={id} data-testid={`library-item-${id}`} style={{ border: "1px solid #ddd", borderRadius: 10, padding: 12, background: "#fff" }}>
               <h3 style={{ margin: "0 0 4px" }}>{String(p.title)}</h3>
               <small>
-                r{String(p.revision)} · {String(p.duration)}s · {String(p.canvas?.width)}x{String(p.canvas?.height)}
+                r{String(p.revision)} · {String(p.duration)}s ·{" "}
+                {String((p.canvas as { width?: unknown; height?: unknown } | undefined)?.width)}x
+                {String((p.canvas as { width?: unknown; height?: unknown } | undefined)?.height)}
               </small>
               <br />
               <Link data-testid={`open-editor-${id}`} href={`/editor?project=${id}`} style={{ fontWeight: 600 }}>

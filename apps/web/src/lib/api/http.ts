@@ -11,7 +11,7 @@ export const http = axios.create({
 type Envelope<T> = { success: boolean; result: T };
 
 export async function request<T>(path: string, config?: AxiosRequestConfig): Promise<T> {
-  const res = await http.request<Envelope<T> | T>(path, config);
+  const res = await http.request({ url: path, ...config });
   const data = res.data as Envelope<T> | T;
   if (typeof data === "object" && data !== null && "success" in data && "result" in data) {
     return (data as Envelope<T>).result;

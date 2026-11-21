@@ -1,12 +1,12 @@
 import { expect, test } from "@playwright/test";
 
 // Mốc Threads: sửa sub -> render -> duyệt -> đăng -> tìm lại bài -> lịch sử.
-// Chạy bằng fixture/mock nội bộ theo contract BE (POST /api/__reset để seed lại).
+// Chạy bằng fixture/mock nội bộ theo contract BE (POST /api/test-reset để seed lại).
 test("threads milestone: subtitle -> render -> approve -> publish -> receipt -> history", async ({
   page,
   request,
 }) => {
-  await request.post("/api/__reset");
+  await request.post("/api/test-reset");
   const subText = `Sub Threads E2E ${Date.now()}`;
 
   // 1. Sửa sub trong Editor.
