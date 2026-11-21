@@ -119,6 +119,28 @@ class TaskService:
             self.store.append_event(record["id"], seq, utc_now_iso(), type, data or {})
 
     # ---- submit (idempotent on request_id) ----
+    @staticmethod
+    def _project_ids(videos: list) -> list[str]:
+        return sorted([(v.get("project_id") or v.get("source") or "") for v in videos])
+
+    def _dedupe_key(self, raw: dict) -> str:
+        """Khoa dedupe revision-level (port A _start_render): cung project +
+        cung revision + cung che do preview -> cung job, ke ca khac request_id."""
+        return hashlib.sha256(json.dumps({
+            "projects": self._project_ids(raw.get("videos", [])),
+            "revision": self.remote.revision,
+            "preview": bool(raw.get("handoff", False)),
+        }, ensure_ascii=False, sort_keys=True).encode()).hexdigest()
+
+    def _snapshot_signature(self, record: dict) -> str:
+        """Chu ky checkpoint (port A project_snapshot): project + timeline
+        revision hien tai. Resume so sanh de phat hien CHECKPOINT_STALE."""
+        ids = sorted([(item.get("project_id") or "") for item in record.get("items", [])])
+        return hashlib.sha256(json.dumps({
+            "projects": ids,
+            "revision": self.remote.revision,
+        }, ensure_ascii=False, sort_keys=True).encode()).hexdigest()
+
     def submit(self, payload: TaskSubmitRequest) -> dict:
         raw = payload.model_dump(mode="json")
         fingerprint = hashlib.sha256(
@@ -128,6 +150,12 @@ class TaskService:
             if existing["fingerprint"] != fingerprint:
                 raise TaskConflictError("REQUEST_ID_CONFLICT", "request_id reused with different content.")
             return existing
+        # T2: dedupe revision-level — job active trung (project, revision,
+        # preview) duoc tra ve thay vi tao job render song song (A _start_render).
+        dedupe_key = self._dedupe_key(raw)
+        active = self.store.find_active_by_dedupe(dedupe_key)
+        if active is not None:
+            return active
         record = TaskRecord(
             id="task-" + uuid.uuid4().hex[:12],
             request_id=payload.request_id,
@@ -138,6 +166,8 @@ class TaskService:
         record["request"] = raw
         record["worker_owner"] = _current_owner()
         record["retry_count"] = 0
+        record["dedupe_key"] = dedupe_key
+        record["snapshot_signature"] = self._snapshot_signature(record)
         record["stop_grace_seconds"] = self.stop_grace_seconds
         self.store.upsert_task(record)
         self._emit(record, "task_created", {"request_id": payload.request_id})
@@ -320,8 +350,24 @@ class TaskService:
             raise TaskConflictError("REMOTE_RESULT_UNKNOWN", "Unknown mutation result; reconcile first.")
         if record["status"] != TaskStatus.NEEDS_ATTENTION:
             raise TaskConflictError("TASK_NOT_RESUMABLE", "Only needs_attention tasks resume.")
+        # T1: resume chi khi snapshot-signature con khop (port A control_job
+        # CHECKPOINT_STALE). Checkpoint luu luc submit; timeline doi tu do ->
+        # phai review lai, khong replay tren checkpoint cu. Chu cu con song
+        # thi van chan truoc nhu cu (OWNERSHIP_UNKNOWN).
+        owner = record.get("worker_owner")
+        if owner and _owner_alive(owner):
+            raise TaskConflictError("OWNERSHIP_UNKNOWN",
+                                    "Previous worker still owns this task; reconcile before resuming.")
+        expected = record.get("snapshot_signature")
+        if expected is not None and expected != self._snapshot_signature(record):
+            raise TaskConflictError("CHECKPOINT_STALE",
+                                    "Timeline changed since checkpoint; re-review before resuming.")
         record["status"] = TaskStatus.QUEUED
         record["error"] = None
+        # Checkpoint moi cho chu ky chay tiep theo; retry reset nhu A
+        # (retryCount=0 luc CONTINUE).
+        record["retry_count"] = 0
+        record["snapshot_signature"] = self._snapshot_signature(record)
         self._save(record)
         self._emit(record, "task_resumed", {})
         return self.get(task_id)

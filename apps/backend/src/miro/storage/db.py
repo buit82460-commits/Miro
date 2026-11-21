@@ -72,6 +72,22 @@ class TaskStore:
         self._db.commit()
         return cur.lastrowid
 
+    def find_active_by_dedupe(self, dedupe_key: str) -> dict | None:
+        """Job cu dang active co cung dedupe-key (T2: port A _start_render dedupe).
+
+        Chi xet queued/running/stop_requested; terminal/needs_attention khong
+        dedupe de timeline moi luon tao job moi. Tra ve ban cu nhat.
+        """
+        rows = self._db.execute(
+            "SELECT record_json FROM tasks"
+            " WHERE status IN ('queued','running','stop_requested')"
+            " ORDER BY created_at").fetchall()
+        for row in rows:
+            record = json.loads(row["record_json"])
+            if record.get("dedupe_key") == dedupe_key:
+                return record
+        return None
+
     def events(self, task_id: str) -> list[dict]:
         rows = self._db.execute(
             "SELECT id, task_id, sequence, timestamp, type, data_json FROM events"

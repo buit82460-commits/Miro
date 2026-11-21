@@ -51,6 +51,21 @@ STEPS = ["download", "audio", "stt", "translate", "tts", "sync", "mix", "render"
 IDEMPOTENT_RETRY_STEPS = frozenset({"audio", "stt", "translate", "tts", "sync", "mix"})
 TRANSIENT_ERRORS = (OSError, TimeoutError, ConnectionError)
 
+# Ma TRANSIENT duoc retry (port A shared/execution_policy.py TRANSIENT +
+# TRANSIENT_CODES ben tasks/service.py). Dung de phan loai PipelineError
+# trong _guarded — truoc day nhanh retry khong bao gio kich hoat vi engine
+# chi nem PipelineError (T3).
+PIPELINE_TRANSIENT_CODES = frozenset({
+    "REMOTE_TIMEOUT", "CONNECTION_ERROR", "TAB_LEASE_BUSY",
+    "DEPENDENCY_UNAVAILABLE", "REMOTE_RATE_LIMITED",
+    "REMOTE_502", "REMOTE_503", "REMOTE_504", "HTTP_429", "HTTP_502",
+    "HTTP_503", "HTTP_504", "ECONNRESET", "ECONNREFUSED", "ETIMEDOUT",
+    "EAI_AGAIN", "EPIPE", "ENETUNREACH", "TEMPORARY_FAILURE",
+    "DOWNLOAD_FAILED",
+})
+
+_PIPELINE_CODE_RE = re.compile(r"^([A-Z0-9_]+)[:\s]")
+
 
 # ---------------------------------------------------------------- cache ----
 def hash_file(path) -> str:
@@ -465,7 +480,17 @@ class Pipeline:
                 return {}
         return {}
 
-    def save_project(self, video_id: str, **fields) -> dict:
+    def save_project(self, video_id: str, expected_signature: str | None = None,
+                       **fields) -> dict:
+        # T4: tu choi publish output khi timeline doi giua render (port A
+        # _run_render stale-check). _step_render truyen expected_signature
+        # chup truoc render; neu timeline hien tai khac -> 409, khong ghi.
+        if ("output" in fields and fields["output"] is not None
+                and expected_signature is not None
+                and expected_signature != self.timeline_signature(video_id)):
+            raise PipelineConflict(
+                "CHECKPOINT_STALE: timeline doi trong luc render; "
+                "output cu bi tu choi, hay render lai ban hien tai.")
         proj = self.load_project(video_id)
         proj.setdefault("video_id", video_id)
         proj.setdefault("steps_done", [])
@@ -547,6 +572,19 @@ class Pipeline:
             work.joinpath("dub.srt").write_text(
                 srt_from_segments(segments), encoding="utf-8")
 
+    @staticmethod
+    def _pipeline_error_transient(exc: "PipelineError") -> bool:
+        """T3: PipelineError mang ma TRANSIENT thi duoc retry (port A
+        failure(..., transient=...)). Truoc day _guarded chi bat
+        (OSError, TimeoutError, ConnectionError) nen moi loi pipeline
+        chuan khong bao gio retry du thuoc nhom TRANSIENT."""
+        message = str(exc)
+        match = _PIPELINE_CODE_RE.match(message.strip())
+        if match and match.group(1) in PIPELINE_TRANSIENT_CODES:
+            return True
+        cause = exc.__cause__
+        return isinstance(cause, TRANSIENT_ERRORS)
+
     # ---- retry wrapper (B: execution_policy failure/recover) ----
     def _guarded(self, step: str, func, *args, **kwargs):
         attempts = self.max_attempts if step in IDEMPOTENT_RETRY_STEPS else 1
@@ -558,7 +596,29 @@ class Pipeline:
                 last = exc
                 if trial < attempts - 1:
                     time.sleep(self.retry_delays[min(trial, len(self.retry_delays) - 1)])
+            except PipelineError as exc:
+                last = exc
+                if step in IDEMPOTENT_RETRY_STEPS and self._pipeline_error_transient(exc) \
+                        and trial < attempts - 1:
+                    time.sleep(self.retry_delays[min(trial, len(self.retry_delays) - 1)])
+                    continue
+                raise
         raise PipelineError(f"Buoc {step} loi: {last}") from last
+
+    def timeline_signature(self, video_id: str) -> str:
+        """Chu ky timeline hien tai (segments + overlays + output-settings).
+        T4: chup truoc render, so lai sau render de phat hien timeline doi
+        giua chung (port A _run_render stale-check)."""
+        try:
+            segments = self._load_segments(video_id)
+        except (OSError, ValueError):
+            segments = []
+        proj = self.load_project(video_id)
+        return signature_of({
+            "segments": segments,
+            "overlays": proj.get("overlays", []),
+            "output_settings": proj.get("output_settings", {}),
+        })
 
     # ---- 8 steps (A: pipeline.py:136-389) ----
     def _step_download(self, ctx, source, progress_cb=None, src_lang=None,
@@ -708,6 +768,9 @@ class Pipeline:
 
     def _step_render(self, ctx, overlays=None, burn_subtitles=False, **_):
         vid = ctx["video_id"]
+        # T4: chup signature timeline truoc render (port A _run_render). Sau
+        # ffmpeg, neu timeline doi -> khong publish output cu, danh stale.
+        pre_signature = self.timeline_signature(vid)
         old_output = self.load_project(vid).get("output")
         srt = self._work_dir(vid) / "dub.srt"
         sig = signature_of([hash_file(ctx["video_path"]),
@@ -724,9 +787,16 @@ class Pipeline:
                 str(srt) if (burn_subtitles and srt.is_file()) else None)
             ctx["output"] = result
             self._mark_step(vid, "render", data={"signature": sig})
-            self.save_project(vid, output=result, overlays=overlays or [],
-                              output_settings={"burn_subtitles": burn_subtitles},
-                              editor_export={}, editor_pending=False)
+            try:
+                self.save_project(vid, output=result, overlays=overlays or [],
+                                  output_settings={"burn_subtitles": burn_subtitles},
+                                  editor_export={}, editor_pending=False,
+                                  expected_signature=pre_signature)
+            except PipelineConflict as exc:
+                ctx["output"] = None
+                ctx["stale"] = True
+                ctx["stale_error"] = str(exc)
+                return
             ctx["ran"].append("render")
         else:
             ctx["output"] = self.load_project(vid).get("output")
@@ -789,12 +859,18 @@ class Pipeline:
                 progress_cb(100)
         except KeyboardInterrupt:
             raise
-        if ctx.get("output") is None:
+        if ctx.get("output") is None and not ctx.get("stale"):
             proj = self.load_project(ctx["video_id"])
             if proj.get("output"):
                 ctx["output"] = proj["output"]
-        return {"video_id": ctx["video_id"], "steps_run": ctx["ran"],
+        result: dict = {"video_id": ctx["video_id"], "steps_run": ctx["ran"],
                 "output": ctx.get("output"), "segments": ctx.get("segments")}
+        if ctx.get("stale"):
+            result["status"] = "stale"
+            result["error"] = {"code": "CHECKPOINT_STALE",
+                               "message": ctx.get("stale_error") or
+                               "Timeline doi trong luc render."}
+        return result
 
     # ---- revoice one sentence (A: pipeline.py:451-482) ----
     def revoice_segment(self, video_id, seg_id, new_text=None, new_voice=None,
