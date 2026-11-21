@@ -285,29 +285,13 @@ class BrowserRuntime:
 
     # -- page state guards -------------------------------------------------
     async def _inspect_page_state(self, page) -> dict:
-        # LUAT CUNG: mat doc state qua JS read-only tap trung o eye.tab_state.
+        # LUAT CUNG: mat doc upload/dirty qua eye.upload_state (read-only).
+        # Runtime guard chi nhan records, khong evaluate truc tiep.
         try:
             from miro import eye as _eye
-            snap = await _eye.tab_state(page) or {}
-            _ = snap.get("url")
-        except Exception:
-            pass
-        try:
-            state = await page.evaluate("""() => {
-                let activeUpload = Boolean(window.__miroUploadActive ||
-                    document.documentElement?.dataset?.miroUploading === '1');
-                if (!activeUpload) {
-                    for (const input of document.querySelectorAll('input[type="file"]')) {
-                        if (input.files && input.files.length > 0) { activeUpload = true; break; }
-                    }
-                }
-                let dirtyForm = Boolean(window.__miroDirtyForm ||
-                    typeof window.onbeforeunload === 'function');
-                return {activeUpload, dirtyForm};
-            }""")
-            if isinstance(state, dict):
-                return {"activeUpload": bool(state.get("activeUpload")),
-                        "dirtyForm": bool(state.get("dirtyForm"))}
+            snap = await _eye.upload_state(page) or {}
+            return {"activeUpload": bool(snap.get("activeUpload")),
+                    "dirtyForm": bool(snap.get("dirtyForm"))}
         except Exception:
             pass
         return {"activeUpload": False, "dirtyForm": False}

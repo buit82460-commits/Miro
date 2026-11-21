@@ -126,15 +126,25 @@ async def fill_composer(page, platform: str, text: str,
                 before_submit=True)
     box = None
     seen_box_sel = str((seen.get("box") or {}).get("selector") or "")
-    box_sels = TEXT_BOX.get(platform, ())
-    if seen_box_sel and seen_box_sel in box_sels:
-        box_sels = [seen_box_sel] + [s for s in box_sels if s != seen_box_sel]
-    for bsel in box_sels:
+    seen_box_ok = bool((seen.get("box") or {}).get("enabled"))
+    if seen_box_sel and seen_box_ok:
+        # LUAT CUNG: mat da thay o nhap — tay chi dung selector nay. Loi thi
+        # dung FAILED_BEFORE_POST de mat do lai, KHONG duyet full bang.
         with suppress(Exception):
-            cand = page.locator(bsel).first
+            cand = page.locator(seen_box_sel).first
             await cand.wait_for(state="visible", timeout=4000)
             box = cand
-            break
+        if box is None:
+            raise LiveChromeError(
+                f"O nhap mat-thay loi ({seen_box_sel}); mat do lai.",
+                before_submit=True)
+    else:
+        for bsel in TEXT_BOX.get(platform, ()):
+            with suppress(Exception):
+                cand = page.locator(bsel).first
+                await cand.wait_for(state="visible", timeout=4000)
+                box = cand
+                break
     if box is None:
         raise LiveChromeError(f"Khong thay o nhap text {platform}.",
                               before_submit=True)
@@ -170,22 +180,34 @@ async def fill_composer(page, platform: str, text: str,
         await dialog.wait_for(state="visible", timeout=5000)
     scope = dialog if dialog is not None else page
     seen_submit_sel = str((seen.get("submit") or {}).get("selector") or "")
-    post_sels = POST_BUTTON.get(platform, ())
-    if seen_submit_sel and seen_submit_sel in post_sels:
-        post_sels = [seen_submit_sel] + [s for s in post_sels
-                                         if s != seen_submit_sel]
-    for psel in post_sels:
-        with suppress(Exception):
-            for cand in await scope.locator(psel).all():
-                with suppress(Exception):
-                    if await cand.is_visible() and await cand.is_enabled():
-                        label = ((await cand.inner_text()) or "").strip()
-                        if label in ("Post", "Đăng", "Lưu", "Save", "Publish",
-                                     "Generate", "Create"):
-                            post_btn = cand
-                            break
-            if post_btn is not None:
-                break
+    seen_submit_ok = bool((seen.get("submit") or {}).get("enabled"))
+    if seen_submit_sel and seen_submit_ok:
+        # LUAT CUNG: mat da thay nut submit — tay chi dung nut nay.
+        for cand in await scope.locator(seen_submit_sel).all():
+            with suppress(Exception):
+                if await cand.is_visible() and await cand.is_enabled():
+                    label = ((await cand.inner_text()) or "").strip()
+                    if label in ("Post", "Đăng", "Lưu", "Save", "Publish",
+                                 "Generate", "Create", "Send", "Gửi"):
+                        post_btn = cand
+                        break
+        if post_btn is None:
+            raise LiveChromeError(
+                f"Nut mat-thay loi ({seen_submit_sel}); mat do lai.",
+                before_submit=True)
+    else:
+        for psel in POST_BUTTON.get(platform, ()):
+            with suppress(Exception):
+                for cand in await scope.locator(psel).all():
+                    with suppress(Exception):
+                        if await cand.is_visible() and await cand.is_enabled():
+                            label = ((await cand.inner_text()) or "").strip()
+                            if label in ("Post", "Đăng", "Lưu", "Save", "Publish",
+                                         "Generate", "Create"):
+                                post_btn = cand
+                                break
+                if post_btn is not None:
+                    break
     if post_btn is None:
         raise LiveChromeError(f"Khong thay nut Post {platform} (enabled).",
                               before_submit=True)
@@ -552,8 +574,23 @@ class LivePage:
                          'span[data-e2e="like-icon"]',
                          'button[aria-label*="Like"]')
             if seen_like and seen_like in like_sels:
-                like_sels = (seen_like,) + tuple(
-                    s for s in like_sels if s != seen_like)
+                # Mat da thay — chi dung selector nay, loi thi dung.
+                try:
+                    el = page.locator(seen_like).first
+                    await el.scroll_into_view_if_needed(timeout=5000)
+                    await el.click(timeout=8000)
+                    await page.wait_for_timeout(2000)
+                    after = {}
+                    with _suppress(Exception):
+                        after = await _eye_engage(page, self.platform) or {}
+                    return {"engaged": True, "action": "like",
+                            "via": seen_like, "receipt": "SUBMITTED",
+                            "eye_buttons": eye_buttons,
+                            "eye_after": (after or {}).get("buttons", {})}
+                except Exception:
+                    raise LiveChromeError(
+                        f"Nut Like mat-thay loi ({seen_like}); mat do lai.",
+                        before_submit=True)
             for sel in like_sels:
                 with _suppress(Exception):
                     el = page.locator(sel).first
@@ -647,8 +684,18 @@ class LivePage:
             follow_sels = ('button[data-e2e="follow-button"]',
                            'button:has-text("Follow")')
             if seen_follow and seen_follow in follow_sels:
-                follow_sels = (seen_follow,) + tuple(
-                    s for s in follow_sels if s != seen_follow)
+                try:
+                    el = page.locator(seen_follow).first
+                    await el.scroll_into_view_if_needed(timeout=5000)
+                    await el.click(timeout=8000)
+                    await page.wait_for_timeout(2000)
+                    return {"engaged": True, "action": "follow",
+                            "via": seen_follow, "receipt": "SUBMITTED",
+                            "eye_buttons": eye_buttons}
+                except Exception:
+                    raise LiveChromeError(
+                        f"Nut Follow mat-thay loi ({seen_follow}); "
+                        f"mat do lai.", before_submit=True)
             for sel in follow_sels:
                 with _suppress(Exception):
                     el = page.locator(sel).first

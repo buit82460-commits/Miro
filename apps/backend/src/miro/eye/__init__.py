@@ -234,6 +234,52 @@ async def flow_video_record(page) -> dict:
             "rendered": bool(src)}
 
 
+# ---- Upload/dirty state: mat doc (read-only) thay evaluate truc tiep ----
+
+async def upload_state(page) -> dict:
+    """Eye upload/dirty: tab co file dang upload / form dirty khong.
+
+    Read-only (evaluate chi doc, khong bam). Runtime guard goi mat nay
+    truoc navigate/submit; True => cam (TAB_PROTECTED_NO_NAVIGATE).
+    """
+    out: dict = {"activeUpload": False, "dirtyForm": False}
+    with suppress(Exception):
+        loc = await _one(page, 'input[type="file"]')
+        try:
+            n = await loc.count()
+        except Exception:
+            n = 0
+        if n and n > 0:
+            with suppress(Exception):
+                has_files = await page.evaluate(
+                    """() => {
+                        try {
+                            for (const i of document.querySelectorAll(
+                                'input[type="file"]')) {
+                                if (i.files && i.files.length > 0) return true;
+                            }
+                        } catch (e) {}
+                        return false;
+                    }""")
+                if has_files is True:
+                    out["activeUpload"] = True
+    with suppress(Exception):
+        flag = await page.evaluate(
+            """() => Boolean(
+                window.__miroUploadActive ||
+                document.documentElement?.dataset?.miroUploading === '1')""")
+        if flag is True:
+            out["activeUpload"] = True
+    with suppress(Exception):
+        dirty = await page.evaluate(
+            """() => Boolean(
+                window.__miroDirtyForm ||
+                typeof window.onbeforeunload === 'function')""")
+        if dirty is True:
+            out["dirtyForm"] = True
+    return out
+
+
 EYE_COVERAGE = {
     "threads": ["threads_profile_record (via collect_post_records)",
                 "composer_state (composer/post_btn/upload)",
