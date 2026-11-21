@@ -91,6 +91,19 @@ def test_mix_ap_speed_khop_slot(tmp_path):
     assert len(bed) == 3 * engine.SAMPLE_RATE
 
 
+def test_mix_overflow_timing_exact(tmp_path):
+    # P1 ghi nhan 2: tran ghi tu giay nao + dai bao nhieu (khong chi boolean).
+    engine = LocalEngine()
+    tts = _wav(tmp_path / "tts" / "o.wav", 2.0, rate=engine.SAMPLE_RATE)
+    orig = _wav(tmp_path / "orig.wav", 3.0, rate=engine.SAMPLE_RATE)
+    entry = {"tts_path": str(tts), "start": 2.5, "speed": 1.0}
+    bed = engine.mix([entry], tmp_path / "tts", str(orig), total=3.0)
+    assert len(bed) == 3 * engine.SAMPLE_RATE
+    assert entry.get("overflow") is True
+    assert entry.get("overflow_from") == 3.0
+    assert entry.get("overflow_secs") == 1.5
+
+
 def test_render_video_preview_boolean(tmp_path):
     import shutil
     if not shutil.which("ffmpeg"):

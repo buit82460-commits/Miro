@@ -404,11 +404,14 @@ class LocalEngine:
                 j = off + i
                 bed[j] = int(max(-32768, min(32767, bed[j] + seg[i])))
             # A build_dub_track:57-60 cat im lang phan tran — C ghi co de UI bao.
+            # P1 ghi nhan 2: them timing_exact (tran tu giay nao, dai bao nhieu)
+            # de UI bao chinh xac thay vi boolean.
             if off + len(seg) > n:
-                try:
-                    entry["overflow"] = True
-                except Exception:
-                    pass
+                placed = max(0, n - off)
+                entry["overflow"] = True
+                entry["overflow_from"] = round(float(entry.get("start", 0.0))
+                                               + placed / rate, 3)
+                entry["overflow_secs"] = round((off + len(seg) - n) / rate, 3)
         peak = max([abs(s) for s in bed] + [1])
         if peak > 30000:
             scale = 30000.0 / peak
