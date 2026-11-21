@@ -280,3 +280,24 @@ trong `C:\Miro\apps\backend` → **47 passed** (EXIT=0).
 Nhỏ (không chặn): `skipped_no_article` hiện chỉ đếm, link ngoài article vẫn được thu record (đúng A fallback `parentElement`, không mù như B4 gợi ý cắt cứng) — chấp nhận có chủ ý.
 
 Lệnh: `cd C:\Miro\apps\backend && python -m pytest tests/test_eye_wiring.py tests/test_eye_collect_p0.py tests/test_publisher_threads.py tests/test_threads_flow.py tests/test_schedule_caller.py -q` → **47 passed**.
+
+---
+
+## § Mắt S1/S4/S5 (commit 3f617c9, ngày 2026-11-21) — **ĐẠT**
+
+Checker thường trực đọc diff 3f617c9 + đối chiếu `docs/reread-eye.md` S1 (`:87-104`),
+S4 (`:120-124`), S5 (`:125-129`) + A (`C:\dubtool\core\rea_eye.py` `match_eye_records :31-53`,
+`extract_tag :26-28`, `TAG_RE :18`) + phần mở P0 (S1/S4/S5 dọn sau) + tự chạy
+`python -m pytest tests/test_eye_wiring.py tests/test_eye_collect_p0.py tests/test_publisher_threads.py tests/test_threads_flow.py tests/test_schedule_caller.py -q`
+trong `C:\Miro\apps\backend` → **50 passed** (EXIT=0).
+
+| Mục | Bằng chứng | Kết quả |
+|---|---|---|
+| S1 fallback record-major 1 vòng | `match_eye_records` fallback gộp 2 vòng thành 1 (`:584-596`: mỗi record check post_id trước rồi tag, skip `url` rỗng); test record đầu `KNOWN` chốt `eye-post_id` dù record sau tag khớp; path delegate vẫn gọi hàm gốc A record-major | **ĐẠT** |
+| S4 tag 6-số thống nhất | `from_item :377` `#dub\d{6}(?!\d)` trên `text.lower()`; test `#dub001`→`#dub000000` (caption_for append unique_tag), `#dub1234567`→`#dub000000` không hit nhầm; alphabet khớp mắt (cộng B3 `(?!\d)` đã có ở `TAG_RE :447`) | **ĐẠT** |
+| S5 want_text chết có ghi rõ | Default `""` + docstring "CỐ Ý KHÔNG DÙNG"; test text khác hẳn không đổi kết quả, text chứa tag vẫn miss; 4 caller (`publisher.py :744/:916`, `worker.py :269/:287`) truyền `intent.text` chạy qua (50 passed) | **ĐẠT** |
+
+Nhỏ (không chặn): A `TAG_RE :18` không boundary, C thêm `(?!\d)` (kế thừa fix B3 — chặt hơn có chủ ý).
+Đóng phần mở P0 dòng S1/S4/S5.
+
+Lệnh: `cd C:\Miro\apps\backend && python -m pytest tests/test_eye_wiring.py tests/test_eye_collect_p0.py tests/test_publisher_threads.py tests/test_threads_flow.py tests/test_schedule_caller.py -q` → **50 passed**.
