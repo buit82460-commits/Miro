@@ -48,3 +48,12 @@ Phạm vi M1: READ-only (read/navigate trên fake page trong bộ nhớ), không
 3. Chuẩn hóa URL kiểu A (`_urls_same_destination`) + đường `create_tab` có guard cho publish.
 4. Snapshot before/after + binding lifecycle (`BINDING_NOT_FOUND` → gắn lại).
 5. 1 lần chạy thật trên Chrome remote-debugging (read-only trước, publish sau).
+
+## 6. Connector DevToolsActivePort kiểu dubtool + luật 1-tab/platform (commit 87797d8, ngày 2026-11-21)
+
+**Kết luận: ĐẠT** — kiểm tra độc lập bằng chạy lại test (phần mở: live Chrome thật chưa chạy).
+
+- Đối chiếu mẫu `C:\dubtool\scripts\social_live_chrome.py:18-27` — ĐẠT: `chrome_endpoint` đọc `<user_data_dir>/DevToolsActivePort` (trống → `%LOCALAPPDATA%\Google\Chrome\User Data`), dòng 1 = port (1–65535), dòng 2 = route `/devtools/browser/<id>` (regex fullmatch giống mẫu), ghép `ws://127.0.0.1:{port}{route}`; file thiếu/sai → `CDP_UNAVAILABLE` kèm hướng dẫn bật Allow remote debugging ở `chrome://inspect`, không tự mở Chrome. Thêm `endpoint=` passthrough (Chrome mở cờ remote-debugging riêng thì dùng thẳng) — mở rộng hợp lệ, không lệch mẫu mặc định.
+- Luật 1-tab/platform — ĐẠT: `register_live_tab` ưu tiên tab open cùng browser+profile+platform (reused, không đăng ký tab thứ 2 kể cả khi URL khác); chưa có tab → `TAB_REQUIRED_OPEN_FIRST` (mở tab trước, không tự `new_page`/`goto`); `acquire_tab` thiếu tab cũng `TAB_REQUIRED_OPEN_FIRST`, không navigate.
+- Lệnh: `python -m pytest tests/test_chrome_single_tab.py tests/test_live_chrome_readonly.py -q` trong `C:\Miro\apps\backend` → **11 passed** (8 endpoint/single-tab + 3 readonly có sẵn; fake hoàn toàn, không Chrome/CDP thật).
+- Phần mở: chưa chạy `ManagedChromeSession.open` + `acquire` + `read` trên Chrome remote-debugging thật (live thật chưa chạy).
