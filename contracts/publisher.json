@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://miro.local/contracts/publisher.json",
   "title": "Publisher — idempotent publish",
-  "description": "POST /publications. Khóa幂 đẳng = cặp (publication_id, attempt_id). Retry cùng cặp -> replay, không đăng trùng.",
+  "description": "POST /publications. Khóa lũy đẳng = cặp (publication_id, attempt_id). Retry cùng cặp -> replay, không đăng trùng.",
   "type": "object",
   "definitions": {
     "PublishRequest": {
@@ -36,5 +36,5 @@
       "404": { "description": "render_id không tồn tại." }
     }
   },
-  "x-idempotency-rule": "Khóa幂 đẳng = (publication_id, attempt_id). Trùng khóa -> 201 replay, không tạo job mới phía channel."
+  "x-idempotency-rule": "Khóa lũy đẳng = (publication_id, attempt_id). Trùng khóa -> 201 replay, không tạo job mới phía channel."
 }

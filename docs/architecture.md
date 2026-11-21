@@ -10,7 +10,7 @@ apps/web (Next.js) ──REST/JSON──▶ apps/backend/src/miro (FastAPI)
                           └─ services/youtube (upload/status)
 ```
 
-- Render là cổng幂 đẳng duy nhất tạo job render (`request_id`).
+- Render là cổng lũy đẳng duy nhất tạo job render (`request_id`).
 - Publisher nhận `(publication_id, attempt_id)`, fan-out sang channel services.
 - Browser/media workers không gọi trực tiếp lẫn nhau; giao tiếp qua backend.
 - DB mới ở `migrations/database/`; legacy chỉ đọc, migrate một chiều

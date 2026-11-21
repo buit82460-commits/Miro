@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from .models import utc_now_iso
+from ..tasks.models import utc_now_iso
 
 
 class PermissionError(Exception):

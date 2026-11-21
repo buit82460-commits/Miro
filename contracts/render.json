@@ -9,7 +9,7 @@
       "type": "object",
       "required": ["request_id", "project_id", "expected_revision", "content_hash"],
       "properties": {
-        "request_id": { "type": "string", "minLength": 1, "description": "Mã幂 đẳng do client cấp, duy nhất mỗi lần tạo render." },
+        "request_id": { "type": "string", "minLength": 1, "description": "Khóa lũy đẳng do client cấp, duy nhất mỗi lần tạo render." },
         "project_id": { "type": "string", "minLength": 1 },
         "expected_revision": { "type": "integer", "minimum": 0, "description": "Revision project mà render này dựa trên. Server từ chối nếu khác revision hiện tại." },
         "content_hash": { "type": "string", "minLength": 1, "description": "SHA-256 của spec đã canonicalize. Dùng để phát hiện cùng mã khác nội dung." },
@@ -44,5 +44,5 @@
       "422": { "description": "Revision không khớp hoặc schema không hợp lệ." }
     }
   },
-  "x-idempotency-rule": "Khóa幂 đẳng = request_id. So sánh (project_id, expected_revision, content_hash): trùng -> 201 replay; lệch -> 409."
+  "x-idempotency-rule": "Khóa lũy đẳng = request_id. So sánh (project_id, expected_revision, content_hash): trùng -> 201 replay; lệch -> 409."
 }

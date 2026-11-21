@@ -3,7 +3,7 @@
 Nguồn chân lý cho API Miro. Mọi implementation (backend, workers, web)
 phải tuân thủ 2 file schema này.
 
-| Contract | File | Khóa幂 đẳng | Xung đột |
+| Contract | File | Khóa lũy đẳng | Xung đột |
 |---|---|---|---|
 | Render | `render.json` | `request_id` | cùng mã + khác `(project_id, expected_revision, content_hash)` → `409` + `existing_render_id` |
 | Publisher | `publisher.json` | `(publication_id, attempt_id)` | trùng khóa → `201` replay (`replayed: true`), không tạo job mới |
