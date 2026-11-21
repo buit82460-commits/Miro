@@ -43,6 +43,9 @@ class MockBrowser:
         self.receipts = receipts or {}
         self.lock = threading.Lock()
 
+    def verify_actor(self, owner):
+        return True  # fake da verify ro rang (contract: True ro rang)
+
     def post_once(self, intent):
         with self.lock:
             self.posts += 1
@@ -147,6 +150,9 @@ def test_failed_before_post_allows_retry(tmp_path):
                     text="retry me #dub000005", tag="#dub000005")
 
     class BeforeSubmitFail:
+        def verify_actor(self, owner):
+            return True  # fake da verify ro rang
+
         def post_once(self, intent):
             err = RuntimeError("composer missing")
             err.before_submit = True
@@ -175,6 +181,9 @@ def test_batch_two_phase_ack_then_group_reconcile(tmp_path):
     class SeqBrowser:
         def __init__(self):
             self.calls: list[str] = []
+
+        def verify_actor(self, owner):
+            return True  # fake da verify ro rang
 
         def post_once(self, intent):
             self.calls.append(intent.intent_id)
@@ -215,6 +224,9 @@ def test_batch_before_submit_error_continues(tmp_path):
                   text="good #dub000022", tag="#dub000022")
 
     class MixedBrowser:
+        def verify_actor(self, owner):
+            return True  # fake da verify ro rang
+
         def post_once(self, intent):
             if intent.intent_id == "threads-c1":
                 err = RuntimeError("composer missing")
@@ -405,3 +417,82 @@ def test_actor_contract_mismatch_blocks(tmp_path):
 
     out = pub.publish(intent, WrongActor())
     assert out.get("error") == "FAILED_BEFORE_POST"
+
+
+def _actor_intent(tag="a2"):
+    suffix = "".join(ch for ch in tag if ch.isdigit()) or "00"
+    return Intent(intent_id=f"threads-{tag}", shortcode=tag, owner="alice",
+                  text=f"actor #dub0000{suffix}", tag=f"#dub0000{suffix}")
+
+
+def test_actor_contract_requires_explicit_true(tmp_path):
+    """Fail-closed: verify_actor phai tra ve dung True; False/None/UNKNOWN
+    deu bi tu choi truoc Post, 0 post."""
+    pub, base, attempts = make_pub(tmp_path)
+    for index, result in enumerate((False, None, "UNKNOWN", 0, "")):
+        intent = _actor_intent(tag=f"ax{index}")
+
+        class AmbiguousBrowser:
+            def __init__(self, value):
+                self.value = value
+                self.posts = 0
+
+            def verify_actor(self, owner):
+                return self.value
+
+            def post_once(self, intent):
+                self.posts += 1
+                raise AssertionError("must not post without explicit True")
+
+            def read_receipt(self, intent):
+                return None
+
+        browser = AmbiguousBrowser(result)
+        out = pub.publish(intent, browser)
+        assert out.get("error") == "FAILED_BEFORE_POST", result
+        assert browser.posts == 0
+
+
+def test_actor_contract_missing_everything_blocks_by_default(tmp_path):
+    """Khong co verify_actor lan declared_actor -> tu choi mac dinh."""
+    pub, base, attempts = make_pub(tmp_path)
+    intent = _actor_intent()
+
+    class BareBrowser:
+        def post_once(self, intent):
+            raise AssertionError("must not post unverified")
+
+        def read_receipt(self, intent):
+            return None
+
+    out = pub.publish(intent, BareBrowser())
+    assert out.get("error") == "FAILED_BEFORE_POST"
+
+
+def test_actor_contract_relaxation_only_with_explicit_env(tmp_path, monkeypatch):
+    """Chi MIRO_ALLOW_UNVERIFIED_ACTOR=1 (test/fake) moi noi long contract."""
+    pub, base, attempts = make_pub(tmp_path)
+
+    class BareBrowser(MockBrowser):
+        verify_actor = None
+        declared_actor = None
+
+        def __init__(self):
+            super().__init__()
+
+    intent = _actor_intent()
+    out = pub.publish(intent, BareBrowser())
+    assert out.get("error") == "FAILED_BEFORE_POST"
+
+    monkeypatch.setenv("MIRO_ALLOW_UNVERIFIED_ACTOR", "1")
+    intent2 = _actor_intent(tag="a3")
+    out2 = pub.publish(intent2, BareBrowser())
+    assert out2.get("error") != "FAILED_BEFORE_POST", out2
+
+
+def test_actor_contract_explicit_true_posts(tmp_path):
+    """verify_actor tra True ro rang -> duoc post."""
+    pub, base, attempts = make_pub(tmp_path)
+    intent = _actor_intent()
+    out = pub.publish(intent, MockBrowser())
+    assert out.get("posted") is True

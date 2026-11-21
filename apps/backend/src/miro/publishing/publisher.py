@@ -310,13 +310,26 @@ def enforce_adapter_integrity(baseline: Path | None = None) -> None:
         raise RuntimeError(f"INTEGRITY_DRIFT: baseline {cand} present; refusing to post.")
 
 
+def _actor_relaxation_enabled() -> bool:
+    """Chi test/fake: MIRO_ALLOW_UNVERIFIED_ACTOR=1 bo qua contract actor.
+
+    Production KHONG dat bien nay: mac dinh fail-closed, thieu verify ro
+    rang la tu choi truoc moi side-effect.
+    """
+    return os.environ.get("MIRO_ALLOW_UNVERIFIED_ACTOR") == "1"
+
+
 def verify_actor_contract(browser, intent: "Intent") -> None:
     """Contract: browser inject phai verify actor @username truoc Post.
 
-    Neu browser co verify_actor(owner) thi goi va fail-closed khi mismatch
-    (before_submit=True). Neu khong co, yeu cau browser khai bao
-    declared_actor da verify; mismatch -> tu choi. Khong co gi ca -> tu choi
-    de tranh post nham tai khoan (scope browser that out-of-scope, ghi ro).
+    Fail-closed mac dinh (production): chi cho post khi co ket qua xac minh
+    RO RANG:
+    - browser.verify_actor(owner) callable -> phai tra ve dung True; False /
+      None / UNKNOWN / bat ky gia tri nao khac -> tu choi (before_submit).
+    - neu khong co verify_actor: browser phai khai bao declared_actor da
+      verify; mismatch -> tu choi (before_submit).
+    - khong co gi ca -> tu choi (before_submit), tru khi
+      MIRO_ALLOW_UNVERIFIED_ACTOR=1 (chi test/fake, khong dung production).
     """
     expected = _normalize_account(intent.owner).lower()
     if not expected:
@@ -326,11 +339,11 @@ def verify_actor_contract(browser, intent: "Intent") -> None:
     verify = getattr(browser, "verify_actor", None)
     if callable(verify):
         ok = verify(intent.owner)
-        if ok is False:
-            err = RuntimeError("Chua xac minh actor Threads (@username).")
-            err.before_submit = True  # type: ignore[attr-defined]
-            raise err
-        return
+        if ok is True:
+            return
+        err = RuntimeError("ACTOR_UNVERIFIED: browser chua xac minh actor ro rang.")
+        err.before_submit = True  # type: ignore[attr-defined]
+        raise err
     declared = getattr(browser, "declared_actor", None)
     if declared is not None:
         if _normalize_account(declared).lower() != expected:
@@ -338,18 +351,11 @@ def verify_actor_contract(browser, intent: "Intent") -> None:
             err.before_submit = True  # type: ignore[attr-defined]
             raise err
         return
-    reads = getattr(browser, "post_once", None), getattr(browser, "read_receipt", None)
-    if reads[0] is None:
-        err = RuntimeError("Browser thieu post_once; khong post khi chua verify actor.")
-        err.before_submit = True  # type: ignore[attr-defined]
-        raise err
-    # Mock/test browser khong co verify_actor: chap nhan nhung ghi ro trong
-    # docstring scope cam (browser that phai verify). De fail-closed that thi
-    # dat MIRO_REQUIRE_ACTOR=1 de bat buoc declared_actor/verify_actor.
-    if os.environ.get("MIRO_REQUIRE_ACTOR") == "1":
-        err = RuntimeError("ACTOR_UNVERIFIED: browser chua verify actor.")
-        err.before_submit = True  # type: ignore[attr-defined]
-        raise err
+    if _actor_relaxation_enabled():
+        return
+    err = RuntimeError("ACTOR_UNVERIFIED: browser chua verify actor.")
+    err.before_submit = True  # type: ignore[attr-defined]
+    raise err
 
 
 @dataclass

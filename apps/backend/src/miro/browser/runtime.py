@@ -34,6 +34,45 @@ from miro.browser.lease_store import LeaseStore, tab_resource
 _DEFAULT_TTL = 180  # khớp JARVIS worker ttl; acquire vượt quá phải truyền tường minh
 
 
+def _origin_of(url: str) -> tuple | None:
+    """Origin chuẩn hóa (scheme, host, port) để so khớp policy.
+
+    Trả None khi URL không parse được hoặc thiếu scheme http(s)/host.
+    Port mặc định: 443 cho https, 80 cho http. Host lowercase.
+    """
+    from urllib.parse import urlsplit
+
+    try:
+        parts = urlsplit(str(url))
+    except Exception:
+        return None
+    scheme = (parts.scheme or "").lower()
+    host = (parts.hostname or "").lower()
+    if scheme not in ("http", "https") or not host:
+        return None
+    port = parts.port
+    if port is None:
+        port = 443 if scheme == "https" else 80
+    return (scheme, host, port)
+
+
+def _check_origin(url: str, allowed_origins: tuple[str, ...] | list[str]) -> None:
+    """Fail-closed: URL phải cùng origin (scheme/host/port) với policy.
+
+    Không parse được hoặc lệch origin -> RegistryError URL_NOT_REGISTERED,
+    caller từ chối trước mọi side-effect.
+    """
+    wanted = _origin_of(url)
+    if wanted is None:
+        raise RegistryError(
+            "URL_NOT_REGISTERED: URL khong hop le hoac khong thuoc policy origin")
+    for allowed in allowed_origins or ():
+        if _origin_of(allowed) == wanted:
+            return
+    raise RegistryError(
+        "URL_NOT_REGISTERED: URL lech policy origin (scheme/host/port)")
+
+
 def chrome_endpoint(user_data_dir: str) -> str:
     """Đọc DevToolsActivePort -> ws endpoint. Chrome chưa bật
     remote-debugging -> CDP_UNAVAILABLE, không tự mở Chrome thay thế."""
@@ -250,8 +289,8 @@ class BrowserRuntime:
             raise ProfileUnverified("PROFILE_UNVERIFIED: bind current live profile evidence first")
         platform_id = request.get("platformId")
         url = request.get("url")
-        if url and self.allowed_origins and not any(url.startswith(o) for o in self.allowed_origins):
-            raise RegistryError("URL_NOT_REGISTERED")
+        if url and self.allowed_origins:
+            _check_origin(url, self.allowed_origins)
         lease_ttl = int(request.get("leaseTtl", _DEFAULT_TTL))
         if not 1 <= lease_ttl <= 1800:
             raise RegistryError("INVALID_LEASE_TTL")
@@ -347,6 +386,8 @@ class BrowserRuntime:
     async def navigate_tab(self, acquired: AcquiredTab, url: str) -> dict:
         self._ensure_live()
         self._check_lease(acquired.lease)
+        if self.allowed_origins:
+            _check_origin(url, self.allowed_origins)
         await self._verify_actor(acquired.page, acquired.record, acquired.lease)
         state = await self._inspect_page_state(acquired.page)
         if state.get("activeUpload") or state.get("dirtyForm") or acquired.record.get("flagWatch"):
@@ -358,6 +399,9 @@ class BrowserRuntime:
         except Exception as error:
             raise RegistryError("NAVIGATE_FAILED: " + type(error).__name__) from None
         self._check_lease(acquired.lease)
+        final_url = getattr(acquired.page, "url", None)
+        if isinstance(final_url, str) and self.allowed_origins:
+            _check_origin(final_url, self.allowed_origins)
         await self._verify_actor(acquired.page, acquired.record, acquired.lease)
         acquired.record["url"] = url
         acquired.record["lastUsedAt"] = time.time()

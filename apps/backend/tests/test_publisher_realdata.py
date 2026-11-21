@@ -56,6 +56,11 @@ class ReadOnlyBrowser:
         self.attempts = 0
         self.receipt = receipt
 
+    def verify_actor(self, owner):
+        # Fake quan sat (khong bao gio post that): khai da verify ro rang
+        # de kiem tra media gate di den post; post that van bi chan o day.
+        return True
+
     def post_once(self, intent):
         self.attempts += 1
         # Dry-run: khong post len mang that — raise TRUOC khi co post thanh cong.

@@ -201,3 +201,95 @@ def test_single_owner_fence_token(tmp_path):
     with pytest.raises(Exception):
         store.release(first)
     store.release(second)
+
+
+def test_origin_prefix_spoof_rejected_on_acquire(tmp_path):
+    """startswith cu chap 'https://example.com.evil.com' (prefix host);
+    check origin moi so scheme/host/port -> tu choi."""
+    page = FakePage("https://example.com/a")
+    runtime, store = make_runtime(tmp_path, [page])
+    seed_profile(runtime)
+    seed_tab(store, target="t1")
+    runtime.pages["t1"] = page
+
+    req = {"profileBindingId": "prof-1", "platformId": "demo",
+           "url": "https://example.com.evil.com/a", "leaseTtl": 300}
+    with pytest.raises(RegistryError, match="URL_NOT_REGISTERED"):
+        asyncio.run(runtime.acquire_tab(req, caller="task-1"))
+
+
+def test_origin_scheme_port_mismatch_rejected(tmp_path):
+    """Lech scheme hoac port -> tu choi, du host giong nhau."""
+    page = FakePage("https://example.com/a")
+    runtime, store = make_runtime(
+        tmp_path, [page], origins=("https://example.com:8443/app",))
+    seed_profile(runtime)
+    seed_tab(store, target="t1")
+    runtime.pages["t1"] = page
+
+    for bad in ("http://example.com:8443/app",
+                "https://example.com/app",      # port mac dinh 443 != 8443
+                "https://example.com:9443/app",
+                "https://other.com:8443/app"):
+        req = {"profileBindingId": "prof-1", "platformId": "demo",
+               "url": bad, "leaseTtl": 300}
+        with pytest.raises(RegistryError, match="URL_NOT_REGISTERED"):
+            asyncio.run(runtime.acquire_tab(req, caller="task-1"))
+
+
+def test_origin_explicit_default_port_allowed(tmp_path):
+    """https cong 443 tuong duong (host case-insensitive) -> duoc acquire."""
+    page = FakePage("https://example.com:443/a")
+    runtime, store = make_runtime(tmp_path, [page],
+                                  origins=("https://example.com/base",))
+    seed_profile(runtime)
+    seed_tab(store, target="t1", url="https://example.com:443/a")
+    runtime.pages["t1"] = page
+
+    req = {"profileBindingId": "prof-1", "platformId": "demo",
+           "url": "https://example.com:443/a", "leaseTtl": 300}
+    acquired = asyncio.run(runtime.acquire_tab(req, caller="task-1"))
+    assert acquired.reused is True
+    asyncio.run(acquired.release())
+
+
+def test_navigate_enforces_policy_before_goto(tmp_path):
+    """Navigate lech origin bi chan TRUOC goto (goto_calls van rong)."""
+    page = FakePage("https://example.com/a")
+    runtime, _ = make_runtime(tmp_path, [page])
+    seed_profile(runtime)
+    seed_tab(runtime.store, target="t1")
+    runtime.pages["t1"] = page
+
+    req = {"profileBindingId": "prof-1", "platformId": "demo",
+           "url": "https://example.com/a", "leaseTtl": 300}
+    acquired = asyncio.run(runtime.acquire_tab(req, caller="task-1"))
+    with pytest.raises(RegistryError, match="URL_NOT_REGISTERED"):
+        asyncio.run(acquired.navigate("https://example.com.evil.com/x"))
+    assert page.goto_calls == []
+    with pytest.raises(RegistryError, match="URL_NOT_REGISTERED"):
+        asyncio.run(acquired.navigate("http://example.com/other"))
+    assert page.goto_calls == []
+    asyncio.run(acquired.release())
+
+
+def test_navigate_rejects_redirect_off_origin(tmp_path):
+    """Goto xong ma URL cuoi lech policy (redirect mo) -> tu choi."""
+    class RedirectPage(FakePage):
+        async def goto(self, url: str, **kwargs):
+            self.goto_calls.append(url)
+            self.url = "https://evil-redirect.example.net/x"
+
+    page = RedirectPage("https://example.com/a")
+    runtime, _ = make_runtime(tmp_path, [page])
+    seed_profile(runtime)
+    seed_tab(runtime.store, target="t1")
+    runtime.pages["t1"] = page
+
+    req = {"profileBindingId": "prof-1", "platformId": "demo",
+           "url": "https://example.com/a", "leaseTtl": 300}
+    acquired = asyncio.run(runtime.acquire_tab(req, caller="task-1"))
+    with pytest.raises(RegistryError, match="URL_NOT_REGISTERED"):
+        asyncio.run(acquired.navigate("https://example.com/next"))
+    assert acquired.record.get("url") == "https://example.com/a"
+    asyncio.run(acquired.release())
