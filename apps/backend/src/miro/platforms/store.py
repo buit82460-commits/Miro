@@ -12,6 +12,9 @@ Rules:
 from __future__ import annotations
 
 import copy
+import json
+import os
+from pathlib import Path
 
 from miro.platforms.registry import (
     CAPABILITIES,
@@ -28,6 +31,53 @@ _LIVE: dict = {
 }
 
 _HISTORY_CAP = 20
+
+
+def _state_path() -> Path:
+    root = Path(os.environ.get("MIRO_BE_DB_DIR", r"C:\Miro\var"))
+    root.mkdir(parents=True, exist_ok=True)
+    return root / "platforms-registry.json"
+
+
+def _persist() -> None:
+    try:
+        _state_path().write_text(
+            json.dumps({"live": _LIVE, "history": _HISTORY}, ensure_ascii=False),
+            encoding="utf-8",
+        )
+    except OSError:
+        pass
+
+
+def _load() -> None:
+    global _LIVE, _HISTORY
+    try:
+        raw = json.loads(_state_path().read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return
+    if isinstance(raw.get("live"), dict) and isinstance(raw["live"].get("platforms"), list):
+        _LIVE = copy.deepcopy(raw["live"])
+    if isinstance(raw.get("history"), list):
+        _HISTORY = copy.deepcopy(raw["history"][-_HISTORY_CAP:])
+
+
+_load()
+
+
+def reset() -> None:
+    """Ve seed ban dau (cho test). Xoa ca file persist."""
+    global _LIVE, _HISTORY
+    _HISTORY = []
+    _LIVE = {"version": REGISTRY_VERSION, "platforms": copy.deepcopy(PLATFORM_REGISTRY)}
+    _persist()
+
+
+def reload() -> None:
+    """Nap lai tu file persist (mo phong restart process)."""
+    global _LIVE, _HISTORY
+    _LIVE = {"version": REGISTRY_VERSION, "platforms": copy.deepcopy(PLATFORM_REGISTRY)}
+    _HISTORY = []
+    _load()
 
 
 def snapshot() -> dict:
@@ -58,12 +108,14 @@ def list_platforms() -> dict:
     return live
 
 
-def _bump() -> dict:
+def _commit(new_platforms: list[dict]) -> dict:
+    """Luu snapshot ban TRUOC khi sua vao history, roi moi bump version + persist."""
     global _LIVE
     _HISTORY.append(copy.deepcopy(_LIVE))
     if len(_HISTORY) > _HISTORY_CAP:
         _HISTORY.pop(0)
-    _LIVE = {"version": _LIVE["version"] + 1, "platforms": _LIVE["platforms"]}
+    _LIVE = {"version": _LIVE["version"] + 1, "platforms": new_platforms}
+    _persist()
     return snapshot()
 
 
@@ -73,7 +125,6 @@ def _find(platforms: list[dict], pid: str) -> dict | None:
 
 def upsert_platform(payload: dict) -> dict:
     """Add new or replace existing platform. Old tasks keep pinned version."""
-    global _LIVE
     pid = (payload.get("id") or "").strip().lower()
     if not pid:
         raise ValueError("platform id required")
@@ -96,8 +147,7 @@ def upsert_platform(payload: dict) -> dict:
         platforms.append(entry)
     else:
         platforms[platforms.index(existing)] = entry
-    _LIVE = {"version": _LIVE["version"], "platforms": platforms}
-    return _bump()
+    return _commit(platforms)
 
 
 def clone_platform(pid: str, new_id: str = "") -> dict:
@@ -113,7 +163,6 @@ def clone_platform(pid: str, new_id: str = "") -> dict:
 
 
 def update_capability(pid: str, capability: str, patch: dict) -> dict:
-    global _LIVE
     if capability not in CAPABILITIES:
         raise ValueError(f"unknown capability: {capability}")
     platforms = copy.deepcopy(_LIVE["platforms"])
@@ -122,8 +171,7 @@ def update_capability(pid: str, capability: str, patch: dict) -> dict:
         raise KeyError(pid)
     cap = plat.setdefault("capabilities", {}).setdefault(capability, {})
     cap.update({k: v for k, v in patch.items() if k in ("status", "runtime", "input", "output", "evidence")})
-    _LIVE = {"version": _LIVE["version"], "platforms": platforms}
-    return _bump()
+    return _commit(platforms)
 
 
 def history() -> list[dict]:
@@ -138,6 +186,7 @@ def rollback(target_version: int) -> dict:
         if snap["version"] == target_version:
             _HISTORY.append(copy.deepcopy(_LIVE))
             _LIVE = copy.deepcopy(snap)
+            _persist()
             return snapshot()
     if _LIVE["version"] == target_version:
         return snapshot()

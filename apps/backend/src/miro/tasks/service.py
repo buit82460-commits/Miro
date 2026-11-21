@@ -15,7 +15,7 @@ import os
 import time
 import uuid
 
-from ..permissions.store import PermissionStore
+from ..permissions.store import PermissionError, PermissionStore
 from ..storage.db import TaskStore
 from .models import TaskError, TaskItem, TaskRecord, TaskStatus, TaskSubmitRequest, utc_now_iso
 
@@ -101,11 +101,22 @@ class TaskService:
         self.stop_grace_seconds = float(stop_grace_seconds)
         self._seq: dict[str, int] = {}
 
-    # ---- events ----
     def _emit(self, record: dict, type: str, data: dict | None = None) -> None:
-        seq = self._seq.get(record["id"], 0) + 1
+        import sqlite3
+
+        known = self._seq.get(record["id"], 0)
+        stored = max((e["sequence"] for e in self.store.events(record["id"])), default=0)
+        seq = max(known, stored) + 1
         self._seq[record["id"]] = seq
-        self.store.append_event(record["id"], seq, utc_now_iso(), type, data or {})
+        try:
+            self.store.append_event(record["id"], seq, utc_now_iso(), type, data or {})
+        except sqlite3.IntegrityError:
+            # Instance moi recover tren cung DB: seq da ton tai (UNIQUE).
+            # Doc lai max tu DB de khong vo idempotency.
+            stored = max((e["sequence"] for e in self.store.events(record["id"])), default=0)
+            seq = max(seq, stored) + 1
+            self._seq[record["id"]] = seq
+            self.store.append_event(record["id"], seq, utc_now_iso(), type, data or {})
 
     # ---- submit (idempotent on request_id) ----
     def submit(self, payload: TaskSubmitRequest) -> dict:
@@ -146,8 +157,15 @@ class TaskService:
         record["pending_mutation"] = {"item": index, "step": step}
         self._save(record)
         if step == "apply":
-            self.permissions.check(record["id"], index, scope="edit",
-                                   revision=self.remote.revision)
+            try:
+                self.permissions.check(record["id"], index, scope="edit",
+                                       revision=self.remote.revision)
+            except PermissionError as exc:
+                # Tu choi quyen: chua co mutation nao xay ra -> xoa marker,
+                # giu nguyen code goc de run() ghi NEEDS_ATTENTION dung ma.
+                record["pending_mutation"] = None
+                self._save(record)
+                raise TaskConflictError(exc.code, exc.message) from None
         attempts = 0
         while True:
             try:

@@ -111,3 +111,48 @@ def test_permissions_scope_revision_revoke(tmp_path):
     with pytest.raises(PermissionError) as exc3:
         svc.permissions.check(record["id"], 0, "edit", 1)
     assert exc3.value.code == "APPROVAL_REQUIRED"
+
+
+@pytest.mark.asyncio
+async def test_permission_denied_at_apply_keeps_db_out_of_running(tmp_path):
+    """Tu choi quyen o buoc apply: DB ghi dung ma goc, khong running/pending."""
+    svc = make_service(tmp_path)
+    record = svc.submit(payload())
+    out = await svc.run(record["id"])  # khong grant -> apply bi tu choi
+    assert out["status"] == "needs_attention"
+    assert out["error"]["code"] == "APPROVAL_REQUIRED"
+    assert out["pending_mutation"] is None
+    fresh = TaskStore(tmp_path / "tasks.db").get_by_id(record["id"])
+    assert fresh["status"] == "needs_attention"
+    assert fresh["pending_mutation"] is None
+
+
+@pytest.mark.asyncio
+async def test_recover_on_fresh_instance_is_idempotent(tmp_path):
+    """Instance moi tren cung DB recover: restart + event khong trung sequence."""
+    svc = make_service(tmp_path)
+    record = svc.submit(payload())
+    svc.permissions.grant(record["id"], 0, "edit", revision=4)
+    done = await svc.run(record["id"])
+    assert done["status"] == "completed"
+
+    # Task non-terminal crash giua chung (dead owner) -> instance moi restart.
+    rec2 = svc.submit(payload(request_id="req-2"))
+    rec2["status"] = "running"
+    rec2["worker_owner"] = {"pid": 999999999, "created_at": 1.0}
+    svc.store.upsert_task(rec2)
+    n_before = len(svc.store.events(rec2["id"]))
+
+    fresh = TaskService(TaskStore(tmp_path / "tasks.db"))
+    out = fresh.restart(rec2["id"])
+    assert out["status"] == "needs_attention"
+    assert out["error"]["code"] == "RESTARTED"
+    events = fresh.store.events(rec2["id"])
+    assert len(events) == n_before + 1
+    seqs = [e["sequence"] for e in events]
+    assert seqs == sorted(seqs) and len(set(seqs)) == len(seqs)
+    # Restart lan nua tren instance thu 3: van khong trung sequence.
+    third = TaskService(TaskStore(tmp_path / "tasks.db"))
+    third.restart(rec2["id"])
+    seqs2 = [e["sequence"] for e in third.store.events(rec2["id"])]
+    assert len(set(seqs2)) == len(seqs2) == len(seqs) + 1

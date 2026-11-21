@@ -10,13 +10,45 @@ Quy uoc (port dubtool core/browser_runtime.py + JARVIS approval receipts):
 from __future__ import annotations
 
 import copy
+import json
+import os
 import time
+from pathlib import Path
 
 _ACCOUNTS: dict[str, dict] = {}
 
 
-def reset() -> None:
+def _state_path() -> Path:
+    root = Path(os.environ.get("MIRO_BE_DB_DIR", r"C:\Miro\var"))
+    root.mkdir(parents=True, exist_ok=True)
+    return root / "connections-accounts.json"
+
+
+def _persist() -> None:
+    try:
+        _state_path().write_text(
+            json.dumps(_ACCOUNTS, ensure_ascii=False), encoding="utf-8")
+    except OSError:
+        pass
+
+
+def _load() -> None:
+    global _ACCOUNTS
+    try:
+        raw = json.loads(_state_path().read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return
+    if isinstance(raw, dict):
+        _ACCOUNTS = {k: copy.deepcopy(v) for k, v in raw.items()}
+
+
+_load()
+
+
+def reset(*, clear_file: bool = True) -> None:
     _ACCOUNTS.clear()
+    if clear_file:
+        _persist()
 
 
 def snapshot() -> dict:
@@ -29,6 +61,7 @@ def now() -> float:
 
 def put(account: dict) -> dict:
     _ACCOUNTS[account["id"]] = copy.deepcopy(account)
+    _persist()
     return copy.deepcopy(account)
 
 
@@ -50,3 +83,10 @@ def unset_default(platform: str, keep_id: str = "") -> None:
     for item in _ACCOUNTS.values():
         if item["platform"] == platform and item["id"] != keep_id and item["is_default"]:
             item["is_default"] = False
+    _persist()
+
+
+def reload() -> None:
+    """Nap lai tu file persist (mo phong restart process)."""
+    _ACCOUNTS.clear()
+    _load()
