@@ -31,3 +31,17 @@ Phạm vi: code + test trên repo `C:\Miro`, nhánh `main`, 57 commit, full BE s
 - Giữ roadmap; dán nhãn ĐẠT chỉ khi có bằng chứng thật (Chrome thật / MP4 nghe đúng / rollback đúng).
 - Trước live post: chạy live-read thật 1 lần theo runbook, rồi nối `workers/browser/worker.py` vào session.
 - Trước duyệt M2 hoàn toàn: 1 lần post thật có phê duyệt rõ của Sếp.
+
+## 4. § FE Publish — `ef39528` (2026-11-21): ĐẠT
+
+- Yêu cầu: nhãn DỮ LIỆU MẪU rõ + gọi BE `POST /threads/publish` dry-run;
+  fixture chỉ fallback khi BE unreachable.
+- Đối soát: `route.ts` BE reachable → `source=backend`, KHÔNG tạo receipt fixture
+  `posted`; chỉ nhánh `unreachable` mới tạo receipt `status: "posted"` kèm
+  `source: "fixture"` + `backend_detail` nhãn mẫu. Không còn đường nào trả
+  `posted` mà thiếu nhãn mẫu (batch/receipt đều render `DỮ LIỆU MẪU — chưa đăng thật`).
+- Lệnh + kết quả (trong `C:\Miro\apps\web`):
+  - `npm run typecheck` → pass (`tsc --noEmit`, exit 0).
+  - `npx playwright test e2e/threads-milestone.spec.ts --reporter=list` → **1 passed**
+    (chromium, ~41s; có assert `publish-sample-note` chứa `DỮ LIỆU MẪU`).
+- Người kiểm: Checker thường trực Miro. Commit KHÔNG push.
