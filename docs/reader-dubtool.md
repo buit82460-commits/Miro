@@ -229,3 +229,82 @@ nối với nhau duy nhất qua `create_from_dubtool` / `handoff`.
 4. Browser: không tự mở Chrome; profile phải có bằng chứng `chrome://version` sống; tab lease 1 owner, TAB_BUSY không tạo tab mới; protected/dirty tab không navigate; đóng tab chỉ khi registry-created.
 5. Desktop: mọi mutation qua `dispatch(_window)` dưới lock + epoch check tươi (2 lần khi có hold); receipt `receipt-<run>` bất biến; doc ambiguity → STOP trước write; write verify bằng read-back chuẩn hóa newline.
 6. YouTube channel-match trước mọi mutation; Shopee không test live Seller Centre; IG không đưa URL profile `/reels/` cho yt-dlp (per-reel URL + SHA-256, AGENTS.md).
+
+## 7. Vòng Browser (2026-11-21) — bảng điểm gọi tab/CDP
+
+### 7.1 Ai tạo / tái dùng tab — tất cả qua `acquire_managed_tab`
+Mọi adapter `scripts/*_post_one.py` (7 cái + `tiktok_engage_one.py`, `threads_post_one.py`)
+đều gọi `core/tab_acquisition.acquire_managed_tab` (`tab_acquisition.py:110-183`) — đúng
+1 managed tab trên Chrome Profile 20, KHÔNG tự mở Chrome, KHÔNG `launch/new_context/
+new_page`. Tham số thực tế từng adapter (platform_id / destination / flag / caller /
+creation_reason):
+
+| Adapter | Điểm gọi | platform_id / destination / flag / caller / creation_reason |
+|---|---|---|
+| instagram | `instagram_post_one.py:254-275` | `instagram` / `https://www.instagram.com/<user>/` (`INSTAGRAM_HOME_URL :53`) / `PUBLISH` / `instagram_post_one` / `instagram_reel_publish`; `channel_id=username` |
+| facebook | `facebook_post_one.py:72-91` | `facebook` / `.../profile.php?id=<account>&sk=reels_tab` (`:73`) / `PUBLISH` / `facebook_post_one` / `facebook_reels_publish`; `channel_id=str(account)` |
+| tiktok | `tiktok_post_one.py:70-87` | `tiktok` / `tiktok.com/tiktokstudio/upload?lang=en` / `PUBLISH` / `tiktok_post_one` / `tiktok_post_one` (run) · `tiktok_draft_batch/one/reconcile` (draft, `:318, :374`) |
+| threads | `threads_post_one.py:646-666` | `threads` / `https://www.threads.com/@<user>` (`THREADS_HOME_URL :53`, `destination :648`) / `PUBLISH` / `threads_post_one` / `threads_post_publish` |
+| chatgpt | `chatgpt_post_one.py:230-248` + read/manage `:422-426, :483-487, :529-533` | `chatgpt` / `CHATGPT_HOME_URL` / `PUBLISH` (gửi) · `RESEARCH` (đọc hội thoại, `channel_id=chatgpt-read`, `task_id=chatgpt-read`) · `PUBLISH` (`chatgpt-manage`, rename/delete) / `chatgpt_post_one` / `chatgpt_chat_send|conversation_read|rename|delete` |
+| flow | `flow_post_one.py:344-362` + reconcile `:551-555` | `flow` / `FLOW_HOME_URL` / `PUBLISH` (generate, `creation_reason=flow_video_generate`) · `RESEARCH` (`channel_id=flow-reconcile`, `task_id=flow-reconcile`) / `flow_post_one` |
+| shopee | `shopee_post_one.py:214-233` | `shopee` / `SELLER_CENTRE_URL=https://seller.shopee.vn/` (`:51, :219`) / `PUBLISH` / `shopee_post_one` / `shopee_item_publish` |
+
+Tái dùng hay tạo mới do `BrowserRuntime.acquire_tab` quyết (`browser_runtime.py:610-753`,
+đã ghi §2 vòng 1): reuse tab open đúng channel/flag theo rank
+`(exact_url, exact_channel, flag_match, lastUsedAt)`, TAB_BUSY thì không tạo tab mới;
+hết candidate thì `create_tab` từ `entryUrls[flag]` của registry. Mỗi batch giữ 1 tab:
+vòng lặp `if page is None: acquire ... else: acq.renew(ttl=300) + CONNECTION_REUSE`
+(FB `:157-168`, IG `:569-578`, threads `:816/:928`). Lỗi trong `_acquire_*` → `acq.
+release()` rồi raise (IG `:273-275`, FB `:89-91`, threads `:665-666`), không để lease treo.
+
+### 7.2 Ai giữ kết nối CDP — adapter giữ 1 connection suốt batch
+- Endpoint: `social_live_chrome.chrome_endpoint()` (`social_live_chrome.py:18-27`) đọc
+  `%LOCALAPPDATA%/Google/Chrome/User Data/DevToolsActivePort` → `ws://127.0.0.1:port/
+  /devtools/browser/...`; Chrome chưa bật remote-debugging → `LiveChromeError` mở
+  `chrome://inspect` bật Allow remote debugging, không tự mở Chrome.
+- Mỗi run `async with async_playwright()` + **1 lần** `connect_over_cdp(endpoint,
+  timeout=20000)` (FB `:150-152`, IG `:555-559`, threads `:722/:797/:913/:1024`,
+  tiktok `:106`, chatgpt `:257`, flow `:371`, shopee `:275`), in `CONNECT_NEW`; cuối
+  batch `await acq.release()` + `await browser.close()` (= ngắt CDP, KHÔNG tắt Chrome,
+  FB `:184-187`, tiktok `:202-203`, IG finally `:614+`). Disconnect giữa chừng →
+  `DISCONNECT_CLOSE`, trả `receipt UNKNOWN`, **không reconnect/khởi động lại Chrome**
+  (FB `:117-122, :171-175`, IG `:606-613`).
+- `connect_factory(driver)` là điểm tiêm test: default = 1 `connect_over_cdp` call
+  (FB `:120, :148-151`); test truyền driver giả. Hai nhánh legacy khi browser giả/monkey-
+  patch (`_find_* is not _ORIG_FIND_*` hoặc thiếu `new_browser_cdp_session`) → dùng
+  `find_tab`/page có sẵn, không qua runtime (FB `:160-164`, IG `:570-571`, tiktok
+  `:71-75` tìm `tiktokstudio/upload|content` trong `tiktok_post_one.py:55-75`).
+
+### 7.3 Nhận diện tài khoản (verify_actor) — chặn trước mọi submit
+| Adapter | Hàm verify | Cách nhận diện (file:dòng) |
+|---|---|---|
+| facebook | `social_live_chrome.verify_actor` (`social_live_chrome.py:54-60`) | URL phải là facebook host (`facebook_url :30-32`); `actor_id` đọc `CurrentUserInitialData.USER_ID` (`:43-51`); khác `expected` → `LiveChromeError` + `sha256('facebook:'+id)` làm identity. Gọi 2 lần: sau acquire (`facebook_post_one.py:87`) + trong `publish_reel/publish_facebook` trước click (`social_live_chrome.py:83, :111, :120`) |
+| instagram | `_verify_instagram_actor` (`instagram_post_one.py:198-229`) | URL instagram host; có `direct/inbox` (= đã login, `:208-211`); link hồ sơ `aria-selected img` → username khớp (`:213-223`); cookie `ds_user_id` duy nhất (`:225-228`). + `_ensure_clean_instagram_page` (`:245-252`) đóng dialog rác trước submit |
+| tiktok | inline trong `run_shortcode` (`tiktok_post_one.py:172-176`) | click avatar → menu có đúng 1 link `tiktok.com/@<account>` else `ACCOUNT_UNVERIFIED`; kèm check audience `Everyone` (`:159-161`) + AI-label bật (`:163-171`) trước `pub.submit` |
+| threads | `_verify_threads_actor` (`threads_post_one.py:251-268`) | URL threads host; `goto https://www.threads.com/@<user>`; body chứa username else lỗi |
+| chatgpt | `_verify_chatgpt_actor` (`chatgpt_post_one.py:137-147`) | `goto CHATGPT_HOME_URL`; body có `log in` mà không có `log out/new chat` → chưa login → refuse. `expected_account` bỏ qua (không bind user cụ thể) |
+| flow | `_verify_flow_actor` (`flow_post_one.py:146-160`) | URL `flow.google.com|labs.google`; body có `sign in/log in` mà không có `log out` → refuse. Kèm `_ensure_project` (`:163-185`) tự vào `/project/<id>` trước khi tìm prompt box |
+| shopee | `_verify_shopee_actor` (`shopee_post_one.py:143-156`) | URL `shopee.vn|seller.shopee`; body chứa username expected else `Chua xac minh actor` (verify yếu nhất — theo tên trong HTML) |
+
+### 7.4 Lỗi trả về + hành vi phải giữ
+- `LiveChromeError(message, before_submit=True/False, code, details)` (`social_live_chrome.
+  py:10-15`): `before_submit=True` → item lỗi, batch tiếp tục; `False` (đã/có thể đã bấm
+  Post, `RECEIPT_UNVERIFIED`) → dừng batch, `UNCONFIRMED_NO_REPLAY`, reconcile read-only
+  (IG `:596-604`, FB `:177-179`). Disconnect (`_is_disconnect`: `BrowserClosed/
+  ConnectionClosed/TargetClosed/TargetCrashed/Closed`, IG `:58-67`, FB `:52`) → `receipt
+  UNKNOWN`, không retry (FB `:171-175`, IG `:606-613`).
+- `browser_manager_command.py:1-32` (1-shot CLI tới verification host): ghi
+  `temp/browser-manager-command.json {action, commandId=uuid4, ...}` (map
+  profile/platform/tab/directory/task → `*BindingId`), poll
+  `reports/browser-registry/manager-current.json` theo `commandId` tới timeout (default
+  90s); không khớp → `RuntimeError('No matching receipt. Do not replay mutations...')`.
+- Đường CDP TRỰC TIẾP duy nhất còn dùng (ngoài `acquire_managed_tab`): `scripts/
+  reconcile_olichopper_facebook.py:18-31` — `connect_over_cdp` rồi tự quét
+  `browser.contexts` tìm tab facebook, không thấy thì `contexts[0].new_page()`, `goto
+  reels_tab`, `verify_actor`, diff `reel_ids` với `beforeIds` trong journals. Đây là
+  read-only reconcile, KHÔNG qua registry/lease — C không được copy pattern này cho
+  publish (publish bắt buộc qua `acquire_managed_tab` + lease + journal-trước-submit).
+- `social_chrome_daemon.py` (owner process): lock `owner.lock` + `owner.json`
+  (`:147-184, :203-216`) giữ 1 owner duy nhất cho CDP; adapter production không gọi
+  trực tiếp mà qua `owner_request`/`run_live` (`social_live_chrome.py:177-179`). C giữ
+  nguyên tắc: 1 owner/1 lease tại một thời điểm, stale-lock thu hồi theo PID.
