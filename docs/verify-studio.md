@@ -156,3 +156,15 @@ budget tính lại từ 0 → `requeued`, không `blocked` oan.
 
 - Lệnh: `python -m pytest tests/test_studio_p1.py -q` (trong `C:\Miro\apps\backend`)
 - Kết quả: `5 passed, 1 skipped`
+
+## P1 leftover 2 — mix overflow timing_exact (ced5e25)
+
+**ĐẠT** — `mix()` khi tràn bed ghi `overflow_from` (tràn từ giây nào) +
+`overflow_secs` (tràn dài bao nhiêu), thay vì chỉ boolean như A
+`core/mix.py :57-60` cắt im lặng. Test `test_mix_overflow_timing_exact`:
+start 2.5 + clip 2.0 vào bed 3.0 → `overflow_from == 3.0`,
+`overflow_secs == 1.5` (số đúng: placed = 3.0-2.5 = 0.5s → from = 2.5+0.5 = 3.0;
+tràn = 2.5+2.0-3.0 = 1.5s).
+
+- Lệnh: `python -m pytest tests/test_studio_p1.py -q` (trong `C:\Miro\apps\backend`)
+- Kết quả: `6 passed, 1 skipped`
