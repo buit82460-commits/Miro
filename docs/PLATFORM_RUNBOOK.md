@@ -155,12 +155,30 @@ login: ĐÃ đăng nhập (actor `@haodaojrk5` trong nav Profile link, title "H�
 
 **Kết luận:** đủ Q1–Q3 + Q8–Q10, Q4–Q7 chờ duyệt live-test composer. Adapter submit port từ code gốc đã verify offline, chỉ chạy live sau duyệt.
 
-## 7. Luật mắt–não (REA eye — áp dụng toàn hệ thống, mọi platform)
+## 7. Luật mắt–não (LUẬT CỨNG — khóa cứng, mọi agent, mọi platform, mọi thao tác)
 
-> **REA = mắt duy nhất. Miro = não + tay.** Mọi khâu nhìn (toast, hashtag, link, video) chỉ REA/mắt-chung làm, trả dữ liệu về. Adapter không tự đọc DOM để đối chiếu — chỉ điều khiển (bấm/điền/upload), quyết định (khớp tag, chốt receipt) và ghi sổ (journal/publication/guard).
+> **REA = mắt duy nhất. Miro = não + tay.** Mọi thao tác trên trình duyệt BẮT BUỘC
+> đi qua REA dò đường làm mắt trước — không ngoại lệ, không được thiếu. Tay làm
+> khi mắt chưa dò = vi phạm luật cứng.
 
 - **Luật sắt:** 1 thời điểm chỉ 1 bên đọc tab. Mắt đọc thì adapter đứng chờ; mắt rút adapter mới thao tác.
-- **Hợp đồng bản ghi (`collect_post_records` / `match_eye_records`):** mỗi bài 1 record `{author, tag, url, post_id, has_video, text}` trong cùng 1 khung bài. Não chỉ chốt khi author + tag + post_id/link cùng 1 record — cấm ghép tag bài này với link bài bên cạnh.
+- **Trình tự bắt buộc:** mắt đọc trước (eye collectors `miro/eye/`, read-only:
+  snapshot/console/network) → não đối chiếu (đúng bài/video, đúng account
+  `verify_actor`) → tay bấm/điền 1 lần theo đúng handle mắt đưa → mắt đọc lại
+  receipt → reconcile. UNKNOWN giữ, không replay.
+- **CẤM TUYỆT ĐỐI:** agent tự dùng snapshot/click/type/JS trực tiếp trên tab để
+  vừa nhìn vừa bấm (bypass REA + adapter); adapter tự chạy locator DOM để đối
+  chiếu thay mắt; thao tác platform/thao tác nào chưa có eye collector trong
+  `miro/eye/`.
+
+- **Hợp đồng bản ghi (`collect_post_records` / `match_eye_records` + eye collectors
+  `miro/eye/`):** mỗi bài 1 record `{author, tag, url, post_id, has_video, text}`;
+  mỗi comment 1 record `{author, text, time, post_id}` — trong cùng 1 khung.
+  Não chỉ chốt khi author + tag + post_id/link cùng 1 record — cấm ghép tag bài
+  này với link bài bên cạnh.
 - **Chuẩn hóa tag:** lowercase + collapse whitespace + boundary 6 số (`#dub\d{6}(?!\d)`).
-- **Áp dụng:** Threads đã tách xong. Platform còn lại tách dần khi chạm tới, không vá lẻ 2 mắt song song.
+- **Bao phủ mắt (đủ 8 platform, `miro/eye/EYE_COVERAGE`):** Threads (collect_post_records);
+  Facebook (reel record); TikTok (comment + video + profile); Instagram (reel record);
+  YouTube (API read-back, không DOM); Shopee (product read-only); ChatGPT (conversation);
+  Flow (video render). Mọi thao tác ngoài danh mục này = chưa có mắt, CẤM làm live.
 - **Rule cứng tab:** nếu phiên đang chạy đã có tab do chính nó mở/tái dùng, tuyệt đối không mở thêm tab mới khi chưa được user yêu cầu. Mắt và tay dùng chung đúng 1 tab: mắt đọc xong rút, tay mới vào.

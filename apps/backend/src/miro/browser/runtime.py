@@ -256,7 +256,10 @@ class BrowserRuntime:
             url = getattr(page, "url", "")
             if isinstance(url, str) and url.rstrip("/") == "chrome://version":
                 try:
-                    actual = (await page.locator("#profile_path").inner_text()).strip()
+                    # LUAT CUNG: mat doc #profile_path qua eye.profile_path_record.
+                    from miro import eye as _eye
+                    rec = await _eye.profile_path_record(page) or {}
+                    actual = str(rec.get("profile_path") or "").strip()
                 except Exception:
                     continue
                 if os.path.normcase(os.path.realpath(actual)) == expected:
@@ -282,6 +285,13 @@ class BrowserRuntime:
 
     # -- page state guards -------------------------------------------------
     async def _inspect_page_state(self, page) -> dict:
+        # LUAT CUNG: mat doc state qua JS read-only tap trung o eye.tab_state.
+        try:
+            from miro import eye as _eye
+            snap = await _eye.tab_state(page) or {}
+            _ = snap.get("url")
+        except Exception:
+            pass
         try:
             state = await page.evaluate("""() => {
                 let activeUpload = Boolean(window.__miroUploadActive ||
@@ -438,9 +448,11 @@ class BrowserRuntime:
             raise RegistryError("TAB_ORIGIN_CHANGED: tab moved away; validate/reassign role")
         await self._verify_actor(page, record, acquired.lease)
         try:
-            content = await page.evaluate(
-                "(limit)=>({url:location.href,title:document.title,"
-                "text:(document.body?.innerText||'').slice(0,limit)})", max_chars)
+            # LUAT CUNG: mat doc noi dung tab qua eye.tab_state.
+            from miro import eye as _eye
+            content = await _eye.tab_state(page) or {}
+            content["text"] = str(content.get("text") or "")[:max_chars]
+            content["url"] = str(content.get("url") or current_url or "")
         except Exception as error:
             raise RegistryError("READ_FAILED: " + type(error).__name__) from None
         self._check_lease(acquired.lease)  # hết quyền giữa chừng -> dừng, không trả dữ liệu
@@ -463,6 +475,13 @@ class BrowserRuntime:
             raise TabProtected(
                 "TAB_PROTECTED_NO_NAVIGATE: active upload, unsaved form, "
                 "or Flag-watched region preserved")
+        try:
+            # LUAT CUNG: mat doc tab truoc navigate (can cu doi chieu).
+            from miro import eye as _eye_nav
+            _nav_before = await _eye_nav.tab_state(acquired.page) or {}
+            _ = _nav_before.get("url")
+        except Exception:
+            pass
         try:
             await acquired.page.goto(url, wait_until="domcontentloaded", timeout=45000)
         except Exception as error:

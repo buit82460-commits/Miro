@@ -51,6 +51,11 @@
   đó là xác nhận thực hiện bước đăng thật trong phạm vi yêu cầu; không hỏi lại
   "có đăng không?". Task chỉ HOÀN THÀNH khi đủ số video/bài đã đăng lên đúng nền tảng,
   đúng tài khoản, đúng nội dung và chế độ xem, có bằng chứng đọc lại (URL/ID bài).
+- "Đúng tài khoản" = tài khoản user chỉ định trong yêu cầu (ví dụ "@kemkhongta",
+  "@haodaojrk5", kênh Bảnh Love You...). Agent KHÔNG tự đặt thêm bước verify
+  sở hữu tài khoản (đổi bio, login lại...) khi user đã chỉ định rõ — chỉ xác minh
+  theo đúng nghĩa gốc: tab/page đang đứng có phải account đó không (verify_actor
+  trước Post), tránh đăng nhầm tài khoản.
 - Nếu bị chặn (đăng nhập, quyền, công cụ, thiếu bằng chứng): giữ task CHƯA HOÀN THÀNH,
   báo chính xác đã làm đến đâu + điều kiện tiếp tục. Không thay kết quả bằng bản nháp.
 - UNKNOWN sau Post vẫn là CHƯA XÁC MINH, phải đối soát trước; không đăng lại để
@@ -104,6 +109,19 @@
 
 - Publication + journal là source of truth, không suy đoán trạng thái đăng.
 - Dry-run mặc định; post thật cần approval bound fingerprint + revision.
+- **LUẬT CỨNG REA-MẮT (khóa cứng, áp dụng mọi agent, mọi platform, mọi thao tác
+  trình duyệt): mọi thao tác trên trình duyệt BẮT BUỘC đi qua REA dò đường làm
+  mắt trước — không ngoại lệ, không được thiếu:**
+  1. Mắt đọc trước (read-only: snapshot/console/network, eye collectors trong
+     `miro/eye/`) → trả eye-record `{author, tag, url, post_id, has_video, text}`
+     hoặc `{author, text, time, post_id}` cho comment.
+  2. Não đối chiếu (đúng video/bài, đúng account `verify_actor`) rồi tay
+     (adapter `LivePage`/worker) mới được bấm/điền 1 lần theo đúng handle mắt đưa.
+  3. Mắt đọc lại receipt → reconcile; UNKNOWN giữ, không replay.
+- **CẤM TUYỆT ĐỐI:** agent tự dùng snapshot/click/type/JS trực tiếp trên tab để
+  nhìn + bấm cùng lúc (bypass REA + adapter); adapter tự chạy locator DOM để đối
+  chiếu thay mắt; thao tác platform/thao tác nào chưa có eye collector tương ứng
+  trong `miro/eye/` (tay làm khi mắt chưa dò = vi phạm luật cứng).
 - Eye = mắt duy nhất (locator hẹp, post_id-first, tag 6 số); adapter/page chỉ
   truyền page handle + nhận records, không tự chạy locator.
 - Test backend: `python -m pytest tests -q` trong `C:\Miro\apps\backend`.

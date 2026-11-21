@@ -86,6 +86,13 @@ def ensure_selected_by_ref(ops, window_id, doc, tab_ref, *, sleep=time.sleep):
         return False, {"stale": True, "detail": st}
     if _is_selected(st.get("states")):
         return True, {"via": "already-selected"}
+    # LUAT CUNG: mat doc doc-record truoc click (re-observe qua eye).
+    try:
+        from miro import eye as _eye_desk
+        _desk_before = _eye_desk.desktop_doc_record(ops, window_id, doc) or {}
+        _ = _desk_before.get("matches")
+    except Exception:
+        pass
     last_click = {"ok": False}
     for attempt in range(4):
         headed = attempt >= 2

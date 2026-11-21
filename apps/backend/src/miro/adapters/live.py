@@ -98,7 +98,15 @@ async def _click_first_visible(page, selectors, timeout_ms=4000):
 
 async def fill_composer(page, platform: str, text: str,
                         media_path: str = "") -> dict:
-    """Mo composer + dien text + attach media. Tra ve handle nut Post."""
+    """Mo composer + dien text + attach media. Tra ve handle nut Post.
+
+    LUAT CUNG: mat (miro.eye.composer_state) do o nhap + nut submit
+    TRUOC; tay chi dung selector mat da xac nhan visible/enabled.
+    """
+    from miro import eye as _eye
+    seen: dict = {}
+    with suppress(Exception):
+        seen = await _eye.composer_state(page, platform) or {}
     if platform == "chatgpt":
         with suppress(Exception):
             btn = page.locator('a[href="/"], button:has-text("New chat")').first
@@ -117,7 +125,11 @@ async def fill_composer(page, platform: str, text: str,
                 f"Khong mo duoc composer {platform} (het selector).",
                 before_submit=True)
     box = None
-    for bsel in TEXT_BOX.get(platform, ()):
+    seen_box_sel = str((seen.get("box") or {}).get("selector") or "")
+    box_sels = TEXT_BOX.get(platform, ())
+    if seen_box_sel and seen_box_sel in box_sels:
+        box_sels = [seen_box_sel] + [s for s in box_sels if s != seen_box_sel]
+    for bsel in box_sels:
         with suppress(Exception):
             cand = page.locator(bsel).first
             await cand.wait_for(state="visible", timeout=4000)
@@ -157,7 +169,12 @@ async def fill_composer(page, platform: str, text: str,
         dialog = page.locator('[role="dialog"]').last
         await dialog.wait_for(state="visible", timeout=5000)
     scope = dialog if dialog is not None else page
-    for psel in POST_BUTTON.get(platform, ()):
+    seen_submit_sel = str((seen.get("submit") or {}).get("selector") or "")
+    post_sels = POST_BUTTON.get(platform, ())
+    if seen_submit_sel and seen_submit_sel in post_sels:
+        post_sels = [seen_submit_sel] + [s for s in post_sels
+                                         if s != seen_submit_sel]
+    for psel in post_sels:
         with suppress(Exception):
             for cand in await scope.locator(psel).all():
                 with suppress(Exception):
@@ -180,7 +197,11 @@ async def fill_composer(page, platform: str, text: str,
 
 async def click_once_and_wait_ack(page, platform: str, handle: dict,
                                   timeout_s: int = 30) -> dict:
-    """1 click duy nhat + ack 3 duong. Khong ack -> UNKNOWN (never replay)."""
+    """1 click duy nhat + ack 3 duong. Khong ack -> UNKNOWN (never replay).
+
+    LUAT CUNG: toast/composer do mat (miro.eye.ack_state) doc; tay chi bam
+    1 click + nghe network hint.
+    """
     hints = ACK_HINTS.get(platform, ())
     observed: list[str] = []
 
@@ -214,16 +235,9 @@ async def click_once_and_wait_ack(page, platform: str, handle: dict,
         while time.time() - t0 < timeout_s:
             await asyncio.sleep(0.5)
             with suppress(Exception):
-                for t in await page.locator(
-                        '[role="status"], [role="alert"]').all():
-                    with suppress(Exception):
-                        msg = ((await t.inner_text()) or "").strip()
-                        low = msg.lower()
-                        if msg and msg not in baseline and (
-                                "posted" in low or "đã đăng" in low
-                                or "published" in low) and "posting" not in low:
-                            toast = True
-                            break
+                eye_ack = await _eye.ack_state(page, platform, hints) or {}
+                if eye_ack.get("toast"):
+                    toast = True
             with suppress(Exception):
                 if dialog is not None and not await dialog.is_visible():
                     closed = True
@@ -334,6 +348,37 @@ class LivePage:
 
     def submit_once(self, req: dict) -> dict:
         async def _run():
+            # LUAT CUNG REA-MAT: mat doc trang thai truoc submit (can cu
+            # reconcile). Tay khong bam khi mat chua do.
+            eye_before: dict = {}
+            try:
+                from miro import eye as _eye
+                _collector = {
+                    "tiktok": _eye.tiktok_video_record,
+                    "facebook": _eye.facebook_reel_record,
+                    "instagram": _eye.instagram_reel_record,
+                    "flow": _eye.flow_video_record,
+                    "chatgpt": _eye.chatgpt_conversation_record,
+                    "shopee": _eye.shopee_product_record,
+                    "threads": None,  # eye Threads: collect_post_records(owner)
+                }.get(self.platform)
+                if _collector is not None:
+                    eye_before = await _collector(self._page) or {}
+                elif self.platform == "threads":
+                    # Eye Threads: collect_post_records(owner) read-only.
+                    try:
+                        from miro.publishing.publisher import (
+                            collect_post_records as _eye_threads)
+                        eye_before = {
+                            "records": await _eye_threads(
+                                self._page, self.account, limit=5) or []}
+                    except Exception:
+                        eye_before = {}
+                elif self.platform == "youtube":
+                    eye_before = {"runtime": "youtube_api.read-back",
+                                  "hint": "mat = API videos.list sau upload"}
+            except Exception:
+                eye_before = {}
             await self._pre_submit(req)
             item = req.get("item") or {}
             media = str(item.get("media_path") or item.get("local_path")
@@ -465,6 +510,8 @@ class LivePage:
         (manifest/CLI), khong hard-code. Loi truoc click -> before_submit=True.
         """
         from contextlib import suppress as _suppress
+        from miro.eye import (tiktok_comment_records as _eye_comments,
+                              tiktok_video_record as _eye_video)
         page = self._page
         action = str(req.get("action") or "").strip().lower()
         comment_text = str(req.get("comment_text") or req.get("comment") or "")
@@ -474,22 +521,52 @@ class LivePage:
                 if (getattr(page, "url", "") or "") != url:
                     await page.goto(url, wait_until="domcontentloaded",
                                     timeout=30000)
+        # LUAT CUNG REA-MAT: mat doc truoc moi action — tay khong duoc bam
+        # khi mat chua do. Eye record truoc submit lam can cu reconcile.
+        eye_before: dict | list = {}
+        with _suppress(Exception):
+            eye_before = await _eye_video(page)
+        _req_post_id = ""
+        try:
+            _req_post_id = str((eye_before or {}).get("post_id") or "")
+        except Exception:
+            _req_post_id = ""
         if action == "view":
             await page.mouse.wheel(0, 400)
             await page.wait_for_timeout(8000)
             await page.mouse.wheel(0, -200)
             await page.wait_for_timeout(3000)
-            return {"engaged": True, "action": "view"}
+            return {"engaged": True, "action": "view",
+                    "post_id": _req_post_id,
+                    "eye_video": eye_before}
+        # LUAT CUNG: mat engage doc nut truoc; tay chi bam selector
+        # mat da xac nhan visible+enabled.
+        with _suppress(Exception):
+            from miro.eye import engage_records as _eye_engage
+            eye_buttons = (await _eye_engage(page, self.platform)
+                           or {}).get("buttons", {})
         if action == "like":
-            for sel in ('button[data-e2e="like-button"]',
-                        'span[data-e2e="like-icon"]',
-                        'button[aria-label*="Like"]'):
+            seen_like = str((eye_buttons.get("like") or {}).get("selector")
+                            or "")
+            like_sels = ('button[data-e2e="like-button"]',
+                         'span[data-e2e="like-icon"]',
+                         'button[aria-label*="Like"]')
+            if seen_like and seen_like in like_sels:
+                like_sels = (seen_like,) + tuple(
+                    s for s in like_sels if s != seen_like)
+            for sel in like_sels:
                 with _suppress(Exception):
                     el = page.locator(sel).first
                     await el.scroll_into_view_if_needed(timeout=5000)
                     await el.click(timeout=8000)
                     await page.wait_for_timeout(2000)
-                    return {"engaged": True, "action": "like", "via": sel}
+                    after = {}
+                    with _suppress(Exception):
+                        after = await _eye_engage(page, self.platform) or {}
+                    return {"engaged": True, "action": "like", "via": sel,
+                            "receipt": "SUBMITTED",
+                            "eye_buttons": eye_buttons,
+                            "eye_after": (after or {}).get("buttons", {})}
             raise LiveChromeError("Khong thay nut Like.", before_submit=True)
         if action == "repost":
             for sel in ('button[data-e2e="share-button"]',
@@ -506,12 +583,18 @@ class LivePage:
                 ).first
                 await rp.click(timeout=8000)
                 await page.wait_for_timeout(2000)
-                return {"engaged": True, "action": "repost"}
+                return {"engaged": True, "action": "repost",
+                        "receipt": "SUBMITTED", "eye_buttons": eye_buttons}
             raise LiveChromeError("Khong thay nut Repost.", before_submit=True)
         if action == "comment":
             if not comment_text.strip():
                 raise LiveChromeError("Thieu noi dung comment.",
                                       before_submit=True)
+            # Mat xac dinh o comment + nut Post TRUOC khi tay bam.
+            before_comments: list = []
+            with _suppress(Exception):
+                before_comments = await _eye_comments(
+                    page, _req_post_id)
             box = None
             for sel in ('div[data-e2e="comment-input"] '
                         '[contenteditable="true"]',
@@ -531,18 +614,50 @@ class LivePage:
                 await page.locator(
                     'div[data-e2e="comment-post"]').first.click(timeout=8000)
                 await page.wait_for_timeout(2000)
-                return {"engaged": True, "action": "comment"}
+                # Mat doc lai sau submit: comment moi phai khop
+                # {author(post_id) + text} trong cung record.
+                after_comments: list = []
+                with _suppress(Exception):
+                    after_comments = await _eye_comments(
+                        page, _req_post_id)
+                new_hits = [
+                    c for c in (after_comments or [])
+                    if comment_text[:60].strip().lower() in str(
+                        c.get("text") or "").lower()]
+                if new_hits and not any(
+                        comment_text[:60].strip().lower() in str(
+                            c.get("text") or "").lower()
+                        for c in (before_comments or [])):
+                    return {"engaged": True, "action": "comment",
+                            "receipt": "SUBMITTED",
+                            "eye_before": len(before_comments or []),
+                            "eye_after": len(after_comments or []),
+                            "post_id": _req_post_id}
+                return {"engaged": True, "action": "comment",
+                        "receipt": "UNCONFIRMED_NO_REPLAY",
+                        "hint": "mat chua thay comment moi; giu, khong replay",
+                        "eye_before": len(before_comments or []),
+                        "eye_after": len(after_comments or []),
+                        "post_id": _req_post_id}
             raise LiveChromeError("Khong gui duoc comment.",
                                   before_submit=True)
         if action == "follow":
-            for sel in ('button[data-e2e="follow-button"]',
-                        'button:has-text("Follow")'):
+            seen_follow = str((eye_buttons.get("follow") or {}).get(
+                "selector") or "")
+            follow_sels = ('button[data-e2e="follow-button"]',
+                           'button:has-text("Follow")')
+            if seen_follow and seen_follow in follow_sels:
+                follow_sels = (seen_follow,) + tuple(
+                    s for s in follow_sels if s != seen_follow)
+            for sel in follow_sels:
                 with _suppress(Exception):
                     el = page.locator(sel).first
                     await el.scroll_into_view_if_needed(timeout=5000)
                     await el.click(timeout=8000)
                     await page.wait_for_timeout(2000)
-                    return {"engaged": True, "action": "follow", "via": sel}
+                    return {"engaged": True, "action": "follow", "via": sel,
+                            "receipt": "SUBMITTED",
+                            "eye_buttons": eye_buttons}
             raise LiveChromeError("Khong thay nut Follow (co the da follow).",
                                   before_submit=True)
         raise LiveChromeError(f"UNSUPPORTED_ENGAGE_ACTION: {action}",
