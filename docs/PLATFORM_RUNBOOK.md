@@ -6,13 +6,16 @@
 
 | Platform | Adapter chuẩn (MAINTAINED) | Nguồn port | Trạng thái |
 |---|---|---|---|
-| Threads | `miro.publishing.publisher.Publisher` (guard/journal/reconcile) + `miro.threads.worker.ThreadsWorker` (2-phase batch) + `miro.browser.threads_page.ManagedThreadsPage` (nối page thật, ĐẠT read-only) | `C:\dubtool\scripts\threads_post_one.py` | `submit()` CHƯA đấu dây — worker chỉ read-only/reconcile |
-| Facebook | Chưa port — khi port: `Publisher` + worker riêng + page riêng, đăng ký vào bảng này | `C:\dubtool\scripts\facebook_post_one.py` | CHƯA CÓ |
-| TikTok | Chưa port — khi port: `Publisher` + worker riêng + page riêng, đăng ký vào bảng này | `C:\dubtool\scripts\tiktok_post_one.py` | CHƯA CÓ (login `@kemkhongta` Profile 20 đã verify) |
-| YouTube | Chưa port — dùng API (`privacyStatus=public`), không browser click | `C:\dubtool\scripts\youtube_post_one.py` | CHƯA CÓ |
-| Instagram | Chưa port — khi port: `Publisher` + worker riêng + page riêng, đăng ký vào bảng này | `C:\dubtool\scripts\instagram_post_one.py` | CHƯA CÓ |
-| Platform mới | Tạo **1 module adapter duy nhất** `apps/backend/src/miro/<platform>/` theo mẫu mục 5, đăng ký vào bảng này | Mẫu mục 2 | CẤM file lẻ `post_<batch>.py` |
-| Điều phối tab dùng chung (Chrome Profile 20) | `miro.browser.runtime.BrowserRuntime` (`acquire_tab`) + `miro.browser.lease_store.LeaseStore` + `miro.browser.live_chrome` (read-only) | `C:\dubtool\core\tab_acquisition.py` + `core\browser_runtime.py` | ĐẠT read-only |
+| Threads | `miro.adapters.threads` (spec) + `miro.adapters.core.PlatformWorker` + `miro.publishing.publisher` (guard/journal/reconcile) | `C:\dubtool\scripts\threads_post_one.py` | Code+test ĐẠT offline (mock page) — `submit()` production qua `page.submit_once` inject, chưa live |
+| Facebook | `miro.adapters.facebook` + `PlatformWorker` + `publisher` | `C:\dubtool\scripts\facebook_post_one.py` | Code+test ĐẠT offline — chưa live |
+| TikTok | `miro.adapters.tiktok` + `PlatformWorker` + `publisher` | `C:\dubtool\scripts\tiktok_post_one.py` | Code+test ĐẠT offline — chưa live (login `@kemkhongta` Profile 20 đã verify) |
+| YouTube | `miro.adapters.youtube` + `PlatformWorker` — Data API, không browser click | `C:\dubtool\scripts\youtube_post_one.py` | Code+test ĐẠT offline — chưa live |
+| Instagram | `miro.adapters.instagram` + `PlatformWorker` + `publisher` | `C:\dubtool\scripts\instagram_post_one.py` | Code+test ĐẠT offline — chưa live |
+| Platform mới | Thêm **1 module** `apps/backend/src/miro/adapters/<platform>.py` bind `SPECS` + `make_worker()`, đăng ký vào bảng này | Mẫu mục 3 | CẤM file lẻ `post_<batch>.py` |
+| Shopee | `miro.adapters.shopee` — BLOCKED live (onboarding Seller Centre 1/5) | `C:\dubtool\scripts\shopee_post_one.py` | Code+test ĐẠT offline — KHÔNG test live |
+| ChatGPT | `miro.adapters.chatgpt` + `PlatformWorker` | `C:\dubtool\scripts\chatgpt_post_one.py` | Code+test ĐẠT offline — chưa live |
+| Flow | `miro.adapters.flow` + `PlatformWorker` | `C:\dubtool\scripts\flow_post_one.py` | Code+test ĐẠT offline — chưa live |
+| Điều phối tab dùng chung (Chrome Profile 20) | `miro.adapters.core.PlatformWorker` inject `page` (`submit_once`/`reconcile`/`release`) + `miro.browser.runtime.BrowserRuntime` + `miro.browser.live_chrome` (read-only) | `C:\dubtool\core\tab_acquisition.py` + `core\browser_runtime.py` | ĐẠT offline (mock page); live qua inject |
 | Điều khiển Windows (EXPERIMENTAL) | `miro.desktop.act` + `miro.desktop.dispatch` + `miro.desktop.gate` + `miro.desktop.backend` | dubtool `shared/desktop_*.py` | ĐẠT D1/D2 |
 
 ## 2. Flow chuẩn — đăng 1 bài (mẫu cho mọi platform)
