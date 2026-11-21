@@ -45,6 +45,25 @@ def test_recover_jobs_slot_mo_cho_chay_lai(tmp_path):
     assert "v1" in summary["requeued"] or "v1" in summary["owned"]
 
 
+def test_release_reset_recoveries_khong_blocked_oan(tmp_path):
+    # P1 ghi nhan 1: job xong reset budget - restart sau khong blocked oan.
+    store = IdempotentStore(persist_dir=tmp_path / "store")
+    store.acquire_slot("v2", "req-2")
+    store._worker_owner.pop("v2", None)
+    store.recover_jobs(max_retries=3)  # recoveries=1
+    store.release_slot("v2", "req-2")  # job xong -> reset budget
+    assert "v2" not in store._recoveries
+    store.acquire_slot("v2", "req-2b")
+    store._worker_owner.pop("v2", None)
+    store._save()
+    store2 = IdempotentStore(persist_dir=tmp_path / "store")
+    store2._worker_owner.pop("v2", None)
+    summary = store2.recover_jobs(max_retries=3)
+    # budget moi tu 0: requeued, khong blocked oan
+    assert "v2" in summary["requeued"] or "v2" in summary["owned"]
+    assert "v2" not in summary["blocked"]
+
+
 def test_recover_jobs_het_budget_blocked(tmp_path):
     store = IdempotentStore(persist_dir=tmp_path / "store")
     store.acquire_slot("v9", "req-9")

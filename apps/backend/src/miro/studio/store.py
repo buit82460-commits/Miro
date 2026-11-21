@@ -249,6 +249,10 @@ class IdempotentStore:
             if self._active.get(video_id) == request_id:
                 del self._active[video_id]
                 self._worker_owner.pop(video_id, None)
+                # Job xong: budget recover het hieu luc (P1 ghi nhan 1).
+                # Khong reset -> video chay xong nhieu lan, restart + recover
+                # cong don co the blocked oan.
+                self._recoveries.pop(video_id, None)
                 self._save()
 
     def mark_contaminated(self, video_id: str) -> None:
