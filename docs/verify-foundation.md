@@ -73,3 +73,32 @@
 ### Ket luan
 
 **Desktop M3 DAT trong pham vi da dong goi** (D1-D6 DAT: resolve window/doc, DOC_NOT_UNIQUE_STOP, stale epoch khong cham backend, dispatch lock + epoch tuoi, read-back verify + receipt, backend Windows + alias write; 3/3 test pass). Dieu kien lam tiep: wiring worker thuc giu `window_lock_dir` shared + re-select tab trong lock (P-D2/P-D3), route desktop-task (P-D5), scheduler + launcher (P-D6). **Da commit, chua push.**
+
+
+## Verify Tasks-recover + Registry-persist (commit b2afcdb) — 2026-11-21
+
+- Commit kiem tra: `b2afcdb` — "Fix task recovery permission-state + idempotent fresh-instance restart; fix platform rollback snapshot-before-mutate + SQLite/file persist for registry and connections"
+- Loi review doi chieu: (1) permission DB sai trang thai khi tu choi quyen o buoc apply; (2) trung sequence khi instance moi restart tren cung DB; (3) rollback luu sai ban (sau-mutate thay vi truoc-mutate); (4) registry/connections RAM-only, mat sau restart
+- Lenh: `python -m pytest tests/test_tasks.py tests/test_tasks_m3.py tests/test_connections_m3.py tests/test_registry_persist.py -q` (trong `C:\Miro\apps\backend`) — **22 passed**
+- Ngay kiem tra: 2026-11-21. **Chi ghi file verify, KHONG push** (theo yeu cau).
+
+### Ket qua tung muc (DAT / CHUA DAT)
+
+| # | Muc (theo loi review) | Ket qua | Can cu |
+|---|---|---|---|
+| R1 | Tu choi quyen o buoc apply: DB dung trang thai, khong running/pending | **DAT** | `service.py::_step` catch `PermissionError` -> xoa `pending_mutation`, `_save`, raise `TaskConflictError(exc.code)` giu ma goc; test `test_permission_denied_at_apply_keeps_db_out_of_running` (needs_attention + APPROVAL_REQUIRED + pending None, DB fresh doc dung) |
+| R2 | Instance moi recover tren cung DB: restart + event khong trung sequence | **DAT** | `_emit` lay `max(seq_memory, seq_DB)+1` + catch `sqlite3.IntegrityError` doc lai max; test `test_recover_on_fresh_instance_is_idempotent` (restart instance 2 + 3, seq tang don dieu, khong trung) |
+| R3 | Rollback luu snapshot ban TRUOC khi sua | **DAT** | `_commit(new_platforms)`: append `_LIVE` cu vao history TRUOC khi bump version; `upsert_platform`/`update_capability` bo gan `_LIVE` truc tiep, di qua `_commit`; test rollback v1 khoi BLOCKED nhung giu x1, rollback v0 mat x1 |
+| R4 | Registry + connections persist qua restart (file, khong RAM-only) | **DAT** | `platforms-registry.json` + `connections-accounts.json` duoi `MIRO_BE_DB_DIR` (default `C:\Miro\var`); `_persist` sau moi mutate + rollback; `reload()` mo phong restart; test persist_across_reload ca 2 store (version + du lieu con nguyen) |
+| R5 | Test moi bao phu du 4 loi | **DAT** | `test_tasks.py` +2 test (R1, R2), `test_registry_persist.py` moi 3 test (R3 rollback, R4 x2); tong 22 passed, khong vo test cu |
+
+### Phan mo
+
+- **P-R1 (luu y ky thuat):** `_emit` import `sqlite3` trong ham + query `events()` moi lan emit (them 1 SELECT/event). Chap nhan o muc fix idempotency; neu emit nong thi cache max-seq theo task.
+- **P-R2 (persist file JSON, khong SQLite):** registry/connections dung file JSON (`_persist`/`_load`), khong phai SQLite nhu mo ta commit ("SQLite/file persist"). Ngu nghia giu nguyen (song restart process); neu can query dong bo thi chuyen SQLite sau.
+- **P-R3 (`_persist` nuot `OSError`):** ghi file that bai bi bo qua am tham (`except OSError: pass`). Chap nhan cho test/local; production nen log de khong mat du lieu am tham.
+- **P-R4 (`connections.reset()` doi signature):** them `clear_file=True`; caller cu `reset()` van xoa ca file — dung trong test, nhung production goi reset se mat persist. Ghi nhan de khong goi nham.
+
+### Ket luan
+
+**b2afcdb DAT** (R1-R5 DAT: permission-state dung, fresh-instance idempotent, rollback snapshot-before-mutate, file persist ca 2 store; 22/22 test pass). **Chua push.**
