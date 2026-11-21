@@ -17,11 +17,12 @@ lookup is PATH-first plus `%NVM_HOME%` / `%ProgramFiles%` roots):
 | ffmpeg + ffprobe | media-worker render jobs | media-worker skipped; BE still runs |
 | `apps/web/node_modules` | FE only | FE skipped until `npm install` in `apps/web` |
 
-Current machine (2026-11-21): Python 3.12.6 + fastapi/uvicorn OK,
-Node v24 reachable via nvm shim (not on `where` PATH — launcher checks
-`%NVM_HOME%` too), **ffmpeg/ffprobe NOT found**, `apps/web/node_modules` absent.
-So today: BE starts; FE/node-youtube/media-worker report "skipped" until their
-toolchains are installed. That is by design — partial stack, clear message.
+Current machine (2026-11-21, verified via `miro.py check`): Python 3.12.6 +
+fastapi 0.136.3 + uvicorn 0.49.0 OK; Node v24 via `%NVM_HOME%` OK;
+ffmpeg/ffprobe OK via PATH; `apps/web/node_modules` absent. So today: BE starts
+verified; FE skipped until `npm install` in `apps/web`; browser/media workers and
+node-youtube skipped until their `server.js`/`server.py` entrypoints land
+(skeletons only). Partial stack with a clear message — by design.
 
 ## Independent from Miro vs still needs legacy env
 
@@ -50,8 +51,17 @@ is set. Unset = fully independent sample stack.
 
 ## Verification (2026-11-21)
 
-- `python windows\miro.py check` → required deps OK; ffmpeg/ffprobe + node_modules
-  reported missing (expected, see table).
+- `python windows\miro.py check` → all required + optional deps found
+  (python 3.12.6, fastapi, uvicorn, node, npm, ffmpeg, ffprobe);
+  only `apps/web/node_modules` reported missing (expected).
 - `python windows\miro.py start --only be --no-browser` → BE up at
-  `http://127.0.0.1:8770`, `GET /health` → `{"status":"ok"}` (see log excerpt
-  in session notes). `stop` shuts it down and removes the manifest.
+  `http://127.0.0.1:8770`, `GET /health` → `{"status":"ok"}`.
+- `python windows\miro.py status` (twice) → same PID, `alive=True`,
+  `health=http-200` — stable, no restart storm.
+- `python windows\miro.py stop` → manifest removed, port 8770 closed.
+
+Fixed during verification (all in `windows\miro.py`):
+- `status` no longer requires `psutil` (optional import, ctypes/`kill(0)` fallback).
+- `_pid_alive` on Windows uses `OpenProcess` — `os.kill(pid, 0)` is NOT a
+  read-only probe there and was killing the BE (restart loop `stopped (0)`).
+- `terminate_owned` now waits/kills and only raises if the process survives.

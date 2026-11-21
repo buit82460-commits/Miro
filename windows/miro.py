@@ -83,7 +83,8 @@ class RestartBudget:
         return min(30.0, 2.0 ** (len(self.history) - 1))
 
 
-def terminate_owned(proc: subprocess.Popen) -> None:
+def terminate_owned(proc: subprocess.Popen, timeout: float = 15) -> None:
+    """Stop a still-live Popen child. Only raises if the process survives kill."""
     if proc.poll() is not None:
         return
     if os.name == "nt":
@@ -93,10 +94,15 @@ def terminate_owned(proc: subprocess.Popen) -> None:
             creationflags=subprocess.CREATE_NO_WINDOW,
             timeout=15,
         )
-        if proc.poll() is None:
-            raise RuntimeError("OWNED_WORKER_STOP_FAILED")
     else:
         proc.terminate()
+    try:
+        proc.wait(timeout=timeout)
+    except subprocess.TimeoutExpired:
+        proc.kill()
+        proc.wait(timeout=10)
+    if proc.poll() is None:
+        raise RuntimeError("OWNED_WORKER_STOP_FAILED")
 
 
 def _which_or_known(name: str, *known: Path) -> str | None:
@@ -352,10 +358,16 @@ def cmd_status() -> int:
     if not MANIFEST.exists():
         print("Miro launcher: not running.")
         return 0
-    import psutil  # optional; fall back to os.kill probe
+    try:
+        import psutil as _psutil
+    except ImportError:
+        _psutil = None
     record = json.loads(MANIFEST.read_text(encoding="utf-8"))
     for name, pid in record.get("services", {}).items():
-        alive = psutil.pid_exists(pid) if "psutil" in sys.modules else _pid_alive(pid)
+        if _psutil is not None:
+            alive = _psutil.pid_exists(pid)
+        else:
+            alive = _pid_alive(pid)
         port = (record.get("ports") or {}).get(name, PORTS.get(name))
         health = "unknown"
         if port:
@@ -371,6 +383,18 @@ def cmd_status() -> int:
 
 
 def _pid_alive(pid: int) -> bool:
+    # NOTE: os.kill(pid, 0) is NOT a read-only probe on Windows (it can signal
+    # the target), so use OpenProcess there. POSIX keeps the classic kill-0 probe.
+    if os.name == "nt":
+        try:
+            import ctypes
+            handle = ctypes.windll.kernel32.OpenProcess(0x1000, False, pid)
+            if not handle:
+                return False
+            ctypes.windll.kernel32.CloseHandle(handle)
+            return True
+        except Exception:
+            return False
     try:
         os.kill(pid, 0)
         return True
@@ -400,10 +424,6 @@ def main(argv: list[str]) -> int:
     if action == "stop":
         return cmd_stop()
     if action == "status":
-        try:
-            import psutil  # noqa: F401
-        except ImportError:
-            pass
         return cmd_status()
     print(f"Unknown command: {action}", file=sys.stderr)
     return 1
