@@ -301,3 +301,28 @@ Nhỏ (không chặn): A `TAG_RE :18` không boundary, C thêm `(?!\d)` (kế th
 Đóng phần mở P0 dòng S1/S4/S5.
 
 Lệnh: `cd C:\Miro\apps\backend && python -m pytest tests/test_eye_wiring.py tests/test_eye_collect_p0.py tests/test_publisher_threads.py tests/test_threads_flow.py tests/test_schedule_caller.py -q` → **50 passed**.
+
+---
+
+## § Scheduler/launcher wiring (commit d146963, ngày 2026-11-21) — **ĐẠT**
+
+Checker thường trực đọc diff d146963 vs 6888fd8 (8 files, +467/-13) + đối chiếu
+`docs/ba-ben/chu-de/TD-publisher.md` (suất UNKNOWN tính cap, reconcile append-only,
+boot-vs-pause ở caller, paused outrank) + `TD-nen.md` (bounded restart) +
+`docs/reread-foundation.md` § launcher + `docs/crosscheck-foundation.md` L2 (history mất
+khi launcher restart) + gốc `C:\dubtool\core\posting_schedule.py` (6 hàm nguyên) + tự chạy
+`python -m pytest tests -q` trong `C:\Miro\apps\backend` → **219 passed** (EXIT=0).
+
+| Mục | Bằng chứng | Kết quả |
+|---|---|---|
+| (a) Day-plan persist qua restart + rebuild/respect đúng boot_action | `store.plan_path` = `var/threads-day-plan.json` (tmp+replace); `ensure_day_plan` gọi `boot_action(was_clean_shutdown, policy.status)` — `respect` giữ plan cũ cùng ngày, `rebuild` build mới + persist; `main._init_threads_state` nạp plan persist vào `threads_publisher.day_plan` lúc boot (try/except, không crash); test `ensure_persists_and_binds_day_plan` (file tồn tại, bind publisher, GET day-plan 200) | **ĐẠT** |
+| touch_unknown/touch_verified persist 1 nơi, reconcile đơn cũng persist | `store.touch_unknown/touch_verified` = mutate + `save_plan` duy nhất; `publisher` 3 điểm (reconcile đơn `:762` + run_batch verified `:957` / unknown `:976`) đều gọi `store.touch_*` trước, fallback `schedule.mark_slot_*` nếu import lỗi; test `touch_verified_persists_to_file` reload file → `verified` | **ĐẠT** |
+| Endpoints đúng luật (STALE 409, CLI fail-closed 503, không crash) | `/schedule/ensure|day-plan|day-plan/status` (caller-giữ-plan; BIND fail → 500; status lạ → 400; thiếu plan → 404); `main` mount 2 router; `/desktop/init|act|transfer` (act qua `act()`: STALE→409, CLI_UNAVAILABLE→503, WINDOW/DOC/UNKNOWN→422, job lạ→404); `backend.run_cli` bắt `OSError/ValueError` → `CLI_UNAVAILABLE` thay vì crash; test desktop CLI fail-closed + pause-block-run_batch (`PAUSED`) | **ĐẠT** |
+| (d) L2 RestartBudget persist per-service, xuyên-launcher không reset | `windows/miro.py RestartBudget(name, state_dir)` + file `restart-budget-<name>.json` (load chịu file hỏng/BOM, save tmp+replace chịu OSError); clock wall (`time.time`, prune `>= window`, giữ `+3600` dung sai); `cmd_start` tạo budget theo tên service; test `launcher_l2_budget_persists_across_instances`: 2 crash cũ → instance mới `maximum=2` raises `WORKER_RESTART_EXHAUSTED` ngay | **ĐẠT** |
+| Không global requeue UNKNOWN, paused outrank | `store` không thêm hàng đợi nào ngoài `plan["reconcile_queue"]` append-only của module; `select_due_intents` paused → toàn bộ deferred `PAUSED`; `due_slots` chỉ `pending`; pause patch vừa memory vừa file | **ĐẠT** |
+
+Lệnh: `cd C:\Miro\apps\backend && python -m pytest tests -q -p no:warnings` → **219 passed in 37.10s** (PYTEST_EXIT=0).
+
+**Đóng:** crosscheck-foundation L2 (history mất khi launcher restart) — đã persist per-service;
+P-D6 verify-foundation (scheduler+launcher ngoài scope) — wiring xong, còn live-run.
+**Đã commit, chưa push** (theo yêu cầu checker).
