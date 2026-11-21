@@ -102,3 +102,44 @@
 ### Ket luan
 
 **b2afcdb DAT** (R1-R5 DAT: permission-state dung, fresh-instance idempotent, rollback snapshot-before-mutate, file persist ca 2 store; 22/22 test pass). **Chua push.**
+
+
+## Verify P0 tasks T1-T4 (commit da43241) — 2026-11-21
+
+- Commit kiem tra: `da43241` — "P0 tasks T1-T4: resume CHECKPOINT_STALE, dedupe revision-level, retry PipelineError TRANSIENT, stale-guard save_project"
+- Docs doi chieu: `docs/reread-foundation.md` (T1 thieu chinh, T2 mat dedupe revision, T3 nhom TRANSIENT cua `_guarded`, T4 stale-check `_run_render`), `docs/reader-dubtool.md` §9, `docs/crosscheck-studio.md`, `docs/reread-studio.md`
+- Code goc A doi chieu: `C:\dubtool\core\studio_service.py` (`_start_render:259-281` dedupe project+revision+preview; `_run_render:289-350` — CHECKPOINT_STALE `:293-294`, timeline doi giua chung -> `stale` `:327-330`, retry `failure(..., transient=isinstance(exc,(OSError,TimeoutError)))` `:345-349`; `control_job:362-396` — OWNERSHIP_UNKNOWN `:375-379`, CHECKPOINT_STALE `:381`, retryCount=0 `:382`), `shared/execution_policy.py` (`TRANSIENT:20`, `failure:45-52`)
+- Lenh: `python -m pytest tests/test_tasks_p0_t1t2.py tests/test_studio_p0_t3t4.py tests/test_tasks.py tests/test_tasks_m3.py -q` (trong `C:\Miro\apps\backend`) — **21 passed**
+- Ngay kiem tra: 2026-11-21. **Chi ghi file verify, KHONG push** (theo yeu cau).
+
+### Ket qua tung muc (DAT / CHUA DAT)
+
+| # | Muc (theo nhiem vu) | Ket qua | Can cu |
+|---|---|---|---|
+| T1 | resume so snapshot-signature, timeline doi -> CHECKPOINT_STALE | **DAT** | `service.py::resume` chan `OWNERSHIP_UNKNOWN` truoc (khuop A `:375-379`), so `snapshot_signature` luu luc submit voi hien tai -> `CHECKPOINT_STALE` khi revision doi (khuop A `control_job:381`); resume thanh cong reset `retry_count=0` + chup checkpoint moi (khuop A `retryCount=0` `:382`); signature persist qua DB (test fresh-instance tren cung DB pass) |
+| T2 | dedupe (project, revision, preview) tra job cu thay vi tao job song song | **DAT** | `service.py::_dedupe_key` (sha256 project_ids + `remote.revision` + preview) + `db.py::find_active_by_dedupe` (quet queued/running/stop_requested, tra ban cu nhat); khac request_id van tra cung id, revision doi -> job moi (khuop A `_start_render:270-272`) |
+| T3 | retry PipelineError mang ma TRANSIENT, fatal fail-fast | **DAT** | `pipeline.py::PIPELINE_TRANSIENT_CODES` (port A `execution_policy.TRANSIENT` + `TRANSIENT_CODES` ben tasks) + `_pipeline_error_transient` (ma dau message hoac `__cause__` thuoc `(OSError, TimeoutError, ConnectionError)`) + `_guarded` bat `PipelineError` retry trong ngan sach `IDEMPOTENT_RETRY_STEPS x max_attempts`; test: DOWNLOAD_FAILED retry 2 lan roi thanh cong (calls==3), ma fatal chi 1 call, OSError tho van retry nhu cu |
+| T4 | tu choi save_project(output) khi timeline doi giua render | **DAT** | `pipeline.py::timeline_signature` (segments + overlays + output_settings) chup truoc render trong `_step_render`, `save_project(..., expected_signature=...)` nem `PipelineConflict` (409) khi khac hien tai, output cu khong ghi; `_step_render` bat -> `ctx stale` + `run()` tra `status=stale` + `error.code=CHECKPOINT_STALE` (khuop A `_run_render:324-330`); ghi binh thuong khong co `expected_signature` van cho phep |
+
+### Red-test co that (doi chieu bo fix)
+
+- T1: khong co nhanh so signature, `resume()` se thanh cong -> `pytest.raises(CHECKPOINT_STALE)` fail. That.
+- T2: khong co dedupe revision-level, submit `req-b` tao id moi -> `assert second["id"] == first["id"]` fail. That.
+- T3: khong co nhanh `except PipelineError`, `DOWNLOAD_FAILED` dau tien nem ngay -> `calls == 3` fail (test fatal 1-call la guard chong hoi quy, pass ca truoc/sau). That.
+- T4: khong co stale-guard, `save_project(output)` ghi binh thuong -> `pytest.raises(PipelineConflict)` fail + `output is None` fail. That.
+
+### Ghi nhan lech nho (chap nhan duoc, khong tinh loi)
+
+- T2 xet them `stop_requested` vao active (A chi queued/running) — an toan hon (khong tao job moi trong luc job cu dang cho dung), ngu nghia dedupe giu nguyen.
+- T3 them `ConnectionError` vao `TRANSIENT_ERRORS` (A: `(OSError, TimeoutError)`; `ConnectionError` la subclass cua `OSError` nen hanh vi runtime nhu nhau).
+- T4: A giu `result` trong job `stale` de tham khao (`:328`); C dat `ctx["output"] = None` + status stale — chat hon, khong publish output cu, dung muc dich guard.
+- Queue cap-4 cua A (`_start_render:268-269`) chua port o day (da co `_MAX_RENDERS = 4` ben `studio/handlers.py`, ngoai pham vi commit nay).
+
+### Phan mo
+
+- **P-T5 (viec con lai, thuoc pham vi sau): T5 RECOVER-tu-dong** — A `_run_render:346-349` dua job ve `queued` + `sleep(delaySeconds)` + de quy render lai khi `failure()` chuyen execution sang RECOVER; C hien moi co retry dong bo trong `_guarded`/`_step`, chua co vong RECOVER/requeue o muc job. Cung nhom cong viec sau: pause/resume/amendments cua `control_job`, receipt digest-verify truoc/sau render, `final-export.json` + digest.
+- **P-T6 (luu y ky thuat):** `_dedupe_key`/`_snapshot_signature` phu thuoc `remote.revision` — FakeRemote tang revision qua `mutate`; production can dam bao revision duoc bump moi khi timeline doi neu khong stale-check mat hieu luc.
+
+### Ket luan
+
+**da43241 DAT** (T1-T4 DAT: resume CHECKPOINT_STALE + ownership truoc, dedupe revision-level, retry PipelineError TRANSIENT + fatal fail-fast, stale-guard save_project; 21/21 test pass ke ca test cu). Dieu kien lam tiep: T5 RECOVER-tu-dong (P-T5). **Chua push.**
