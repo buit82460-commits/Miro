@@ -25,6 +25,7 @@ from pydantic import BaseModel, Field
 
 from miro.library.service import LibraryService
 from miro.library.store import LibraryStore
+from miro.browser.errors import RegistryError
 from miro.storage.registry import PublicationStore, RenderStore
 from miro.threads.flow import (
     ApprovalError,
@@ -69,6 +70,13 @@ class PublishRequest(BaseModel):
     channel: str = Field(default="threads")
     approval: dict = Field(default_factory=dict)
     revision: int = Field(default=0)
+    allow_post: bool = Field(default=False)
+    text: str = ""
+    owner: str = ""
+    shortcode: str = ""
+    tag: str = ""
+    media_sha256: str = ""
+    media_path: str = ""
 
 
 class ReconcileRequest(BaseModel):
@@ -122,14 +130,57 @@ def approve(body: ApproveRequest) -> dict:
 
 @router.post("/publish", status_code=status.HTTP_201_CREATED)
 def publish(body: PublishRequest) -> dict:
-    library, _, publications = _services()
+    from miro.main import app as _app
+
+    _, _, publications = _services()
     try:
         queued, replayed = publications.publish(
             body.publication_id, body.attempt_id, body.render_id, body.channel)
     except Exception as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT,
                             detail=str(exc)) from None
-    return {**queued, "replayed": replayed}
+    intent = _intent_of(body)
+    if not intent.text.strip():
+        return {**queued, "replayed": replayed, "worker": {"skipped": "no-intent"}}
+    publisher = _app.state.threads_publisher  # type: ignore[attr-defined]
+    audit = _app.state.threads_audit  # type: ignore[attr-defined]
+    worker = ThreadsWorker(publisher, audit=audit)
+    fake_posts: list[str] = []
+
+    class _FakePage:
+        owner = intent.owner
+
+        def verify_actor(self, owner):
+            return str(owner or "").lower().lstrip("@") == intent.owner.lower()
+
+        def submit(self, intent):
+            fake_posts.append(intent.shortcode or intent.intent_id)
+            url = f"https://www.threads.com/@{intent.owner}/post/FAKE"
+            return {"ack_post_codes": [], "ack_via": "http-dry-run",
+                    "ack_response_url": None, "observed_toasts": [],
+                    "observed_responses": []}
+
+        def read_eye(self, intent):
+            return []
+
+        def renew(self, ttl=300):
+            return None
+
+        def release(self):
+            return None
+
+    approvals = {}
+    if isinstance(body.approval, dict) and body.approval:
+        approvals[intent.intent_id] = body.approval
+    try:
+        out = worker.run_batch([intent], lambda: _FakePage(),
+                               allow_post=bool(body.allow_post),
+                               approvals=approvals, revision=body.revision)
+    except (ApprovalError,) as exc:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                            detail=f"{exc.code}: {exc.message}") from None
+    return {**queued, "replayed": replayed, "worker": out,
+            "posted_fake": fake_posts}
 
 
 @router.post("/reconcile")
