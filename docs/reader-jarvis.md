@@ -285,3 +285,163 @@ Snapshot mỗi op (`worker.py:132–148,164–174`): `targets_before/after`, `wi
 3. `tabs` không lease; `bind/read` lease SQLite ttl 180 + validate; không cướp lease, không retry khi uncertain.
 4. Mỗi request 1 worker process ngắn hạn; dọn đúng worker + node-playwright driver, không kill Chrome; timeout 175s.
 5. Binding in-memory (mất khi restart); lỗi read (trừ BUSY) → xóa binding; kết quả kèm snapshot before/after để caller phát hiện đổi tab/cửa sổ.
+
+---
+
+## 9. Vòng M3 — nền chạy chung (2026-11-21)
+
+Nguồn duy nhất B = `D:\JARVIS-Assistant`. Đọc toàn văn: `backend/app/jobs/manager.py` (1–1030),
+`backend/app/jobs/runner.py` (1–492), `backend/app/agents/base.py` (1–87),
+`backend/app/agents/browser.py::cleanup` (501–549), routes `desktop_task.py` (1–46) +
+`live_chrome.py` (1–46) + `assistant.py` (74–90, 120–154), `backend/app/core/execution_policy.py` (1–79),
+`backend/app/policies/browser.py` (trần job_timeout các loại), `backend/config/policy.json` (1–21).
+
+### 9.1. `create_job` — 14 job_type + policy/limits
+
+- `JobType` = 14 giá trị (`models.py:63`): `browser_task, web_search, web_read, stock_quote,
+  stock_search, github_search, github_read, synthesize, page_extract, video_extract,
+  channel_report, desktop_task, tiktok_discover, dubtool`.
+- Validate từng loại (`manager.py:322–698`):
+  - `browser_task`: `task` bắt buộc; `fake_scenario` chỉ khi `AGENT_MODE=fake` (ngược lại
+    `FAKE_SCENARIO_FORBIDDEN`); limits qua `resolve_effective_limits` (default 5 steps / 60s,
+    trần 15 steps / 300s theo `policy.json`).
+  - 6 job web/stock/github (`web_search/web_read/stock_quote/stock_search/github_search/github_read`):
+    bắt `query|url|symbol` tương ứng; `fake_scenario` luôn bị từ chối; timeout trần kênh web 60s
+    (`resolve_web_*`), github 60s; `web_read` validate SSRF/allowlist qua `resolve_web_read_limits`.
+  - 7 job nội bộ **bắt agent dựng sẵn, client không tự tạo**: `synthesize` (SYNTHESIS_AGENT_REQUIRED),
+    `page_extract` (EXTRACT_AGENT_REQUIRED), `video_extract` (VIDEO_AGENT_REQUIRED),
+    `channel_report` (CHANNEL_AGENT_REQUIRED), `desktop_task` (DESKTOP_AGENT_REQUIRED,
+    chỉ qua `POST /desktop-task`), `tiktok_discover` (TIKTOK_AGENT_REQUIRED),
+    `dubtool` (DUBTOOL_AGENT_REQUIRED, chỉ qua `POST /dubtool`).
+  - Trần timeout riêng từng job nội bộ (`policies/browser.py` + `manager.py:508–693`):
+    `page_extract 180s / video_extract 600s / channel_report 1800s / desktop_task 300s
+    (step 60s) / tiktok_discover 300s / dubtool 1800s (trần 7200s)`; client chỉ được thu hẹp,
+    vượt trần → `TIMEOUT_EXCEEDED`.
+- Từ chối input chứa secret thật (`TASK_CONTAINS_SECRET`, `manager.py:736`); lưu `recipe`
+  (input thô để replay) + `execution = new_execution(job_id)` (giữ lại khi `_restore_id`) +
+  `advance(execution,'PLAN','agent')` (`manager.py:750–756`).
+
+### 9.2. Slot / contamination / snapshot / recover_pending
+
+- **Slot đơn** `_active_job_id` + hàng đợi `_waiting`; `release_slot` chỉ nhả khi slot trống và
+  không `unclean`; job chờ `PAUSED` bị bỏ qua, `CANCELLED` bị loại (`manager.py:215–229`).
+- **Contamination lock**: cleanup fail → `mark_slot_contaminated` khóa tạo job mới
+  (`RESOURCE_CLEANUP_UNCLEAN`) cho tới xử lý rõ (`manager.py:231–244`, `runner.py:471–475`).
+- **Snapshot bền**: `_persist_job = to_public_dict() | {recipe}` → `atomic_save`
+  (`runtime/execution/jobs/job_<id>.json`, tmp + fsync + replace, retry PermissionError 7 lần —
+  `execution_policy.py:58–73`), sanitize secret trước (`manager.py:143–147`). Khởi động lại:
+  `_load_execution_snapshots` đọc lại snapshot, job dở dang (không terminal, không paused) vào
+  `_pending_recovery` (`manager.py:127–141`).
+- **`recover_pending` (`manager.py:149–177`)** — M3 phải copy nguyên thứ tự:
+  1. Chủ cũ còn sống (so `workerOwner={pid, createdAt}` qua psutil `is_running() + create_time()`)
+     → `BLOCKED/OWNERSHIP_UNKNOWN`, không replay (`:155–166`). `AccessDenied/KeyError` → coi như
+     còn sống (fail-closed); `NoSuchProcess` → đã chết, đi tiếp.
+  2. `control==pause` → giữ `PAUSED`, không replay (`:167`).
+  3. Chỉ replay nhóm safe `web_read/web_search/stock_*/github_*` (+ fake hoặc browser_task chưa
+     start); cần `recipe` + `retryCount < maxAttempts-1`, ngược lại →
+     `BLOCKED/RESULT_UNKNOWN` (browser/desktop) hoặc `ADAPTER_CHECKPOINT_REQUIRED`,
+     kèm `JobErrorInfo` + hint đối chiếu ngoài, **không replay mutation chưa rõ** (`:168–173`).
+  4. Replay = `create_job(**recipe, _restore_id=id)` giữ execution cũ; lỗi restore →
+     `BLOCKED/RESTORE_FAILED` (`:174–177`).
+
+### 9.3. Runner — terminal / stop-grace / cleanup verify / retry
+
+- Vòng đời `_execute_lifecycle`: `queued→running (+job_started)` → `_run_autonomously` dưới
+  `wait_for(timeout)` → timeout thì `job_timeout` + `agent.request_stop()` + grace (tối đa 2s) →
+  buộc cancel → **cleanup TRƯỚC** → đúng 1 terminal → nhả/khóa slot → phát terminal event →
+  đóng subscribers (`runner.py:231–491`).
+- Thứ tự ưu tiên terminal: `timeout > user_stop/Cancelled > AgentExecutionError
+  (BLOCKED nếu execution BLOCKED) > cleanup fail > success` (`runner.py:351–465`).
+- **Stop 2 pha**: `initiate_stop` idempotent → `stopping` + `control='stop'` (chỉ khi
+  `user_requested`; `server_shutdown` để control None cho web-safe RECOVER) + `agent.request_stop()`
+  + watchdog `stop_grace_seconds` (mặc định 10s, min 0.05s) buộc cancel task chưa thoát
+  (`runner.py:122–164`). `request_stop` ở manager idempotent: terminal → 409; waiting/paused-không-runner
+  → `CANCELLED` trực tiếp; `stopping` → trả về ngay (`manager.py:899–925`).
+- **Pause**: `request_pause` chỉ đặt `control_request='pause'` + `execution['control']='pause'`,
+  chờ agent xác nhận tại điểm an toàn (`confirm_paused` → `job_paused`); chỉ `browser_task` gọi
+  `agent.request_pause()` thật, các job khác giữ `control==pause` và giữ `result` chờ resume
+  (không rerun) trong `_run_autonomously` (`runner.py:98–121, 198–217`). Queued pause trực tiếp qua
+  execution control (`manager.py:831–833`).
+- **Cleanup verify + contamination**: `_safe_cleanup` bọc `agent.cleanup()` trong
+  `wait_for(max(stop_grace, 5s))`; timeout/exception → `cleaned_up=False` (+
+  `browser_closed_verified=False` nếu `agent_type=='browser'`). Cuối lifecycle: `cleanup_ok =
+  cleaned_up and browser_closed_verified is not False`; ok → `release_slot`, fail →
+  `mark_slot_contaminated` (`runner.py:166–192, 321–327, 471–475`).
+- **Retry theo loại lỗi** (`_run_autonomously`, `runner.py:218–229` + `execution_policy.failure`):
+  chỉ nhóm safe (`web_read/web_search/stock_*/github_*`, `safe=True`) được retry; browser/desktop/
+  extract nội bộ `safe=False` → BLOCKED ngay. Điều kiện retry: mã thuộc `TRANSIENT`
+  (mạng/429/502/503/504/TAB_LEASE_BUSY/DEPENDENCY_UNAVAILABLE…) hoặc
+  `WEB_TIMEOUT/AGENT_REACH_TIMEOUT/AGENT_REACH_CONNECTION_ERROR`, và `retryCount < maxAttempts-1`
+  (3 lần, backoff 1s→30s). Giữa retry: cleanup trước, cleanup fail → `BLOCKED/RESOURCE_CLEANUP_UNCLEAN`;
+  `sleep(delaySeconds)`; stop trong recovery → `AgentStoppedSignal`. Hết budget/mã BLOCKING →
+  `BLOCKED` giữ checkpoint. Mã BLOCKING (`execution_policy.py:23–26`):
+  `OWNERSHIP_UNKNOWN/REMOTE_RESULT_UNKNOWN/RESULT_UNKNOWN/APPROVAL_REQUIRED/CAPTCHA/MFA/
+  AUTH/PERMISSION/LEASE_LOST/PROFILE_UNVERIFIED/SCOPE_DENIED/RESOURCE_CLEANUP_UNCLEAN…` — không retry.
+- Server shutdown: web-safe → `RECOVER` + hạ về `QUEUED` (chạy lại khi restart);
+  browser/desktop giữ terminal (`runner.py:467–470`); `manager.shutdown` stop active job + chờ
+  `stop_grace+2s` rồi buộc cancel (`manager.py:1002–1030`).
+- Sanitize mọi output qua `sanitize_data/scrub_text`; key nghiệp vụ dài
+  (`final_answer/text/content/caption/missing/core_gap`) không cắt 500 ký tự
+  (`runner.py:442–460`). Error chuẩn hóa `JobErrorInfo{code,message,details}`, không stack trace.
+
+### 9.4. Agents — `base.py` + `browser.py::cleanup`
+
+- `BaseAgent` (`base.py:62–87`): `run(context) → dict JSON` / `request_pause / request_resume /
+  request_stop / cleanup() → AgentCleanupReport`. `AgentRunContext` mang `job_id/task/
+  effective_limits/emit_event/confirm_paused/confirm_resumed/fake_scenario`.
+  `AgentExecutionError{code,message,details}` (lỗi có kiểm soát) vs `AgentStoppedSignal`
+  (tín hiệu dừng chủ động, map → `CANCELLED`); exception lạ → `AGENT_EXECUTION_ERROR` + FAILED.
+- `BrowserUseAgent.cleanup` (`browser.py:501–549`): `agent.close()` + `session.kill()`,
+  xác minh PID từ `_local_browser_watchdog` (`browser_pid`/`_subprocess.pid`) qua psutil còn sống
+  không; **không kill mọi Chrome trên máy**. `browser_closed_verified=False` (không lấy được PID
+  dù đã start local, hoặc còn sống, hoặc có close_errors) → runner khóa slot. Chưa từng start
+  session + không lỗi → coi như sạch.
+
+### 9.5. Routes — `desktop-task` + `browser-live` + `assistant.browser_access`
+
+- `POST /desktop-task` (`desktop_task.py:32–46`): dựng `DesktopTaskAgent(cfg, steps)` (0 LLM,
+  headless, allowlist đóng ở adapter) rồi `create_job(job_type='desktop_task', …)` → 202 +
+  `JobResponse`. `timeout_seconds?` thu hẹp trần 300s.
+- `POST /browser-live/*` (`live_chrome.py:28–46`): `tabs / bindings / bindings/{id}/read /
+  DELETE bindings/{id}` qua `LiveChromeService`; lỗi → 409 `{"detail": …}`; **không qua JobManager,
+  không tạo job**. `GET /status` chỉ báo mode/capability, không phải bằng chứng profile.
+- `POST /assistant` (`assistant.py:81–89`): `payload.browser_access` (binding có sẵn + max_chars)
+  → `live_chrome.read` đồng bộ, trả 200 `{tool: existing_cdp_read, result}`; không suy quyền ghi
+  từ văn bản/LLM. Còn lại router LLM chọn 1 trong `web_search/web_read/browser_task` →
+  `create_job` nguyên validate policy + phát event `router_decision` lên job (`:120–154`).
+
+### 9.6. Connections tài khoản thật — hành vi M3 phải lấy
+
+- Nguồn duy nhất cho "tài khoản thật đang đăng nhập": **Existing Chrome Đ2** (§8), capability
+  READ-only. M3 bọc connection tương tự phải giữ:
+  1. **Verify kép trước VÀ sau mỗi op**: profile (`chrome://version` cùng window + realpath
+     `user_data_dir/profile_directory`) + actor (`CurrentUserInitialData.USER_ID` khớp
+     `account_id ^\d{1,30}$`, URL đúng host FB). Lệch → `PROFILE_UNVERIFIED/PROFILE_MISMATCH/
+     ACCOUNT_MISMATCH/ORIGIN_CHANGED`, không dùng kết quả dở, bắt gắn lại.
+  2. **Không fallback**: tab mất → `TAB_NOT_FOUND` (không chọn tab khác); browser đổi/chết →
+     `SESSION_CHANGED/CDP_UNAVAILABLE/CONNECTION_REFUSED` (không mở browser thay thế); lease bị
+     giữ → không cướp, không retry post (`TAB_BUSY`).
+  3. **Quyền sở hữu**: browser instance không ai sở hữu (so sha endpoint mỗi op); tab thuộc worker
+     hiện tại qua lease SQLite ttl 180 + `validate` sau op; `tabs` không lease; binding READ
+     in-memory của backend (mất khi restart; lỗi read trừ BUSY → xóa, `BINDING_NOT_FOUND` → liệt
+     kê + bind lại).
+  4. **Vệ sinh tiến trình**: mỗi request 1 worker process ngắn hạn, timeout 175s; dọn đúng worker +
+     driver node-playwright (check creation-time), **không kill Chrome người dùng**; kết quả kèm
+     snapshot before/after để caller phát hiện đổi tab/cửa sổ.
+- Guard `EXISTING_CDP_REQUIRED` (`agents/browser_access.py:5–21`): ở mode existing_cdp chặn mọi
+  adapter launch cũ — M3 giữ để không có đường vòng mở browser riêng khi đang bọc tài khoản thật.
+
+### Invariant vòng M3 (Checker dùng)
+
+1. 14 job_type đúng validate: 6 web/stock/github tự tạo qua query/url/symbol; 7 job nội bộ bắt
+   agent dựng sẵn (mã `*_AGENT_REQUIRED`); trần timeout riêng, vượt → `TIMEOUT_EXCEEDED`.
+2. 1 slot active; cleanup fail khóa slot (`RESOURCE_CLEANUP_UNCLEAN`); terminal đúng 1 lần,
+   ưu tiên timeout > stop > error > cleanup.
+3. `workerOwner={pid,createdAt}` mọi job; restart: chủ cũ còn sống → `BLOCKED/OWNERSHIP_UNKNOWN`;
+   chỉ replay nhóm safe + đủ recipe + còn budget; mutation chưa rõ → BLOCKED giữ checkpoint/receipt.
+4. Retry chỉ khi `safe_to_retry` (nhóm read-only) + mã TRANSIENT, tối đa 3 lần backoff 1→30s,
+   cleanup giữa retry; mã BLOCKING → không retry.
+5. Stop 2 pha idempotent + watchdog grace; pause chỉ browser_task gọi agent thật, job khác giữ
+   result chờ resume; shutdown: web-safe RECOVER→QUEUED, browser/desktop giữ terminal.
+6. Connections tài khoản thật: verify profile+actor trước/sau, không fallback/cướp lease,
+   không kill Chrome, binding in-memory + snapshot before/after.
