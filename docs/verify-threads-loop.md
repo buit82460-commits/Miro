@@ -76,3 +76,42 @@ full suite → **119 passed**.
 3. Stop 2 pha/watchdog worker, scheduler auto-pause — đã chuyển sang M3 theo reader §9.
 
 **Module Threads được tính "xong" ở mức lõi C (gate/journal/reconcile/approval/media-gate thật trên manifest A, 0 post thật). Live post đầu tiên vẫn qua runbook dubtool + reconcile read-only.**
+
+---
+
+# VERIFY vòng 3 — commit 33e3877 (ngày 2026-11-21): POST /threads/publish nối worker + live-read Profile 20 read-only — KẾT LUẬN: **ĐẠT**
+
+Checker thường trực đọc diff 33e3877 + code hiện trạng (`routers/threads.py`, `browser/live_chrome.py`)
++ tự chạy `python -m pytest tests/test_live_chrome_readonly.py tests/test_threads_publish_http.py -q`
+trong `C:\Miro\apps\backend` → **6 passed**. Files không đổi sau 33e3877
+(`git diff 33e3877 HEAD --stat` rỗng trên 5 file + biên bản này).
+
+## § HTTP publish (`POST /threads/publish` → `ThreadsWorker.run_batch`)
+
+| Mục | Bằng chứng | Kết quả |
+|---|---|---|
+| Nối worker vào router | `publish()` queue `publications.publish(...)` rồi gọi `worker.run_batch([intent], _FakePage, allow_post, approvals, revision)`; trả `{queued, replayed, worker, posted_fake}` | **ĐẠT** — đóng điều kiện mở §vòng-2.1 |
+| Dry-run mặc định 0 post | `test_publish_defaults_to_dry_run_zero_post`: `results[0].dry_run is True`, `posted_fake == []` | **ĐẠT** |
+| allow_post thiếu approval bị deny | `test_publish_allow_post_without_approval_denied`: `error in (APPROVAL_REQUIRED, FAILED_BEFORE_POST)` (không exception HTTP 403 vì worker trả lỗi trong result, đúng hợp đồng `run_batch`) | **ĐẠT** |
+| allow_post + approval còn hiệu lực → fake post | `test_publish_allow_post_with_approval_runs_fake_post_only`: `posted_fake == [shortcode]`, `posted is True`, `receipt == UNCONFIRMED_NO_REPLAY` | **ĐẠT** |
+
+Nhỏ (không chặn): `from miro.browser.errors import RegistryError` ở `routers/threads.py:28`
+hiện chưa dùng trong file — dọn ở commit sau.
+
+## § Live-read Profile 20 read-only (`browser/live_chrome.py` + `docs/live-read-profile20.md`)
+
+| Mục | Bằng chứng | Kết quả |
+|---|---|---|
+| Chỉ 1 CDP tới Chrome có sẵn, không tự mở | `connect_over_cdp`: `connect_over_cdp` duy nhất; lỗi → `CDP_UNAVAILABLE` raise, không retry/reconnect; thiếu playwright → `PLAYWRIGHT_MISSING` fail-closed | **ĐẠT** (fake CDP trong test) |
+| Module không có post/navigate path | `test_module_has_no_post_path` (không `def post`/`post_once`/`def navigate`/`def submit`) + grep tay: chỉ còn chữ "navigate" trong comment/docstring cấm | **ĐẠT** |
+| Read 1 URL: open → bind profile → acquire → read → release → disconnect | `test_read_url_once_fake_cdp_no_post`: text chứa `dub417888`, `browser.disconnected is True` | **ĐẠT** |
+| Không Chrome → deny, không tự mở thay thế | `test_no_chrome_running_denied_without_opening`: `CDP_UNAVAILABLE`/`WAITING_CONFIRMATION` (test dùng `connect=dead` raise `ConnectionError`; đường `connect_over_cdp` thật map mọi exception → `CDP_UNAVAILABLE`) | **ĐẠT** |
+| Runbook `docs/live-read-profile20.md` | Chuẩn bị Chrome thủ công + CLI + bảng lỗi + test fake + §4 phần mở | **ĐẠT** |
+
+## Phần mở (chưa làm, không chặn vòng này)
+
+1. `workers/browser/worker.py:19` vẫn skeleton `raise NotImplementedError("merge từ nhánh nghiệp vụ (workers/browser)")` — chưa nối vào `ManagedChromeSession`.
+2. Live-read thật cần Chrome do người dùng mở sẵn (remote-debugging, Profile 20, 2 tab `chrome://version` + URL bài) + `pip install playwright` — chưa chạy lần nào; connector mới qua test fake CDP.
+3. Actor verify mới qua URL (`threads_actor` regex `@username`); verify qua DOM + watch/poll để sau khi live thật.
+
+Lệnh: `cd C:\Miro\apps\backend && python -m pytest tests/test_live_chrome_readonly.py tests/test_threads_publish_http.py -q` → **6 passed**.
