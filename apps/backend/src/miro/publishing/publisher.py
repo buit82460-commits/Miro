@@ -458,7 +458,8 @@ def _strip_post_id(href: str) -> str:
     return seg.strip()
 
 
-async def collect_post_records(page, username: str, limit: int = 40) -> list[dict]:
+async def collect_post_records(page, username: str, limit: int = 40,
+                             diag: dict | None = None) -> list[dict]:
     """Mat that trong C (port rea_eye.collect_post_records :56-89 + fix B1-B8).
 
     - Locator hep 2 pattern theo A (khong mo rong mu).
@@ -466,18 +467,26 @@ async def collect_post_records(page, username: str, limit: int = 40) -> list[dic
     - post_id cat query/fragment (fix B2); TAG boundary 6 so (fix B3).
     - Dedup theo post_id/url, limit theo record unique (fix B6).
     - text preview giu tag (fix B7); dem loi thay vi nuot cam (fix B5).
-    - author truyen qua username nhu A (B8: caller dam bao qua acquire/verify).
+    - B4: dem link/article/hit/miss vao `diag` (truyen dict vao de nhan;
+      khong tron record diagnostic vao ket qua de giu contract cu).
+    - B8: doc author live tu DOM (link href/@username quan sat duoc); caller
+      van acquire/verify truoc, nao tu choi khi author lech tab (verified o
+      match_eye_records, khong tin author tu khai o day).
     """
     from contextlib import suppress
 
     user = str(username or "").lstrip("@")
     records: list[dict] = []
+    scan: dict = {"links": 0, "articles": 0, "skipped_no_article": 0,
+                  "skipped_no_pid": 0, "dupes": 0, "errors": 0}
     links: list = []
     with suppress(Exception):
         links = await page.locator(
             f'a[href*="/@{user}/post/"], a[href*="/@{user}/t/"]').all()
+    scan["links"] = len(links or [])
+    with suppress(Exception):
+        scan["articles"] = await page.locator("article").count()
     seen: set[str] = set()
-    errors = 0
     for link in (links or [])[: max(1, int(limit)) * 3]:
         if len(records) >= max(1, int(limit)):
             break
@@ -487,6 +496,10 @@ async def collect_post_records(page, username: str, limit: int = 40) -> list[dic
                 continue
             parent_text = await link.evaluate(
                 "el => (el.closest('article') || el.parentElement).innerText || ''")
+            in_article = await link.evaluate(
+                "el => !!el.closest('article')")
+            if not in_article:
+                scan["skipped_no_article"] += 1
             norm = _norm_tag_exact(parent_text)
             # Fix B1: chi query video trong article, khong lan sang document.
             has_video = await link.evaluate(
@@ -494,17 +507,23 @@ async def collect_post_records(page, username: str, limit: int = 40) -> list[dic
                 " return a ? !!a.querySelector('video') : false; }")
             url = href if href.startswith("http") else f"https://www.threads.com{href}"
             pid = _strip_post_id(href)
-            if not pid and not url:
+            if not pid:
+                scan["skipped_no_pid"] += 1
                 continue
+            if not url:
+                continue
+            # B8: author live tu href quan sat duoc, khong tin username truyen vao.
+            live_author = _author_of_href(href) or f"@{user}"
             key = pid or url
             if key in seen:
+                scan["dupes"] += 1
                 continue
             seen.add(key)
             # Fix B7: preview giu tag (dau + duoi) thay vi cat cung 300 ky tu.
             preview = norm[:300] if extract_eye_tag(norm) in norm[:300] else (
                 norm[:240] + " … " + norm[-60:] if len(norm) > 300 else norm)
             records.append({
-                "author": f"@{user}",
+                "author": live_author,
                 "tag": extract_eye_tag(norm),
                 "url": url,
                 "post_id": pid,
@@ -512,15 +531,19 @@ async def collect_post_records(page, username: str, limit: int = 40) -> list[dic
                 "text": preview,
             })
         except Exception:
-            errors += 1
+            scan["errors"] += 1
             continue
-    if errors:
-        try:
-            records.append({"_diagnostic": "eye-errors", "errors": errors,
-                            "links": len(links or [])})
-        except Exception:
-            pass
+    if isinstance(diag, dict):
+        diag.update(scan)
     return [r for r in records if "post_id" in r and "url" in r]
+
+
+def _author_of_href(href: str) -> str:
+    """B8: trich @username tu href quan sat duoc (/...@user/post/...)."""
+    import re
+
+    hit = re.search(r"/@([A-Za-z0-9._-]+)/", str(href or ""))
+    return f"@{hit.group(1)}" if hit else ""
 
 
 def match_eye_records(records: list[dict], owner: str, want_tag: str,

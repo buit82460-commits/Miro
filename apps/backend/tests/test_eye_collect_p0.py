@@ -30,9 +30,13 @@ class FakeLink:
         return self._href
 
     async def evaluate(self, js):
+        if "innerText" in js:
+            return self._text
         if "querySelector('video')" in js:
             # mo phong fix B1: khong article -> False (khong lan document)
             return self._video if self._article else False
+        if "closest('article')" in js:
+            return self._article
         return self._text
 
 
@@ -42,6 +46,9 @@ class FakeLocator:
 
     async def all(self):
         return self._links
+
+    async def count(self):
+        return len(self._links)
 
 
 class FakePage:
@@ -61,10 +68,12 @@ def run(coro):
 
 def test_locator_hep_2_pattern():
     page = FakePage([])
-    run(collect_post_records(page, "alice"))
-    assert len(page.locator_calls) == 1
+    run(collect_post_records(page, "alice", diag={}))
+    # 1 call links (locator hep A) + 1 call dem articles (B4)
+    assert len(page.locator_calls) == 2
     sel = page.locator_calls[0]
     assert "/@alice/post/" in sel and "/@alice/t/" in sel
+    assert page.locator_calls[1] == "article"
 
 
 def test_same_record_2_article_khong_ghep_cheo():

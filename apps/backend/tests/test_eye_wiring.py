@@ -26,16 +26,26 @@ def _fake_dom(records):
         async def evaluate(self, js):
             if "innerText" in js:
                 return self._rec["text"]
+            if "closest('article')" in js and "querySelector" not in js:
+                return True  # link nam trong article
             return self._rec["has_video"]
 
     class Page:
         def locator(self, sel):
+            if sel == "article":
+                class ArticleLoc:
+                    async def count(self):
+                        return len(records)
+
+                return ArticleLoc()
             assert "/@alice/post/" in sel and "/@alice/t/" in sel  # locator hep A
-            outer = self
 
             class Loc:
                 async def all(self):
                     return [Link(r) for r in records]
+
+                async def count(self):
+                    return len(records)
 
             return Loc()
 
@@ -84,3 +94,23 @@ def test_verify_actor_khop_va_lech():
     assert page.verify_actor("alice") is True
     assert page.verify_actor("@ALICE") is True
     assert page.verify_actor("bob") is False
+
+
+def test_b4_scan_log_hit_miss_va_b8_author_live():
+    import asyncio
+    from miro.publishing.publisher import collect_post_records
+    recs = [{"href": "/@alice/post/P1", "text": "a #dub111111", "has_video": False},
+            {"href": "/@alice/post/P1", "text": "a #dub111111", "has_video": False}]
+    diag: dict = {}
+    raw = asyncio.run(collect_post_records(_fake_dom(recs), "alice", diag=diag))
+    assert diag["links"] == 2 and diag["articles"] == 2 and diag["dupes"] == 1
+    assert len(raw) == 1  # contract cu: chi record that, khong tron diagnostic
+    assert raw[0]["author"] == "@alice"  # B8: doc tu href quan sat duoc
+
+
+def test_b8_author_lech_tab_nao_tu_choi():
+    from miro.publishing.publisher import match_eye_records
+    recs = [{"author": "@bob", "tag": "#dub111111",
+             "url": "https://www.threads.com/@bob/post/P9",
+             "post_id": "P9", "has_video": False}]
+    assert match_eye_records(recs, "alice", "#dub111111", "x", []) is None
