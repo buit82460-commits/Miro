@@ -440,6 +440,89 @@ def _norm_tag_exact(text) -> str:
     return re.sub(r"\s+", " ", str(text or "").strip().lower())
 
 
+# P0 mat (A rea_eye.py + dap HOI-eye-01): chi 2 pattern locator, giu hep.
+_EYE_LINK_SELECTOR = 'a[href*="/@{user}/post/"], a[href*="/@{user}/t/"]'
+# Fix B3 (A TAG_RE khong boundary hit 6 so dau cua tag dai): chan bang (?!\d).
+TAG_RE = re.compile(r"#dub\d{6}(?!\d)")
+
+
+def extract_eye_tag(text: str) -> str:
+    """Tag eye: #dub dung 6 so (A :18 + fix B3 boundary). Khong co -> ''."""
+    hit = TAG_RE.search(str(text or "").lower())
+    return hit.group(0) if hit else ""
+
+
+def _strip_post_id(href: str) -> str:
+    """Fix B2: post_id = segment cuoi, cat query/fragment."""
+    seg = (href or "").strip().split("?")[0].split("#")[0].strip("/").split("/")[-1]
+    return seg.strip()
+
+
+async def collect_post_records(page, username: str, limit: int = 40) -> list[dict]:
+    """Mat that trong C (port rea_eye.collect_post_records :56-89 + fix B1-B8).
+
+    - Locator hep 2 pattern theo A (khong mo rong mu).
+    - has_video chi trong article (fix B1: khong fallback document).
+    - post_id cat query/fragment (fix B2); TAG boundary 6 so (fix B3).
+    - Dedup theo post_id/url, limit theo record unique (fix B6).
+    - text preview giu tag (fix B7); dem loi thay vi nuot cam (fix B5).
+    - author truyen qua username nhu A (B8: caller dam bao qua acquire/verify).
+    """
+    from contextlib import suppress
+
+    user = str(username or "").lstrip("@")
+    records: list[dict] = []
+    links: list = []
+    with suppress(Exception):
+        links = await page.locator(
+            f'a[href*="/@{user}/post/"], a[href*="/@{user}/t/"]').all()
+    seen: set[str] = set()
+    errors = 0
+    for link in (links or [])[: max(1, int(limit)) * 3]:
+        if len(records) >= max(1, int(limit)):
+            break
+        try:
+            href = await link.get_attribute("href")
+            if not href:
+                continue
+            parent_text = await link.evaluate(
+                "el => (el.closest('article') || el.parentElement).innerText || ''")
+            norm = _norm_tag_exact(parent_text)
+            # Fix B1: chi query video trong article, khong lan sang document.
+            has_video = await link.evaluate(
+                "el => { const a = el.closest('article');"
+                " return a ? !!a.querySelector('video') : false; }")
+            url = href if href.startswith("http") else f"https://www.threads.com{href}"
+            pid = _strip_post_id(href)
+            if not pid and not url:
+                continue
+            key = pid or url
+            if key in seen:
+                continue
+            seen.add(key)
+            # Fix B7: preview giu tag (dau + duoi) thay vi cat cung 300 ky tu.
+            preview = norm[:300] if extract_eye_tag(norm) in norm[:300] else (
+                norm[:240] + " … " + norm[-60:] if len(norm) > 300 else norm)
+            records.append({
+                "author": f"@{user}",
+                "tag": extract_eye_tag(norm),
+                "url": url,
+                "post_id": pid,
+                "has_video": bool(has_video),
+                "text": preview,
+            })
+        except Exception:
+            errors += 1
+            continue
+    if errors:
+        try:
+            records.append({"_diagnostic": "eye-errors", "errors": errors,
+                            "links": len(links or [])})
+        except Exception:
+            pass
+    return [r for r in records if "post_id" in r and "url" in r]
+
+
 def match_eye_records(records: list[dict], owner: str, want_tag: str,
                       want_text: str, known_ids: list[str] | None = None) -> dict | None:
     """Same-record exact semantics cua core/rea_eye.match_eye_records.
@@ -499,8 +582,10 @@ def verify_receipt(receipt: dict | None, intent: Intent,
     """
     if not isinstance(receipt, dict):
         return None
-    if _normalize_account(receipt.get("owner")).lower() != intent.owner.lower().lstrip("@") \
-            and str(receipt.get("owner") or "").lower().lstrip("@") != intent.owner.lower().lstrip("@"):
+    # Fix S3: eye record dung key "author", khong phai "owner" — chap nhan ca hai.
+    _owner_raw = receipt.get("owner") or receipt.get("author")
+    if _normalize_account(_owner_raw).lower() != intent.owner.lower().lstrip("@") \
+            and str(_owner_raw or "").lower().lstrip("@") != intent.owner.lower().lstrip("@"):
         return None
     url = str(receipt.get("url") or "").strip()
     if not url:
@@ -510,10 +595,12 @@ def verify_receipt(receipt: dict | None, intent: Intent,
     if post_id and kids and post_id in kids:
         return {"shortcode": intent.shortcode or intent.intent_id, "status": "published",
                 "url": url, "post_id": post_id, "match": "post_id"}
+    # Fix S2: bo passthrough receipt tu khai match=post_id; post_id trong url
+    # chi chap nhan khi tag exact hoac post_id nam trong known_ids.
     if post_id and post_id in url:
         rtag = _norm_tag_exact(receipt.get("tag") or "")
         itag = _norm_tag_exact(intent.tag or "")
-        if (itag and rtag == itag) or receipt.get("match") == "post_id":
+        if (itag and rtag == itag) or (kids and post_id in kids):
             return {"shortcode": intent.shortcode or intent.intent_id, "status": "published",
                     "url": url, "post_id": post_id, "match": "post_id"}
     rtag = _norm_tag_exact(receipt.get("tag") or "")
