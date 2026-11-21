@@ -331,12 +331,14 @@ class Intent:
     @classmethod
     def from_item(cls, item: dict, account: str) -> "Intent":
         text = caption_for(item)
+        # Legacy unique_tag khong zero-pad: shortcode it chu so cho tag ngan
+        # (vd test-001 -> #dub001), nen match #dub + bat ky so chu so nao.
+        found = re.search(r"#dub\d+", text)
         return cls(
             intent_id=job_id_for(item),
             owner=_normalize_account(account),
             text=text,
-            tag=(re.search(r"#dub\d{6}", text).group(0).lower()
-                 if re.search(r"#dub\d{6}", text) else ""),
+            tag=(found.group(0).lower() if found else ""),
             media_sha256=str(item.get("sha256") or ""),
             shortcode=str(item.get("shortcode")),
             media_path=str(item.get("media_path") or item.get("local_path") or ""),
@@ -566,7 +568,7 @@ class Publisher:
             return {"reconciled": False, "shortcode": intent.shortcode or intent.intent_id,
                     "hint": "no attempt journal"}
         journal = load_json_if_exists(journal_path, {})
-        if journal.get("status") == VERIFIED:
+        if journal.get("status") in (VERIFIED, "published"):
             return {"reconciled": True, "shortcode": intent.shortcode or intent.intent_id,
                     "already": "verified"}
         known_ids = [str(x) for x in (journal.get("ack_post_codes") or []) if str(x).strip()]

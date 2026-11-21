@@ -1,22 +1,24 @@
-"""Miro backend app factory (Python 3.12 + FastAPI + Pydantic + SQLite)."""
+"""Backward-compat alias: entrypoint duy nhat la miro.main:app.
+
+Giu file nay vi mot so test/tool cu import miro.app; factory create_app
+tra ve cung app canonical thay vi dung app rieng thieu router.
+"""
 from __future__ import annotations
 
-import asyncio
 from pathlib import Path
 
 from fastapi import FastAPI
 
-from .permissions.store import PermissionStore
-from .storage.db import TaskStore
-from .tasks.router import router as tasks_router
-from .tasks.service import FakeRemote, TaskService
+from .main import app
 
 
-def create_app(db_path: Path | None = None, remote: FakeRemote | None = None) -> FastAPI:
-    app = FastAPI(title="Miro Backend")
-    store = TaskStore(db_path or Path("miro-tasks.db"))
-    service = TaskService(store, PermissionStore(), remote)
-    app.state.task_service = service
-    app.state.run_task = lambda coro: asyncio.ensure_future(coro)
-    app.include_router(tasks_router)
+def create_app(db_path: Path | None = None, remote=None) -> FastAPI:
+    if db_path is not None or remote is not None:
+        from .permissions.store import PermissionStore
+        from .storage.db import TaskStore
+        from .tasks.service import FakeRemote, TaskService
+
+        app.state.task_service = TaskService(
+            TaskStore(db_path or Path(r"C:\Miro\var\tasks.db")),
+            PermissionStore(), remote or FakeRemote())
     return app
