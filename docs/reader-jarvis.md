@@ -233,3 +233,55 @@ Ký hiệu: `B:<path>` = file trong `D:\JARVIS-Assistant`; `C:<path>` = file tro
 - [ ] Bước tổng hợp (nếu có): schema `final_answer/sources/insufficient_data/missing/core_requirement_met/core_gap`, sources validate thuộc tập bước đã chạy, không bịa.
 
 *Nguồn B file:dòng ghi trong từng mục; nguồn C: `apps/backend/src/miro/{studio/handlers.py:47–60,studio/store.py:34–51,tasks/service.py:30–37,85–98,140–188,storage/db.py:47–73}`. Vòng sau bổ sung tiếp dưới mục mới — không sửa mục đã chốt.*
+
+---
+
+## 8. Vòng Browser — lần theo một task Existing Chrome từ nhận đến trả kết quả (2026-11-21)
+
+Nguồn duy nhất B = `D:\JARVIS-Assistant`. Hai đường task riêng biệt, không lẫn:
+(Đ1) **BrowserUse job** — agent tự launch browser riêng qua `agents/browser.py`, qua `jobs/manager+runner` (đã ghi §1, §3.2).
+(Đ2) **Existing Chrome read** — mục này: bám Chrome người dùng đang mở, capability duy nhất READ, qua `live_chrome*` + route `/browser-live` + `/assistant.browser_access`. Không tạo job.
+
+### 8.1. Nhận task → giao việc cho worker (Đ2)
+
+| Bước | File:hàm:dòng | Hành vi |
+|---|---|---|
+| 1. Nhận | `B:api/routes/live_chrome.py:9–45`: `POST /browser-live/tabs`, `POST /bindings`, `POST /bindings/{id}/read`, `DELETE /bindings/{id}`; hoặc `B:api/routes/assistant.py:81–89`: `payload.browser_access` (binding có sẵn + `max_chars`) → read đồng bộ, trả 200 trực tiếp | Không qua `JobManager`; không `request_id/fingerprint/write-ahead` (read-only, không mutation) |
+| 2. Serialize | `B:integrations/live_chrome.py:98–118` `LiveChromeService.execute`: `asyncio.Lock` (1 op tại một thời điểm, `CHROME_BUSY` nếu đang bận) + `request_id=uuid4` trace log `browser_route … outcome=started/completed/failed_or_cancelled` | Lock là trong-process; phối hợp cross-process qua lease SQLite ở worker (§8.2) |
+| 3. Spawn worker | `B:integrations/live_chrome.py:53–96` `_run`: `create_subprocess_exec(<JARVIS_LIVE_CHROME_PYTHON> live_chrome_worker.py)`, stdin JSON (≤65537 bytes ở worker `main`), stdout 1 dòng JSON (trần 200000 bytes), **timeout 175s** → `CHROME_TIMEOUT` (không tự kết nối lại) | Worker là tiến trình con ngắn hạn, mỗi request 1 process mới; `RUNTIME_MISSING/START_FAILED/TRANSPORT_FAILED` khi runtime/stdout lỗi |
+| 4. Dọn transport | `live_chrome.py:80–96`: worker xong/timeout → `proc.kill()` (chỉ Python worker) + kill đúng tiến trình `node*playwright*` (driver), **không bao giờ kill Chrome** | `psutil` check creation-time trước kill |
+| 5. Binding | `live_chrome.py:123–137` `bind`: lưu `data` request vào `self.bindings[uuid4]`, trả `binding_id + capability READ`; `read`: binding mất → `BINDING_NOT_FOUND`; read lỗi (trừ `CHROME_BUSY`) → **xóa binding**, bắt gắn lại | Binding in-memory, mất khi backend restart; `close()` clear + cancel tasks (`live_chrome.py:45–51`) |
+
+### 8.2. Bảng quyền sở hữu worker/tab
+
+| Tài nguyên | Chủ | Cấp ở đâu | TTL / phạm vi | Bằng chứng |
+|---|---|---|---|---|
+| Browser instance (`browser_id = sha256(ws_endpoint)`) | Không ai sở hữu — chỉ kiểm tra | `worker.py:33–34,94–96,151–155` | Mỗi op so `request.browser_id` với instance từ `DevToolsActivePort`; lệch → `SESSION_CHANGED`, liệt kê + gắn lại | `endpoint()` đọc port/route (`worker.py:22–30`) |
+| Tab (`tab:<browser_id>:<targetId>`) | Worker tiến trình hiện tại (`owner="jarvis-existing-worker"`) | `worker.py:179–203` `run()`: `SharedStore.held(resource, ttl=180)` + `store.validate(lease)` sau op | Chỉ `bind/read`; **`tabs` không lease** (`worker.py:181–182` → `_run_unleased` thẳng) | `tab_resource(instance, target_id)` (cùng công thức Dubtool); DB `JARVIS_BROWSER_LEASE_DB` mặc định `C:\dubtool\config\browser-registry.sqlite` (`worker.py:194`) |
+| Cửa sổ/profile bằng chứng | Người dùng (worker chỉ đọc) | `verify_profile` (`worker.py:69–91`): tab `chrome://version` có `targetId==profile_target_id`, cùng `windowId` với tab FB (qua `Browser.getWindowForTarget`), `#profile_path` khớp `normcase(realpath(user_data_dir/profile_directory))` | Kiểm tra **trước và sau** mỗi op (`operate`: `worker.py:113–129`: verify → actor → bind/read → actor → verify) | `profile_evidence: "existing_version_same_window"` trong kết quả |
+| Account FB (`account_id ^\d{1,30}$`) | Người dùng đăng nhập sẵn | `actor()` (`worker.py:57–66`): URL phải hostname facebook hợp lệ + `CurrentUserInitialData.USER_ID` khớp `account_id` | Trước và sau op; lệch → `ACCOUNT_MISMATCH`, đổi origin → `ORIGIN_CHANGED` | Không cookie/storage — chỉ đọc JS có sẵn trong trang |
+| Quyền READ của caller | Binding in-memory của backend | `bind()` cấp, `read()` dùng 1 lần logic (binding giữ lại nếu read thành công), lỗi → xóa | `capability: "READ"` duy nhất; action khác → `ACTION_DENIED` (`worker.py:122–123`) | Schema `ChromeBindingRequest/ChromeReadRequest` (`live_chrome.py:14–29`) |
+| Guard đường launch cũ | `browser_access.guard_legacy_browser` | `agents/browser_access.py:5–21`: mode `existing_cdp` (hoặc có personal profile) → `EXISTING_CDP_REQUIRED`, chặn mọi adapter launch cũ; phát event `browser_route` (`launch/copy/new_page=false`) | `browser.py:271` + `tiktok_discover.py:63` gọi guard trước mọi launch | `tabs` kiểu launch riêng (`scripts/social_browser.py`) cũng bị chặn ở mode này |
+
+Snapshot mỗi op (`worker.py:132–148,164–174`): `targets_before/after`, `windows_before/after`, `target_set_changed/window_set_changed` — bằng chứng tab/cửa sổ đổi giữa chừng; không tự chữa, trả về cho caller quyết định.
+
+### 8.3. Trả kết quả / ngắt / phục hồi (kể cả mất kết nối)
+
+| Tình huống | Hành vi | Mã lỗi / file:dòng |
+|---|---|---|
+| Read thành công | `{"text": body.innerText[:max_chars], profile_verified:true, account_id, url(public, strip query), browser_id, target_id, window_id, shared_lock:false, snapshot…}` | `worker.py:118–129`; trần stdout 200KB `live_chrome.py:67–68` |
+| Tab mất / chọn sai | Không chọn tab thay thế | `TAB_NOT_FOUND` `worker.py:111–112` |
+| Browser đổi / endpoint chết | `SESSION_CHANGED` (so endpoint sha), `CDP_UNAVAILABLE` (đọc DevToolsActivePort lỗi), `CONNECTION_REFUSED` (socket 127.0.0.1:port 2s fail) — **không mở browser thay thế** | `worker.py:22–30,94–96,151–160,190–193` |
+| Lease bị giữ (TAB_BUSY) | `RegistryError` → `LiveChromeError`, không cướp, không retry post | `worker.py:202–203`; `run()` không fallback (`main`: `worker.py:206–224` map `CONNECTION_CLOSED/TIMEOUT/…`, live error passthrough, lỗi lạ → `CHROME_FAILED_<Type>_<reason>`, "không tự thử lại") |
+| Timeout 175s / cancel | `CHROME_TIMEOUT`; `execute()` trace `failed_or_cancelled`, dọn worker + driver | `live_chrome.py:77–78,110–118` |
+| Bận (op khác đang chạy) | `CHROME_BUSY`, binding giữ nguyên (không xóa) | `live_chrome.py:99–100,136–137` |
+| Binding hỏng / restart backend | `BINDING_NOT_FOUND` → client liệt kê `tabs` + `bind` lại từ đầu; bindings mất khi restart (`close()` clear) | `live_chrome.py:45–51,130–137` |
+| Phục hồi chuẩn | tabs → bind (verify profile+actor, giữ lease 180s, validate) → read (verify lại) → kết quả kèm snapshot; bất kỳ verify nào fail → lỗi rõ + gắn lại, không dùng kết quả dở | `worker.py:94–129,179–203` |
+
+### Invariant vòng Browser (Checker dùng)
+
+1. READ-only: chỉ `tabs/bind/read`; không launch/copy/new-page/fallback khi thiếu binding (guard `EXISTING_CDP_REQUIRED`).
+2. Verify kép (profile cùng-window + realpath, actor USER_ID) trước VÀ sau mỗi op; tab mất/browser đổi → dừng + gắn lại.
+3. `tabs` không lease; `bind/read` lease SQLite ttl 180 + validate; không cướp lease, không retry khi uncertain.
+4. Mỗi request 1 worker process ngắn hạn; dọn đúng worker + node-playwright driver, không kill Chrome; timeout 175s.
+5. Binding in-memory (mất khi restart); lỗi read (trừ BUSY) → xóa binding; kết quả kèm snapshot before/after để caller phát hiện đổi tab/cửa sổ.
