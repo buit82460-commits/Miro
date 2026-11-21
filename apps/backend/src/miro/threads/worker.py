@@ -95,6 +95,21 @@ class ThreadsWorker:
         started = time.time()
         if not intents:
             return {"results": [], "report": {"submitted": [], "total_s": 0.0}}
+        # Guard DUPLICATE_TAGS ca batch (A §8.7.2, giong Publisher.run_batch
+        # :650-657): trung → dung ca batch, 0 post.
+        _tag_counts: dict[str, int] = {}
+        for _i in intents:
+            _t = (getattr(_i, "tag", "") or "").lower()
+            if _t:
+                _tag_counts[_t] = _tag_counts.get(_t, 0) + 1
+        _dupes = sorted(t for t, c in _tag_counts.items() if c > 1)
+        if _dupes:
+            return {"results": [{"batch": "threads-worker",
+                                 "error": "DUPLICATE_TAGS", "tags": _dupes,
+                                 "hint": "tag #dub trung nhau; dung ca batch, "
+                                         "khong dang"}],
+                    "report": {"submitted": [],
+                               "total_s": round(time.time() - started, 1)}}
         try:
             page = page_factory()
         except Exception as exc:
@@ -173,11 +188,46 @@ class ThreadsWorker:
                 if isinstance(out, dict) and out.get("receipt") in (
                         "UNKNOWN", "UNCONFIRMED_NO_REPLAY"):
                     break
+            # Phase B: group reconcile 1 lan read-only (A §8.1) roi moi merge
+            # publication cho item submitted-nhung-chua-verified.
+            try:
+                posted_sc = {r.get("shortcode") for r in results
+                             if isinstance(r, dict) and r.get("posted")}
+                pending = [i for i in intents
+                           if (getattr(i, "shortcode", "") or
+                               getattr(i, "intent_id", "?")) in posted_sc]
+                reconciled_out = []
+                if pending and hasattr(self.publisher, "reconcile"):
+                    _ro = _ReadOnlyBrowser(page)
+                    # 1 pass gom nhom read-only (A §8.1 phase B).
+                    try:
+                        _ro.read_group_receipts(pending)
+                    except Exception:
+                        pass
+                    for _pi in pending:
+                        try:
+                            _rec = self.publisher.reconcile(_pi, _ro)
+                        except Exception:
+                            continue
+                        if isinstance(_rec, dict) and _rec.get("reconciled"):
+                            reconciled_out.append(_rec)
+                if reconciled_out:
+                    results.append({"phase": "B-group-reconcile",
+                                    "reconciled": reconciled_out})
+            except Exception:
+                pass
         finally:
             try:
                 page.release()
             except Exception:
                 pass
+            # Dong CDP sau release (docstring: "release + disconnect").
+            _disc = getattr(page, "disconnect", None)
+            if callable(_disc):
+                try:
+                    _disc()
+                except Exception:
+                    pass
         total_s = round(time.time() - started, 1)
         return {"results": results,
                 "report": {"submitted": [r.get("shortcode") for r in results

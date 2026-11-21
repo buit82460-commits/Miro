@@ -262,6 +262,35 @@ def media_for(item: dict) -> Path | None:
     return p
 
 
+def _media_gate(intent: "Intent") -> None:
+    """Media gate that opens the real media path (M2 fix #3).
+
+    - No media (no sha256, no path) → pass (text-only).
+    - media_path/local_path points to a real file → run media_for +
+      check_video; pass → allowed through (browser attaches bytes at
+      submit); fail → ValueError(before_submit) → FAILED_BEFORE_POST.
+    - sha256 set but no resolvable file → still blocked (bytes cannot be
+      verified): ValueError(before_submit) with MEDIA_UNVERIFIED.
+    """
+    has_claim = bool(intent.media_sha256 or intent.media_path)
+    if not has_claim:
+        return
+    item = {"media_path": intent.media_path, "local_path": intent.media_path}
+    try:
+        resolved = media_for(item)
+    except ValueError as exc:
+        err = ValueError(f"MEDIA_GATE_REJECTED: {exc}")
+        err.before_submit = True  # type: ignore[attr-defined]
+        raise err from None
+    if resolved is not None:
+        return
+    err = ValueError(
+        "MEDIA_UNVERIFIED: media claimed but no readable file to gate; "
+        "refusing to post.")
+    err.before_submit = True  # type: ignore[attr-defined]
+    raise err
+
+
 def enforce_adapter_integrity(baseline: Path | None = None) -> None:
     """Fail-closed guard (port _enforce_adapter_integrity :93-105).
 
@@ -506,10 +535,7 @@ class Publisher:
     def _pre_post_checks(self, intent: Intent, browser, approval=None,
                            revision: int = 0) -> None:
         enforce_adapter_integrity(self.integrity_baseline)
-        if intent.media_sha256 or intent.media_path:
-            err = ValueError("MEDIA_NOT_PORTED: publish co media bi cam khi chua gate video.")
-            err.before_submit = True  # type: ignore[attr-defined]
-            raise err
+        _media_gate(intent)
         verify_actor_contract(browser, intent)
         if self.require_approval:
             from miro.threads.flow import check_approval as _check_approval
@@ -639,8 +665,7 @@ class Publisher:
                 results.append(skip)
                 continue
             try:
-                if intent.media_sha256 or intent.media_path:
-                    raise ValueError("MEDIA_NOT_PORTED")
+                _media_gate(intent)
             except Exception as exc:
                 results.append({"error": type(exc).__name__,
                                 "shortcode": intent.shortcode or intent.intent_id})

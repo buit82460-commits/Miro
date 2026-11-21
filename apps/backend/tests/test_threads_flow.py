@@ -69,6 +69,13 @@ class FakeManagedPage:
     def release(self):
         self.released = True
 
+    # Publisher browser contract (Publisher.publish/reconcile gọi trực tiếp).
+    def post_once(self, intent):
+        return self.submit(intent)
+
+    def read_receipt(self, intent):
+        return self.read_eye(intent)
+
 
 def make_stack(tmp_path):
     base = tmp_path / "batch"
@@ -120,16 +127,28 @@ def test_closed_loop_with_real_manifest(tmp_path):
     assert replayed is True
 
     # 3. Publications queue + approval bound fingerprint+revision.
-    # Manifest thật có media → gate MEDIA_NOT_PORTED chặn trước post (đúng
-    # thiết kế C). Tách 2 đường: (a) media bị chặn, (b) text-only post có approval.
+    # Manifest thật có media → media gate mở đường thật (fix #3): file gốc
+    # C:\Users\Admin\Videos\Ai\vizzion*(-20261119)\*.mp4 tồn tại trên máy này
+    # → media_for + check_video pass → được post; file vắng → MEDIA_UNVERIFIED
+    # chặn FAILED_BEFORE_POST (fail-closed). Tách 2 đường: (a) media kiểm gate,
+    # (b) text-only post có approval.
     intents = [Intent.from_item(s, manifest["account"]) for s in saved]
     for intent in intents:
         assert intent.tag.startswith("#dub")
     from dataclasses import replace as _replace
+    from miro.publishing.publisher import _media_gate
     postable = [_replace(it, media_sha256="", media_path="") for it in intents]
-    blocked = publisher.publish(intents[0], FakeManagedPage(),
+    try:
+        _media_gate(intents[0])
+        media_expect = "posted"
+    except Exception:
+        media_expect = "FAILED_BEFORE_POST"
+    blocked = publisher.publish(intents[0], FakeManagedPage(manifest["account"]),
                                 approval=approve_intent(intents[0], 3), revision=3)
-    assert blocked.get("error") == "FAILED_BEFORE_POST"
+    if media_expect == "posted":
+        assert blocked.get("posted") is True
+    else:
+        assert blocked.get("error") == "FAILED_BEFORE_POST"
     queued, replayed = publications.publish("m2-pub", "att-1",
                                             prepared[0]["render"]["render_id"],
                                             "threads")
@@ -138,8 +157,15 @@ def test_closed_loop_with_real_manifest(tmp_path):
     assert approvals[postable[0].intent_id]["fingerprint"] == intent_fingerprint(postable[0])
     # intent đổi sau duyệt → gate từ chối
     postable[0].text += " chen thêm"
-    worker = ThreadsWorker(publisher, audit=AuditLog(tmp_path / "audit.jsonl"))
-    page = FakeManagedPage()
+    worker_base = tmp_path / "batch-w"
+    worker_attempts = tmp_path / "attempts-w"
+    worker_base.mkdir()
+    worker_attempts.mkdir()
+    from miro.publishing.publisher import Publisher as _Publisher
+    publisher2 = _Publisher(worker_base, attempts_dir=worker_attempts,
+                            require_approval=True)
+    worker = ThreadsWorker(publisher2, audit=AuditLog(tmp_path / "audit.jsonl"))
+    page = FakeManagedPage(manifest["account"])
     res = worker.run_batch(postable, lambda: page, allow_post=True,
                            approvals=approvals, revision=3)
     changed = [r for r in res["results"] if r.get("shortcode") == postable[0].shortcode]
@@ -152,12 +178,12 @@ def test_closed_loop_with_real_manifest(tmp_path):
     library.link_publication(prepared[1]["render"]["render_id"], "m2-pub",
                              platform="threads",
                              url="https://www.threads.com/@haodaojrk5/post/P001")
-    history = history_for(library, publications, base, attempts,
+    history = history_for(library, publications, worker_base, worker_attempts,
                           publication_id="m2-pub",
                           render_id=prepared[1]["render"]["render_id"])
     assert history["render_id"] == prepared[1]["render"]["render_id"]
     assert any(a["asset_id"] == assets[1]["id"] for a in history["assets"])
-    assert any(j.get("status") in ("verified", "submit", "unknown",
+    assert any(j.get("status") in ("verified", "published", "submit", "unknown",
                                    "submitted-awaiting-group-reconcile")
                for j in history["journals"])
 
@@ -238,3 +264,88 @@ def test_secret_rejected_and_audit_dropped_counted(tmp_path):
     audit = AuditLog(tmp_path / "a.jsonl", batch_size=1)
     audit.append({"shortcode": "s", "decision": "denied"})
     assert (tmp_path / "a.jsonl").exists()
+
+
+def test_worker_duplicate_tags_stops_whole_batch(tmp_path):
+    """Worker: 2 intent cùng #dub → dừng cả batch, 0 post (A §8.7.2)."""
+    base, attempts, library, renders, publications, publisher = make_stack(tmp_path)
+    a = Intent(intent_id="threads-d1", shortcode="d1", owner="alice",
+               text="một #dub000111", tag="#dub000111")
+    b = Intent(intent_id="threads-d2", shortcode="d2", owner="alice",
+               text="hai #dub000111", tag="#dub000111")
+    worker = ThreadsWorker(publisher)
+    page = FakeManagedPage(owner="alice")
+    out = worker.run_batch([a, b], lambda: page, allow_post=True,
+                           approvals={"threads-d1": approve_intent(a, 1),
+                                      "threads-d2": approve_intent(b, 1)},
+                           revision=1)
+    assert out["results"] and out["results"][0].get("error") == "DUPLICATE_TAGS"
+    assert page.posts == 0
+
+
+def test_worker_phase_b_group_reconcile_merges_publication(tmp_path):
+    """Worker phase B: submit chưa verified → group reconcile read-only rồi
+    mới merge publication (A §8.1). Fake tab submit ack rỗng (không receipt)
+    nhưng eye đã có record verified → phase B promote + merge, pass gom
+    read-only đúng 1 lần."""
+    base, attempts, library, renders, publications, publisher = make_stack(tmp_path)
+
+    class AcklessPage(FakeManagedPage):
+        def __init__(self, owner="alice"):
+            super().__init__(owner)
+            self.group_passes = 0
+
+        def submit(self, intent):
+            self.posts += 1
+            self.eye[intent.shortcode or intent.intent_id] = {
+                "author": f"@{intent.owner}", "tag": intent.tag,
+                "url": f"https://www.threads.com/@{intent.owner}/post/PB1",
+                "post_id": "PB1", "has_video": False}
+            return {"ack_post_codes": [], "ack_via": "fake-managed-tab",
+                    "ack_response_url": None, "observed_toasts": [],
+                    "observed_responses": []}
+
+        def read_group_receipts(self, intents):
+            self.group_passes += 1
+            return {}
+
+    # _ReadOnlyBrowser của worker không có read_group_receipts riêng → đếm
+    # pass gom bằng cách bọc Publisher.run_batch-style: page có
+    # read_group_receipts, worker gọi 1 lần trước reconcile từng item.
+    intent = Intent(intent_id="threads-pb", shortcode="pb", owner="alice",
+                    text="phase b #dub000112", tag="#dub000112")
+    worker = ThreadsWorker(publisher)
+    page = AcklessPage(owner="alice")
+    out = worker.run_batch([intent], lambda: page, allow_post=True,
+                           approvals={"threads-pb": approve_intent(intent, 1)},
+                           revision=1)
+    assert page.released is True
+    phase_b = [r for r in out["results"] if r.get("phase") == "B-group-reconcile"]
+    assert phase_b and phase_b[0]["reconciled"]
+    pub = json.loads((base / "publication-threads.json").read_text(encoding="utf-8-sig"))
+    assert any(x.get("shortcode") == "pb" and x.get("url") for x in pub.get("items", []))
+
+
+REAL_VIDEO = Path(r"C:\Miro\var\studio-fixture.mp4")
+
+
+def test_media_gate_real_video_passes_and_unverified_blocked(tmp_path):
+    """Gate media trên file video thật (M2 fix #3): file thật cho qua,
+    sha256 không file vẫn cấm."""
+    from miro.publishing.publisher import _media_gate
+    base, attempts, library, renders, publications, publisher = make_stack(tmp_path)
+    if REAL_VIDEO.is_file():
+        vid = Intent(intent_id="threads-v", shortcode="v", owner="alice",
+                     text="video that #dub000113", tag="#dub000113",
+                     media_path=str(REAL_VIDEO))
+        _media_gate(vid)  # không raise
+        page = FakeManagedPage(owner="alice")
+        out = publisher.publish(vid, page, approval=approve_intent(vid, 1), revision=1)
+        assert out.get("posted") is True
+    ghost = Intent(intent_id="threads-g", shortcode="g", owner="alice",
+                   text="ma #dub000114", tag="#dub000114",
+                   media_sha256="f" * 64,
+                   media_path=r"C:\khong-ton-tai\ghost.mp4")
+    blocked = publisher.publish(ghost, FakeManagedPage(owner="alice"),
+                                approval=approve_intent(ghost, 1), revision=1)
+    assert blocked.get("error") == "FAILED_BEFORE_POST"
