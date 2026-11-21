@@ -147,3 +147,12 @@ video thật — xem ghi nhận 3).
    đồng thời: (a) filter `overlay=` dùng đúng `[{n}:v]`, (b) tính index input mix động thay
    vì `audio_map="1:a"` cứng (logo chen input vào giữa → `1:a` trỏ nhầm vào ảnh logo →
    `RENDER_FAILED`). Hiện không chặn vì logo raise trước, chưa có đường lỗi production.
+
+## P1 leftover 1 — release_slot reset recoveries (128308c)
+
+**ĐẠT** — `release_slot` pop `recoveries[video_id]` + `_save`; test mới
+`release_reset_recoveries_khong_blocked_oan`: job xong → restart + recover sau
+budget tính lại từ 0 → `requeued`, không `blocked` oan.
+
+- Lệnh: `python -m pytest tests/test_studio_p1.py -q` (trong `C:\Miro\apps\backend`)
+- Kết quả: `5 passed, 1 skipped`
