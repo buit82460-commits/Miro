@@ -47,10 +47,9 @@ class Watcher:
         self.tabs: dict[str, dict] = {}
         self.seen: set[str] = set()
         self.fired: list[WatchEvent] = []
-
     def watch_tab(self, tab: str, obj: str, initial_state: str = "") -> None:
         self.tabs[tab] = {"object": obj, "state": initial_state,
-                          "focused": True, "deadline_at": None}
+                          "focused": True, "last_at": None}
 
     def focus_changed(self, tab: str, focused: bool, reverify_state: str | None = None) -> None:
         """Re-verify identity on focus change: update stored state, fire nothing."""
@@ -60,7 +59,7 @@ class Watcher:
         entry["focused"] = focused
         if reverify_state is not None:
             entry["state"] = reverify_state
-            entry["deadline_at"] = None
+            entry["last_at"] = None
 
     def observe(self, tab: str, kind: str, state: str,
                 react=None, now: float | None = None) -> WatchEvent | None:
@@ -75,17 +74,14 @@ class Watcher:
         eid = event_id_for(tab, obj, kind, state)
         if eid in self.seen:
             return None
-        deadline_at = entry.get("deadline_at")
-        if deadline_at is None:
-            entry["deadline_at"] = t + self.deadline_ms / 1000.0
-            deadline_at = entry["deadline_at"]
-        if t > deadline_at:
-            entry["deadline_at"] = None
+        last_at = entry.get("last_at")
+        if last_at is not None and (t - last_at) * 1000.0 > self.deadline_ms:
+            entry["last_at"] = t
             entry["state"] = state
             return None
         self.seen.add(eid)
         entry["state"] = state
-        entry["deadline_at"] = None
+        entry["last_at"] = t
         event = WatchEvent(tab=tab, object=obj, kind=kind,
                            detail={"state": state}, event_id=eid, at=t)
         self.fired.append(event)

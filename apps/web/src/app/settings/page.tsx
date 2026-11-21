@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import MiroNav from "@/components/miro-nav";
 import { useConnections } from "@/hooks/data/useMiro";
 
@@ -8,7 +9,12 @@ export default function SettingsPage() {
   return (
     <MiroNav>
       <h1 data-testid="settings-title">Cài đặt & kết nối</h1>
-      <p>Tài khoản các platform. Fixture hiện tại — nối runtime thật sau.</p>
+      <p>
+        Tài khoản các platform. Fixture hiện tại — nối runtime thật sau.{" "}
+        <Link data-testid="link-platforms" href="/settings/platforms">
+          Quản lý registry nền tảng →
+        </Link>
+      </p>
       {isLoading ? <p>Đang tải kết nối…</p> : null}
       {isError ? <p style={{ color: "#B52E2E" }}>Chưa nối được BE.</p> : null}
       <ul data-testid="connections-list">

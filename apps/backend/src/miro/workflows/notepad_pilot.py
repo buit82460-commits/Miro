@@ -18,7 +18,7 @@ tests inject a fake ops object with the same 3 methods.
 """
 from __future__ import annotations
 
-from miro.desktop import gate as gate_mod
+from miro.desktop.gate import gate as _epoch_gate
 from miro.desktop.dispatch import dispatch_window
 from miro.desktop.watcher import Watcher
 
@@ -138,7 +138,7 @@ class NotepadPilot:
         """
         if self.window_id is None:
             raise ValueError("NOT_ATTACHED")
-        allowed, detail = gate_mod.gate(
+        allowed, detail = _epoch_gate(
             self.base_dir, self.job_id, self.worker, self.worker_epoch)
         if not allowed:
             return False, {"denied": detail}

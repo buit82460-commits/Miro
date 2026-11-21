@@ -1,9 +1,13 @@
 import { api } from "@/lib/api/http";
 import type {
   ChatSendInput,
+  PlatformCloneInput,
+  PlatformUpsertInput,
   PublishBatchInput,
   Receipt,
+  Registry,
   ReviewInput,
+  RollbackInput,
   SubtitleInput,
   TaskItem,
 } from "@/lib/schemas/miro.schema";
@@ -72,5 +76,17 @@ export const EditorService = {
 export const SettingsService = {
   connections(): Promise<Record<string, unknown>[]> {
     return api.get<Record<string, unknown>[]>(`${PREFIX}/settings/connections`);
+  },
+  platforms(): Promise<Registry> {
+    return api.get<Registry>(`${PREFIX}/settings/platforms`);
+  },
+  upsertPlatform(input: PlatformUpsertInput): Promise<Registry> {
+    return api.post<Registry>(`${PREFIX}/settings/platforms`, input);
+  },
+  clonePlatform(id: string, input: PlatformCloneInput): Promise<Registry> {
+    return api.post<Registry>(`${PREFIX}/settings/platforms/${id}/clone`, input);
+  },
+  rollbackRegistry(input: RollbackInput): Promise<Registry> {
+    return api.post<Registry>(`${PREFIX}/settings/platforms/rollback`, input);
   },
 };

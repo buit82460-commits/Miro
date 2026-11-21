@@ -15,7 +15,7 @@ import time
 import uuid
 from pathlib import Path
 
-from miro.desktop import gate as gate_mod
+from miro.desktop.gate import gate as _epoch_gate
 
 
 class DispatchLock:
@@ -79,7 +79,7 @@ def dispatch(base_dir, job_id, worker, worker_epoch, op, *args,
     base = Path(base_dir)
     run_id = uuid.uuid4().hex[:8]
     with DispatchLock(base / "dispatch.lock"):
-        allowed, detail = gate_mod.gate(base, job_id, worker, worker_epoch)
+        allowed, detail = _epoch_gate(base, job_id, worker, worker_epoch)
         if not allowed:
             _save_receipt(base, f"denied-{run_id}.json",
                           {"job": job_id, "worker": worker, "run": run_id,
@@ -87,7 +87,7 @@ def dispatch(base_dir, job_id, worker, worker_epoch, op, *args,
             return False, {"denied": detail, "run": run_id}
         if hold_before_op is not None:
             hold_before_op(base)
-            allowed, detail = gate_mod.gate(base, job_id, worker, worker_epoch)
+            allowed, detail = _epoch_gate(base, job_id, worker, worker_epoch)
             if not allowed:
                 _save_receipt(base, f"denied-{run_id}.json",
                               {"job": job_id, "worker": worker, "run": run_id,
@@ -121,7 +121,7 @@ def dispatch_window(base_dir, window_id, job_id, worker, worker_epoch, op,
     with DispatchLock(base / "dispatch.lock"), \
             DispatchLock(lock_dir / _window_lock_name(window_id)):
         entered_at = time.time()
-        allowed, detail = gate_mod.gate(base, job_id, worker, worker_epoch)
+        allowed, detail = _epoch_gate(base, job_id, worker, worker_epoch)
         if not allowed:
             _save_receipt(base, f"denied-{run_id}.json",
                           {"job": job_id, "worker": worker, "run": run_id,
@@ -129,7 +129,7 @@ def dispatch_window(base_dir, window_id, job_id, worker, worker_epoch, op,
             return False, {"denied": detail, "run": run_id}
         if hold_before_op is not None:
             hold_before_op(base)
-            allowed, detail = gate_mod.gate(base, job_id, worker, worker_epoch)
+            allowed, detail = _epoch_gate(base, job_id, worker, worker_epoch)
             if not allowed:
                 _save_receipt(base, f"denied-{run_id}.json",
                               {"job": job_id, "worker": worker, "run": run_id,

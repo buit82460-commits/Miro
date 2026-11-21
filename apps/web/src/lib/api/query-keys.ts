@@ -11,4 +11,5 @@ export const QUERY_KEYS = {
   projects: ["projects"] as const,
   projectDetail: (id: string) => [...QUERY_KEYS.projects, "detail", id] as const,
   connections: ["settings", "connections"] as const,
+  platforms: ["settings", "platforms"] as const,
 } as const;

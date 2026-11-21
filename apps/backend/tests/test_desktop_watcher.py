@@ -97,8 +97,9 @@ def test_watcher_deadline_drops_late_events_never_replayed():
     assert e1 is not None
     assert w.observe("t1", kind="content", state="a", now=1000.05) is None
     assert w.observe("t1", kind="content", state="b", now=2000.0) is None
-    assert w.observe("t1", kind="content", state="b", now=2000.05) is None
-    assert len(w.fired) == 1
+    assert w.observe("t1", kind="content", state="c", now=2000.05) is not None
+    assert w.observe("t1", kind="content", state="c", now=2000.06) is None
+    assert len(w.fired) == 2
 
 
 def test_run_notepad_pilot_end_to_end(tmp_path):
