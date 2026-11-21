@@ -136,3 +136,22 @@ d) **B port check**: `media_for` trên file video thật (nếu còn trong batch
 4. Ghi rõ trong test khi nào `pytest.skip` (A không mount) — skip vì thiếu dữ liệu là hợp lệ, nhưng CI có A mount thì phải chạy (không được skip toàn bộ nhóm mới).
 
 **Kết luận vòng 3: CHƯA ĐẠT — không phải do code sai (logic đã đúng theo vòng 2), mà do thiếu kiểm chứng trên dữ liệu thật của A ngay trong C. Viết xong 4 test trên (hoặc tương đương) + pass thì được chữ ĐẠT theo định nghĩa mới.**
+
+---
+
+# VERIFY vòng 4 (commit 2533888, ngày 2026-11-21) — KẾT LUẬN: **ĐẠT** (có 1 lưu ý không chặn)
+
+Checker đối chiếu diff `publisher.py` (8 dòng), đọc `test_publisher_realdata.py` (158 dòng), chạy `python -m pytest test_publisher_realdata.py test_publisher_threads.py -q` → **19 passed, 0 skipped** (A mount đầy đủ nên cả 4 test dữ liệu thật đều chạy, không skip), và kiểm tra trực tiếp dữ liệu thật A + code gốc.
+
+## Từng mục vòng 3
+
+1. **`test_real_manifest_caption_guard` — ĐẠT.** Đọc `download.json` thật (item `test-001`), `caption_for` ra `'Hello Threads! ...\n\n#dub001'` chứa text gốc + tag thật `#dub001` (không phải fixture bịa). `guard_duplicate` trên copy production → `ALREADY_IN_PUBLICATION`; shortcode lạ → `None`. Đúng tiêu chí (3).
+2. **`test_real_journal_reconcile_readonly` — ĐẠT.** Journal thật `threads-test-001.json` (status `published`, post `Df8vGSCkUXp`, `reconciledReadOnly`) → `reconcile` True với `posts == 0` (ReadOnlyBrowser raise nếu post). Journal treo thật `threads-7679492543322557728.json` (status `submit`, đã xác minh trực tiếp) → guard `UNRECONCILED_ATTEMPT` + reconcile False, không replay.
+3. **`test_real_batch_dryrun` — ĐẠT.** Copy publication+journal thật → `run_batch` skip `ALREADY_IN_PUBLICATION`, 0 post. Batch 2v thật (`threads-20261120-2v/download.json`, 2 item shortcode `7640141773947325728`/`7708817728873827617`) → prep chặn MEDIA, vẫn 0 post, mọi result đều có error/skipped/receipt/posted.
+4. **`test_real_media_gate` — ĐẠT có điều kiện.** File video thật của A tại `C:/Users/Admin/Videos/Ai/vizzion-20261119/*.mp4` **không còn tồn tại trên máy này** → test skip nhánh file-thật đúng như thiết kế (`pytest.skip("khong con file video that...")`), chỉ assert `media_for` trên path giả. Không trừ điểm (dữ liệu gốc mất, không phải lỗi C), nhưng ghi nhận: gate `check_video` trên bytes thật chưa từng được chạy — **lần đầu có video thật phải chạy `check_video` tay trước khi tin gate.**
+5. **Fix tag regex `#dub\d{6}` → `#dub\d+` — ĐẠT (bắt buộc theo dữ liệu thật).** `Intent.from_item` cũ không bắt được tag thật `#dub001` (3 chữ số từ `unique_tag("test-001")`); journal/publication thật đều dùng tag ngắn. Không fix thì `test_real_*` fail hàng loạt. Ghi nhận chênh với gốc: legacy `run_batch`/`run_reconcile` dùng `#dub\d{6}` cố định (:574/:613/:775/:1015) vì shortcode số của A luôn đủ 6+ chữ số; chỉ manifest `test-001` (test kỹ thuật, không phải shortcode số thật) mới sinh tag ngắn. Nới regex là đúng cho C (phải nuốt được cả 2 shape), không làm lỏng same-record (vẫn exact sau normalize).
+6. **Fix `reconcile` nhận status `published` — ĐẠT.** Journal thật `threads-test-001.json` có status chữ `published` (do tooling cũ/tool ngoài ghi, không phải `verified` của adapter). Không fix thì `reconcile` trả `already:verified` sai nhánh... thực tế là trả reconcile-lại thay vì short-circuit — fix cho short-circuit đúng. Không che lỗi: chỉ nhận đúng 2 giá trị `verified|published`, mọi status khác vẫn đi path verify receipt.
+7. **Tiêu chí (1)+(2) định nghĩa mới — giữ nguyên ĐẠT** (không đổi ở commit này; B vẫn không có gì cho Publisher).
+8. **Phạm vi commit:** `2533888` còn sửa `app.py`/`main.py`/routers/registry/gitignore (entrypoint, router RAM→SQLite) — **ngoài phạm vi Publisher, Checker không đánh giá ở vòng này.** Ghi nhận để vòng sau kiểm tra riêng: router SQLite + entrypoint gộp cần verify luồng thật riêng.
+
+**Module publisher được tính "xong" theo định nghĩa merge mới (19 passed, dữ liệu thật A chạy trong C, 0 post). UNKNOWN không replay; live Post đầu tiên vẫn qua runbook dubtool + reconcile read-only.**
