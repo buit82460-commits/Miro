@@ -204,14 +204,7 @@ def merge_publication(spec: AdapterSpec, base: Path, entry: dict,
 
 
 class PlatformWorker:
-    """Worker 2-phase dung chung 8 platform (port run_batch dubtool).
-
-    - Phase A: guard -> validate text/media -> journal submit TRUOC click ->
-      page.submit_once 1 click -> ack check. UNKNOWN/disconnect -> break,
-      item sau KHONG submit.
-    - Phase B: group reconcile read-only qua page.reconcile(item).
-    - Page la interface inject (fake trong test, Playwright production).
-    """
+    """Worker 2-phase dung chung 8 platform (port run_batch dubtool)."""
 
     def __init__(self, spec: AdapterSpec):
         self.spec = spec
