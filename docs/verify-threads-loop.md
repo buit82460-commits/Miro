@@ -115,3 +115,19 @@ hiện chưa dùng trong file — dọn ở commit sau.
 3. Actor verify mới qua URL (`threads_actor` regex `@username`); verify qua DOM + watch/poll để sau khi live thật.
 
 Lệnh: `cd C:\Miro\apps\backend && python -m pytest tests/test_live_chrome_readonly.py tests/test_threads_publish_http.py -q` → **6 passed**.
+
+## § P0 journal (commit f09e377, ngày 2026-11-21) — **ĐẠT**
+
+Checker thường trực đọc diff f09e377 + đối chiếu A (`C:\dubtool\scripts\threads_post_one.py`
+`run_batch :840-856`) + tự chạy
+`python -m pytest tests/test_publisher_threads.py tests/test_publisher_realdata.py -q`
+trong `C:\Miro\apps\backend` → **24 passed** (EXIT=0).
+
+| Mục | Bằng chứng | Kết quả |
+|---|---|---|
+| Deferred không journal | A `:840-856` dùng `break`: item sau điểm dừng không bao giờ chạm tới → không journal; port cũ ghi `unknown` cho deferred là sai. f09e377 bỏ `atomic_save` ở nhánh `stopped`, chỉ trả `DEFERRED_TO_GROUP_RECONCILE`. Test `test_batch_deferred_no_journal_retry_next_batch`: `threads-p3.json` không tồn tại, batch sau post lại được (`posted is True`) | **ĐẠT** |
+| Unknown vẫn guard | Nhánh disconnect/ambiguous sau click vẫn `atomic_save status=unknown`; test assert `p2.json status == unknown` và `run_batch([bad])` → `skipped == UNRECONCILED_ATTEMPT` | **ĐẠT** |
+
+Nhỏ (không chặn, ghi nhận chênh với A): A nhánh disconnect (`:850-855`) không ghi journal
+unknown (chỉ `ambiguous.append` + `break`), còn port ghi `unknown` cho cả disconnect —
+an toàn hơn (guard chặn replay), chấp nhận có chủ ý.
