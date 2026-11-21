@@ -181,3 +181,18 @@ không gọi `render_video(preview=True)` — nối hai đường là việc ri�
 
 - Lệnh: `python -m pytest tests/test_studio_p1.py -q` (trong `C:\Miro\apps\backend`)
 - Kết quả: `7 passed` (0 skipped — test preview thật chạy luôn)
+
+## P1 leftover 4 — logo overlay sống thật + audio_map động (1ee3c2d)
+
+**ĐẠT** — `_overlay_filter` hỗ trợ kind `logo` (scale theo % rộng video + overlay
+`[{li}:v]`, nhãn step riêng `[lg{step}]`/`[v{step}]`, logo input đếm riêng `li`
+từ `logo_start=1`); blur/text vẫn `OVERLAY_UNSUPPORTED`. `mix_idx = 1 +
+len(logo_paths)` nên 1 logo → audio_map `"2:a"` (thay `"1:a"` cứng sai khi logo
+sống — đúng ghi nhận 4 docs §144-149). Subtitle nối sau `[vout]` bằng nhãn
+`[vsub]` riêng, không trùng. Test mới: `test_logo_overlay_khong_con_code_chet`
+(render logo thật ra mp4) + `test_audio_map_nhay_theo_logo_input` (assert
+`"-map", "2:a"`). Ghi nhận: preview bỏ qua overlay/subtitle (đường `-vf
+scale=640:-1` riêng); logo path không tồn tại bị lọc im lặng (không báo lỗi).
+
+- Lệnh: `python -m pytest tests/test_studio_p1.py tests/test_studio_render_audio_map.py tests/test_studio_idempotency.py tests/test_studio_real_pipeline.py tests/test_studio_p0_t3t4.py -q` (trong `C:\Miro\apps\backend`)
+- Kết quả: `32 passed`
