@@ -252,15 +252,42 @@ class _ReadOnlyBrowser:
         return self._page.read_eye(intent)
 
     def read_group_receipts(self, intents):
+        """Phase B 1-collect (luat A rea_eye :59-61): eye quet 1 lan, nao
+        match offline tren data. Page co collect_records(owner) -> 1 call;
+        page cu chi co read_eye -> fallback loop cu (van dung semantics)."""
+        from miro.publishing.publisher import match_eye_records
+        collect = getattr(self._page, "collect_records", None)
+        if callable(collect):
+            try:
+                records = collect(getattr(intents[0], "owner", "") if intents else "")
+            except Exception:
+                records = None
+            if isinstance(records, list):
+                out = {}
+                for intent in intents:
+                    try:
+                        hit = match_eye_records(
+                            records, intent.owner, intent.tag, intent.text, [])
+                    except Exception:
+                        continue
+                    if hit:
+                        out[intent.shortcode or intent.intent_id] = {
+                            "owner": intent.owner, "url": hit["url"],
+                            "post_id": hit.get("post_id"),
+                            "match": hit.get("match")}
+                return out
+            # collect loi -> roi xuong fallback loop cu
         out = {}
         for intent in intents:
             try:
                 records = self._page.read_eye(intent)
             except Exception:
                 continue
-            from miro.publishing.publisher import match_eye_records
-            hit = match_eye_records(records, intent.owner, intent.tag,
-                                    intent.text, [])
+            try:
+                hit = match_eye_records(records, intent.owner, intent.tag,
+                                        intent.text, [])
+            except Exception:
+                continue
             if hit:
                 out[intent.shortcode or intent.intent_id] = {
                     "owner": intent.owner, "url": hit["url"],
