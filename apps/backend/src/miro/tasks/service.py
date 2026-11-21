@@ -321,6 +321,22 @@ class TaskService:
         return record
 
     # ---- restart: rehydrate; in-flight becomes needs_attention, terminal unchanged ----
+    # T5 RECOVER-tu-dong (port A studio_service :67-70 + execution_policy.failure
+    # :52-55): job sach (co snapshot) + con budget + chu cu da chet -> ve QUEUED
+    # + retry_count+=1 + RECOVER, khong doi resume tay. Chi job sach moi duoc
+    # auto (pending_mutation UNKNOWN / chu song / het budget van NEEDS_ATTENTION).
+    RECOVER_BUDGET = 3  # A POLICY maxAttempts (execution_policy :52)
+
+    def _recoverable(self, record: dict) -> bool:
+        if record.get("pending_mutation"):
+            return False
+        owner = record.get("worker_owner")
+        if owner and _owner_alive(owner):
+            return False
+        if int(record.get("retry_count", 0)) >= max(self.RECOVER_BUDGET - 1, 0):
+            return False
+        return bool(record.get("snapshot_signature"))
+
     def restart(self, task_id: str) -> dict:
         record = self.get(task_id)
         if record["status"] in (TaskStatus.STOPPED, TaskStatus.COMPLETED, TaskStatus.AWAITING_REVIEW):
@@ -337,6 +353,17 @@ class TaskService:
             record["error"] = {"code": "REMOTE_RESULT_UNKNOWN",
                                "message": "A mutation has an unknown result; reconcile before resuming."}
         elif record["status"] in (TaskStatus.RUNNING, TaskStatus.QUEUED, TaskStatus.STOP_REQUESTED):
+            if self._recoverable(record):
+                # Job sach + con budget + chu chet -> RECOVER tu dong nhu A.
+                record["retry_count"] = int(record.get("retry_count", 0)) + 1
+                record["status"] = TaskStatus.QUEUED
+                record["error"] = None
+                record["snapshot_signature"] = self._snapshot_signature(record)
+                self._save(record)
+                self._emit(record, "task_recovered",
+                           {"status": record["status"],
+                            "retry_count": record["retry_count"]})
+                return self.get(task_id)
             record["status"] = TaskStatus.NEEDS_ATTENTION
             record["error"] = {"code": "RESTARTED",
                                "message": "Service restarted; resume to continue observation."}

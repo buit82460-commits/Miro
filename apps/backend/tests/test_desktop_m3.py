@@ -38,6 +38,14 @@ class FakeOps:
         self.calls.append(f"get:{ref}")
         return {"ok": True, "value": self.values.get(ref, "")}
 
+    def get_states(self, ref):
+        self.calls.append(f"get-states:{ref}")
+        return {"ok": True, "states": ["selected"]}
+
+    def click(self, ref, headed=False):
+        self.calls.append(f"click:{ref}")
+        return {"ok": True}
+
     def write(self, ref, text):
         self.calls.append(f"write:{ref}")
         return {"ok": True}

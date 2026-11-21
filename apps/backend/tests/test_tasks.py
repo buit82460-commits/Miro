@@ -62,18 +62,22 @@ async def test_restart_shows_correct_state(tmp_path):
     # restart on terminal task: unchanged
     assert svc.restart(record["id"])["status"] == "completed"
 
-    # in-flight task becomes needs_attention with RESTARTED
+    # in-flight task sach + chu chet + con budget -> T5 RECOVER tu dong
+    # (queued, retry_count=1), khong doi resume tay
     svc2 = make_service(tmp_path / "second")
     rec2 = svc2.submit(payload(request_id="req-2"))
     rec2["status"] = "running"
     rec2["worker_owner"] = {"pid": 999999999, "created_at": 1.0}  # chu cu da chet
     svc2.store.upsert_task(rec2)
     out = svc2.restart(rec2["id"])
-    assert out["status"] == "needs_attention"
-    assert out["error"]["code"] == "RESTARTED"
+    assert out["status"] == "queued"
+    assert out["retry_count"] == 1
 
-    # chu cu con song (cung process) -> OWNERSHIP_UNKNOWN, khong replay
-    rec2b = svc2.submit(payload(request_id="req-2b"))
+    # chu cu con song (cung process) -> OWNERSHIP_UNKNOWN, khong replay.
+    # Dung project khac de tranh dedupe voi rec2 (da QUEUED sau RECOVER).
+    rec2b = svc2.submit(payload(request_id="req-2b",
+                                 videos=[{"project_id": "proj-2b",
+                                          "title": "Video B"}]))
     rec2b["status"] = "running"
     svc2.store.upsert_task(rec2b)
     out2 = svc2.restart(rec2b["id"])
@@ -145,8 +149,9 @@ async def test_recover_on_fresh_instance_is_idempotent(tmp_path):
 
     fresh = TaskService(TaskStore(tmp_path / "tasks.db"))
     out = fresh.restart(rec2["id"])
-    assert out["status"] == "needs_attention"
-    assert out["error"]["code"] == "RESTARTED"
+    # T5 RECOVER-auto: job sach -> queued + event task_recovered (van idempotent seq)
+    assert out["status"] == "queued"
+    assert out["error"] is None
     events = fresh.store.events(rec2["id"])
     assert len(events) == n_before + 1
     seqs = [e["sequence"] for e in events]

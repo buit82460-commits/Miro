@@ -70,6 +70,42 @@ def resolve_doc(ops, window_id, doc):
     return matches[0], None
 
 
+def _is_selected(states) -> bool:
+    return "selected" in [str(s).lower() for s in (states or [])]
+
+
+def ensure_selected_by_ref(ops, window_id, doc, tab_ref, *, sleep=time.sleep):
+    """D2: dam bao dung tab duoc selected ngay truoc write, trong window lock.
+
+    Port A desktop_act.ensure_selected_by_ref :140-162: get_states, neu chua
+    selected thi click (semantic truoc, headed fallback) toi da 4 lan, moi lan
+    probe lai bang get_states + find (re-observe). That bai -> stage select-tab.
+    """
+    st = ops.get_states(tab_ref) if hasattr(ops, "get_states") else {"ok": False}
+    if not isinstance(st, dict) or not st.get("ok"):
+        return False, {"stale": True, "detail": st}
+    if _is_selected(st.get("states")):
+        return True, {"via": "already-selected"}
+    last_click = {"ok": False}
+    for attempt in range(4):
+        headed = attempt >= 2
+        try:
+            last_click = ops.click(tab_ref, headed=headed)
+        except TypeError:
+            last_click = ops.click(tab_ref)
+        if isinstance(last_click, dict) and last_click.get("ok"):
+            st2 = ops.get_states(tab_ref)
+            if isinstance(st2, dict) and st2.get("ok") and _is_selected(st2.get("states")):
+                return True, {"via": "clicked-headed" if headed else "clicked"}
+        probe = ops.find(window_id, role="tab", name=doc)
+        if (isinstance(probe, dict) and probe.get("ok")
+                and len(probe.get("matches") or []) == 1
+                and _is_selected((probe["matches"][0] or {}).get("states"))):
+            return True, {"via": "reselect-observed"}
+        sleep(0.5)
+    return False, {"stale": False, "detail": last_click}
+
+
 def build_write_result(mode, text, before_value, readback, after_ok):
     if mode == "write":
         if not after_ok or _norm(readback) != _norm(text):
@@ -136,6 +172,10 @@ def act(base_dir, job_id, worker, worker_epoch, ops, *, app=None,
         return False, {"error": "TEXT_REQUIRED"}
 
     def _write():
+        # D2: select-tab truoc moi write trong lock (nhu A _full_op :422-424).
+        sel_ok, sel_detail = ensure_selected_by_ref(ops, wid, doc, tab_ref)
+        if not sel_ok:
+            return {"ok": False, "stage": "select-tab", "detail": sel_detail}
         fields = ops.find(wid, role=control)
         if not isinstance(fields, dict) or not fields.get("ok") \
                 or not fields.get("matches"):

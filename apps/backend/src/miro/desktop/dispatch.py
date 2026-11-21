@@ -8,6 +8,10 @@ through dispatch(), which under an exclusive file lock:
   2. denies if worker epoch != current epoch,
   3. runs the backend op,
   4. writes a per-run receipt (job_id + run_id, never overwritten).
+
+D1: window-lock dir mac dinh la state-dir CHUNG (ensure_state_dir) nhu A
+`desktop_dispatch.py:130`, khong phai per-base — 2 job khac base chung 1
+cua so Notepad van serialize chung nhau.
 """
 from __future__ import annotations
 
@@ -15,6 +19,7 @@ import time
 import uuid
 from pathlib import Path
 
+from miro.desktop.backend import ensure_state_dir
 from miro.desktop.gate import gate as _epoch_gate
 
 
@@ -116,7 +121,9 @@ def dispatch_window(base_dir, window_id, job_id, worker, worker_epoch, op,
     only takes base/dispatch.lock, so no deadlock cycle.
     """
     base = Path(base_dir)
-    lock_dir = Path(window_lock_dir) if window_lock_dir else (base / "window-locks")
+    # D1: default ve state-dir chung (nhu A), caller van truyen window_lock_dir
+    # rieng khi muon co lap. Per-base lam mat serialize lien-job.
+    lock_dir = Path(window_lock_dir) if window_lock_dir else (ensure_state_dir() / "window-locks")
     run_id = uuid.uuid4().hex[:8]
     with DispatchLock(base / "dispatch.lock"), \
             DispatchLock(lock_dir / _window_lock_name(window_id)):

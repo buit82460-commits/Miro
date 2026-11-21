@@ -46,15 +46,16 @@ def test_restart_owner_alive_blocks(tmp_path):
     assert out["error"]["code"] == "OWNERSHIP_UNKNOWN"
 
 
-def test_restart_owner_dead_restarts_cleanly(tmp_path):
+def test_restart_owner_dead_recovers_auto(tmp_path):
     svc = make_service(tmp_path)
     rec = svc.submit(payload())
     rec["status"] = "running"
     rec["worker_owner"] = {"pid": 999999999, "created_at": 1.0}  # pid khong ton tai
     svc.store.upsert_task(rec)
     out = svc.restart(rec["id"])
-    assert out["status"] == "needs_attention"
-    assert out["error"]["code"] == "RESTARTED"
+    # T5: chu chet + job sach + con budget -> RECOVER tu dong (queued)
+    assert out["status"] == "queued"
+    assert out["retry_count"] == 1
 
 
 @pytest.mark.asyncio

@@ -83,6 +83,27 @@ class RestartBudget:
         return min(30.0, 2.0 ** (len(self.history) - 1))
 
 
+def _control_stop_requested() -> bool:
+    """L1: stop co hieu luc ngay ca giua backoff — sleep theo nhip ngan 0.2s,
+    moi nhip kiem tra CONTROL thay vi sleep block ca delay."""
+    if not CONTROL.exists():
+        return False
+    try:
+        return json.loads(CONTROL.read_text(encoding="utf-8")).get("action") == "stop"
+    except (OSError, ValueError):
+        return False
+
+
+def _sleep_interruptible(seconds: float) -> bool:
+    """Sleep co the bi stop cat ngang. Tra True neu bi stop giua chung."""
+    deadline = time.monotonic() + max(float(seconds), 0.0)
+    while time.monotonic() < deadline:
+        if _control_stop_requested():
+            return True
+        time.sleep(min(0.2, max(deadline - time.monotonic(), 0.0)))
+    return _control_stop_requested()
+
+
 def terminate_owned(proc: subprocess.Popen, timeout: float = 15) -> None:
     """Stop a still-live Popen child. Only raises if the process survives kill."""
     if proc.poll() is not None:
@@ -310,7 +331,8 @@ def cmd_start(only: list[str] | None = None, open_browser: bool = True) -> int:
                 name, cmd, cwd, extra = specs[index]
                 delay = budgets[index].next_delay()
                 print(f"{name} stopped ({proc.returncode}); restarting in {delay:.0f}s", flush=True)
-                time.sleep(delay)
+                if _sleep_interruptible(delay):
+                    return 0
                 if CONTROL.exists():
                     return 0
                 merged = dict(base_env)
