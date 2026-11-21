@@ -453,3 +453,141 @@ Nguồn duy nhất `C:\dubtool`. Threads KHÔNG đi qua `app.py` submit (app ch�
 5. Lịch: UNKNOWN giữ slot + vào `reconcile_queue`, auto-pause ≥2 unknown liên
    tiếp; Threads không đi qua `app.py submit_studio`/timeline/handoff — giữ
    đường manifest→adapter→publication+journal nguyên trạng.
+
+## 9. Vòng M3 (2026-11-21) — nền chạy chung: Tasks nhiều loại việc, Desktop/Watcher backend Windows, Scheduler
+
+Phạm vi: `scripts/desktop_act.py` + `shared/desktop_gate.py` +
+`shared/desktop_dispatch.py` + `shared/desktop_backend.py` (epoch, window lock,
+receipt), `core/studio_service.py::_recover_jobs/_run_render/control_job`
+(render worker supervision: pause/resume/stop), `core/posting_schedule.py`
+(slot/carryover/reconcile/auto-pause), `run.py` +
+`shared/worker_supervision.py` + `scripts/verify_worker_supervision_runtime.py`.
+§3 vòng 1 đã ghi khung Desktop; vòng này bổ sung chi tiết backend Windows +
+supervision + scheduler để bọc Tasks/Watcher.
+
+### 9.1 Desktop backend Windows — `shared/desktop_backend.py:1-155`
+
+- Mỗi lệnh = 1 lần gọi CLI `BIN =
+  C:\nvm4w\nodejs\node_modules\agent-desktop\bin\agent-desktop-win32-x64.exe`
+  (`:21, :51-64`); session/ref state nằm trên đĩa dưới `AGENT_DESKTOP_HOME`
+  (`scripts/desktop_env.desktop_env`, `:54`); **không input nếu chưa qua
+  `desktop_gate.gate()`** (`:1-7` — lease trong agent-desktop chỉ serialize truy
+  cập, không thay epoch check).
+- `set_session/get_session` (`:27-33`) giữ session hiện tại theo process; `_run`
+  (`:51-64`) log mọi call vào `CALL_LOG` (`{cmd, dur_s, ok}`, label qua
+  `_cmd_label`: `find:<role>`, `get:<property>`, else base cmd); `take_call_log`
+  (`:81-85`) trả + xóa (dùng cho `backend_call_count/snapshot_count` trong stdout
+  `desktop_act`).
+- API mỏng, không guard nội tại: `session_start/session_end` (`:67-78`),
+  `list_windows [--app]` (`:92-99`), `find --window-id
+  [--role/--name/--native-id/--value]` (`:102-117`), `get_value/get_states`
+  (`:120-134`), `set_value` (`:137-144`, lỗi trả `{error: code|detail}` giữ
+  nguyên `code` từ backend), `click [--headed]` (`:147-155`). Invariant: mọi
+  mutation qua `dispatch/dispatch_window`, backend không tự quyết epoch.
+
+### 9.2 Render worker supervision — `core/studio_service.py`
+
+- Cấu trúc (`studio_service.py:31-46`): `ThreadPoolExecutor(max_workers=1,
+  "studio-render")`; `_jobs/_futures`, `_guard` RLock, `_queue_lock`,
+  `_project_locks`, `_analysis_slots=BoundedSemaphore(2)`, `_asr_lock`; job file
+  `cache/studio/render-jobs.json` giữ 200 job gần nhất (`_save_jobs :83-88`).
+- `_recover_jobs` (`:48-81`): nạp job đã lưu (validate `id=render-[0-9a-f]{32}`,
+  `project_id=studio-...`, bỏ status lạ); job `queued/running` dở dang:
+  workerOwner còn sống/không xác minh được qua `process_identity` →
+  `blocked/OWNERSHIP_UNKNOWN` + `advance BLOCKED`; còn snapshot + budget
+  (`retryCount < POLICY.maxAttempts-1`) → `queued + RECOVER`; else
+  `blocked/CHECKPOINT_UNAVAILABLE`. Job `queued` được submit lại `_run_render`.
+- `_start_render` (`:259-281`, dưới `_lock(project_id)`): duration ≥0.1s, verify
+  digest asset; active (`queued+running`) ≥4 → conflict; trùng `(project_id,
+  revision, preview)` active → trả job cũ (không render lại); else tạo
+  `render-<hex> queued + new_execution + project_snapshot + PLAN`, submit pool.
+  `start_batch` (`:243-257`): 1–4 project khác nhau, mỗi cái có clip + asset ok,
+  `active+n ≤ 4`.
+- `_run_render` (`:289-350`): boundary pause/stop → checkpoint signature vs
+  current (`CHECKPOINT_STALE` nếu timeline đổi trước render) → verify asset →
+  `EXECUTE`, `running`; checkpoint receipt reuse nếu 3 file
+  `(output,audio,segments)` còn đủ + digest khớp (`:306-308`); else render vào
+  `attempt-<retryCount>/` + output `..._<attempt>.mp4` (encoder mồ côi không ghi
+  đè); boundary lần 2 → `VERIFY` bounds → dưới project lock: signature đổi →
+  job `stale` (không được handoff YouTube); non-preview → `final-export.json
+  {revision, signature, result, hashes, job_id}` → `COMPLETE`. Lỗi:
+  `TASK_STOPPED` → `STOPPED/cancelled`; else `failure(..., safe_to_retry,
+  transient=OSError/TimeoutError)` → `RECOVER` thì `queued` + sleep delay + đệ
+  quy lại; else `failed`.
+- `_render_control_boundary` (`:352-360`): `control==stop` → raise
+  `TASK_STOPPED`; `pause` → `PAUSED` + status `paused`, poll 0.1s.
+- `control_job` (`:362-396`): `pause/resume/stop` (+`amendments` ≤4000 chars chỉ
+  khi `paused`); terminal (`completed/stale/cancelled`) → conflict; resume chỉ
+  từ `paused/blocked/failed` + ownership check (worker cũ còn sống/cùng stamp →
+  `OWNERSHIP_UNKNOWN` conflict) + signature đổi → `CHECKPOINT_STALE` (bắt tạo
+  task mới, không tái dùng step cũ); reset `retryCount`, `CONTINUE`, `queued`,
+  submit lại nếu future xong/mất; stop set `control=stop`, cancel future →
+  `cancelled`.
+- `delete_project` (`:121-129`): cùng thứ tự lock `queue_lock → project lock`;
+  conflict nếu còn job `queued/running`.
+
+### 9.3 Launcher + RestartBudget — `run.py:1-147`, `shared/worker_supervision.py:1-33`
+
+- `run.py`: 2 service `youtube` (node `server.js`) + `dubbing` (`app.py`), mỗi cái
+  1 `RestartBudget` (`:86`); port khác nhau bắt buộc, port bận → refuse (`:64-71`);
+  manifest `reports/studio/processes.json {root, launcher pid, service pids}` +
+  `control.json {action:stop}` (`--stop` ghi file rồi thoát, `:42-50`);
+  `wait_ready` health 2 cổng; crash → `next_delay()` → sleep → restart **chỉ
+  child của launcher**, giữ peer khỏe (`:107-120`); cuối `terminate_owned` mọi
+  proc sống + `wait 10s` + kill + xóa control/manifest (`:124-138`).
+- `RestartBudget(maximum=3, window=600)` (`worker_supervision.py:19-33`): quá
+  `maximum` restart trong window → `WORKER_RESTART_EXHAUSTED`; delay `2^(n-1)`,
+  trần 30s (`1,2,4...`).
+- `terminate_owned` (`:7-17`): proc còn sống → Windows `taskkill /PID /T /F`
+  (`CREATE_NO_WINDOW`, timeout 15s, fail → `OWNED_WORKER_STOP_FAILED`); else
+  `terminate`.
+- `verify_worker_supervision_runtime.py:1-100`: worker HTTP disposable, worker
+  `youtube` lần đầu `os._exit(77)` sau 2s; assert restart → youtube 2 rows +
+  dubbing 1 row, peer khỏe không restart thừa, mọi pid owned chết sau stop;
+  `RestartBudget(2)` delay `1,2` rồi raise; receipt
+  `reports/autonomous/supervision-runtime.json {PASS,...}`. Lưu ý: script còn
+  nhánh `jarvis` trỏ `D:/JARVIS-Assistant` (hệ khác) — C không copy pattern này,
+  chỉ chạy nhánh `dubtool`.
+
+### 9.4 Scheduler chi tiết — `core/posting_schedule.py:1-128` (pure, dry-run, clock inject)
+
+- `build_slot_times` (`:38-52`): `count≤0 → []`; window default `09:00–21:00`;
+  `end≤start` hoặc `count==1 → [start]`; else `step=(end-start)/count`,
+  `start+i*step` (ISO local, `_tz` HCM/Bangkok → +7).
+- `build_day_plan` (`:55-90`): `cap=daily_cap` (default 10); carryover
+  `eligible!=False` trước + new, cắt `[:cap]`; `storage` = new thừa;
+  slot `{slot_index, task_id, shortcode, origin, planned_at, state}`;
+  `reconcile_queue=[]`.
+- `due_slots` (`:93-103`): chỉ `state==pending` và `planned_at≤now` — boot muộn
+  không burst. `record_submit_unknown` (`:106-114`): slot →
+  `unknown_pending_reconcile`, giữ slot, thêm `reconcile_queue` (không dup).
+  `consecutive_unknowns/should_auto_pause(threshold=2)` (`:117-128`): 2 UNKNOWN
+  liên tiếp → pause.
+- Bằng chứng: `tests/test_posting_schedule.py` 6 case (carryover 2+8=10 slot giữ
+  task_id; fetch 10/cap 10 không tràn; late-boot không burst; xóa note >5d vẫn
+  trace report; UNKNOWN sang ngày reconcile-only không carryover; auto-pause sau
+  2 UNKNOWN + restart 0 adapter call trên account paused, account khỏe vẫn chạy).
+- Thực trạng wiring: **chưa có caller production trong `scripts/`** (chỉ test
+  gọi) — scheduler chưa nối vào adapter; khi nối phải giữ nguyên ngữ nghĩa guard
+  (§4: publication+journal trước submit, UNKNOWN chỉ reconcile).
+
+### 9.5 Invariant bổ sung vòng M3 (Miro bọc nền chạy chung phải giữ)
+
+1. Tasks nhiều loại việc: hàng render tối đa 4 active + dedupe
+   `(project, revision, preview)`; recover/retry gắn `project_snapshot` bất biến,
+   timeline đổi → `stale/CHECKPOINT_STALE`, không tái dùng step; pause/resume/stop
+   qua `control` flag + boundary, ownership worker cũ phải chết trước recover;
+   `delete_project` chặn khi còn job active (cùng thứ tự lock).
+2. Launcher: restart bounded (`RestartBudget`, trần 30s, hết budget thì dừng báo
+   sửa worker); chỉ restart child của mình, giữ peer khỏe; stop qua
+   `control.json` + `terminate_owned` (Windows `taskkill /T /F`), xóa
+   control+manifest; không attach port lạ, không để 2 scheduler nền.
+3. Desktop Windows: mọi mutation qua `dispatch(_window)` dưới lock + epoch tươi
+   (2 lần khi có hold); receipt `receipt-<run>` bất biến, `denied-<run>` riêng;
+   lock order base→window, `transfer` chỉ lấy base; `cache_stale` không ghi
+   receipt; doc ambiguity → STOP trước write; verify read-back chuẩn hóa newline
+   (§3 vòng 1 vẫn hiệu lực).
+4. Scheduler: carryover giữ `task_id`, không vượt `daily_cap`, thừa vào Storage;
+   `due_slots` chỉ tới giờ (no burst); UNKNOWN giữ slot + vào reconcile queue,
+   không post lại, không carryover sang ngày; 2 UNKNOWN liên tiếp → auto-pause;
+   `paused` át mọi slot; publication+journal vẫn là source of truth khi wiring.
