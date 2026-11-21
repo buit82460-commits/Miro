@@ -143,3 +143,25 @@
 ### Ket luan
 
 **da43241 DAT** (T1-T4 DAT: resume CHECKPOINT_STALE + ownership truoc, dedupe revision-level, retry PipelineError TRANSIENT + fatal fail-fast, stale-guard save_project; 21/21 test pass ke ca test cu). Dieu kien lam tiep: T5 RECOVER-tu-dong (P-T5). **Chua push.**
+
+
+## Verify Connections P4/P5 (commit 91aac73) — 2026-11-21
+
+- Commit kiem tra: `91aac73` — "Connections P4+P5: profile_path that trong verify_via_browser + bind_revoke_to_leases (LeaseStore that)"
+- Docs doi chieu: `docs/verify-foundation.md` P4 (verify_via_browser chua truyen profile_path/profile_path_after, nhanh realpath chua chay trong duong verify that) + P5 (revoke hook mac dinh None, chua noi LeaseStore) + `C:\dubtool` §9.6 (chrome://version + realpath user_data_dir/profile_directory)
+- Lenh: `python -m pytest tests/test_connections_p4p5.py tests/test_connections_m3.py tests/test_browser_single_owner.py -q` (trong `C:\Miro\apps\backend`) — **20 passed**
+- Ngay kiem tra: 2026-11-21. **Chi ghi file verify, KHONG push** (theo yeu cau).
+
+### Ket qua tung muc (DAT / CHUA DAT)
+
+| # | Muc (theo nhiem vu) | Ket qua | Can cu |
+|---|---|---|---|
+| P4 | profile_path that trong verify_via_browser (lay tu runtime.profiles, truyen ca truoc/sau) | **DAT** | `service.py::verify_via_browser` lay `profilePath` tu `runtime.profiles[profileBindingId]` (bind_profile evidence Browser M1), truyen ca `profile_path` + `profile_path_after` vao `VerifyEvidence`; test capture thay ca 2 = `/x/Profile 20`; read khong navigate nen 2 snapshot bang nhau khi on dinh |
+| P4-red | duong verify that di qua nhanh realpath PROFILE_MISMATCH | **DAT** | test red-guard: `profile_path` doi giua truoc/sau (p1 -> p2) -> `verify_account` nem `PROFILE_MISMATCH` (nhanh realpath normcase o `_check_evidence:123-125` gio co hieu luc that) |
+| P5 | bind_revoke_to_leases(store, instance_id) invalidate dung lease | **DAT** | hook loc tab theo `browserInstanceId` + `expectedAccountId == account_id`, invalidate `tab_resource(instance, target)`; test: lease worker-1 validate OK truoc revoke, sau revoke -> `LeaseLost`; status `revoked` |
+| P5-guard | revoke account A khong anh huong lease tab account B | **DAT** | test: tab expectedAccountId `nguoi-khac`, revoke `tiktok:kemkhongta` -> `store.validate(lease_b)` van OK |
+| P5-failopen | revoke status co hieu luc ngay ca khi store/tab loi | **DAT** | `revoke_account` dat status + persist TRUOC `_notify_revoked`; hook `list("tab")` loi -> return am, tung tab loi -> `continue` (bo qua am); `_notify_revoked` try/except |
+
+### Ket luan
+
+**91aac73 DAT** (P4/P5 DAT: profile_path that + nhanh realpath co hieu luc, revoke noi LeaseStore that + guard khac-account + fail-open; 20/20 test pass ke ca test cu). P4/P5 o verify-foundation dong lai. **Chua push.**
