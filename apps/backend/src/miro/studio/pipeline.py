@@ -419,33 +419,41 @@ class LocalEngine:
         return bed
 
     # -- render via ffmpeg (A: pipeline.py:357-389 shape + studio preview boolean) --
-    # Filter output label is [v]: callers map [v] + audio input 1:a.
     # Logo overlay: moi logo 1 input -i rieng theo dung thu tu [{n}:v] (A overlay.py
-    # :92-107 — thieu la loi caller). preview_secs chet -> thay bang preview boolean
-    # (A start_render: out temp/, duration min 20s, kẹp 20s, scale 640).
+    # :92-107 — thieu la loi caller). preview boolean (A start_render: out temp/,
+    # kep 20s, scale 640). audio_map tinh dong theo so logo input (P1 ghi nhan 4:
+    # logo chen input vao giua -> "1:a" cung tro nham sang anh logo).
     def render_video(self, video_path: str, mix_wav: str, out_path: Path,
                      overlays: list | None = None, subtitles: str | None = None,
                      preview: bool = False) -> str:
         ffmpeg = self._require_ffmpeg()
-        filt = self._overlay_filter(overlays or [])
-        if subtitles:
-            filt += ("," if filt else "") + f"subtitles='{_escape_sub(subtitles)}'"
-        use_mix = bool(mix_wav) and Path(mix_wav).is_file()
-        audio_map = "1:a" if use_mix else "0:a"
-        cmd = [ffmpeg, "-y", "-v", "error", "-i", str(video_path)]
+        overlays = list(overlays or [])
         # Logo input rieng (A overlay.py): overlay type logo co "path" -> -i theo thu tu.
-        logo_paths = [ov.get("path") for ov in (overlays or [])
+        logo_paths = [ov.get("path") for ov in overlays
                       if isinstance(ov, dict) and ov.get("type") == "logo" and ov.get("path")]
+        logo_paths = [lp for lp in logo_paths if Path(lp).is_file()]
+        use_mix = bool(mix_wav) and Path(mix_wav).is_file()
+        # Thu tu input: 0=video, 1..k=logo, cuoi=mix -> audio_map phai nhay theo.
+        mix_idx = 1 + len(logo_paths)
+        audio_map = f"{mix_idx}:a" if use_mix else "0:a"
+        cmd = [ffmpeg, "-y", "-v", "error", "-i", str(video_path)]
         for lp in logo_paths:
-            if Path(lp).is_file():
-                cmd += ["-i", str(lp)]
+            cmd += ["-i", str(lp)]
         if use_mix:
             cmd += ["-i", str(mix_wav)]
+        filt = ""
+        if overlays and not preview:
+            width, height = self._probe_dims(video_path)
+            filt = self._overlay_filter(overlays, width, height, logo_start=1)
+        vlabel = "vout"
+        if subtitles and not preview:
+            filt += (";" if filt else "") + f"[vout]subtitles='{_escape_sub(subtitles)}'[vsub]"
+            vlabel = "vsub"
         if preview:
             cmd += ["-t", "20", "-vf", "scale=640:-1",
                     "-map", "0:v", "-map", audio_map]
         elif filt:
-            cmd += ["-filter_complex", f"[0:v]{filt}[v]", "-map", "[v]",
+            cmd += ["-filter_complex", filt, "-map", f"[{vlabel}]",
                     "-map", audio_map]
         else:
             cmd += ["-map", "0:v", "-map", audio_map]
@@ -456,20 +464,81 @@ class LocalEngine:
             raise PipelineError(f"RENDER_FAILED: {result.stderr[-500:]}")
         return str(out_path)
 
-    def _overlay_filter(self, overlays: list) -> str:
-        """Linear video chain (drawbox,...) ending without output label."""
-        parts = []
-        for ov in overlays or []:
+    def _probe_dims(self, video_path: str) -> tuple[int, int]:
+        """Kich thuoc video cho overlay toa do tuong doi (A overlay build_filter)."""
+        if not self._ffprobe:
+            return (1280, 720)
+        try:
+            import json as _json
+            import subprocess as _sp
+            r = _sp.run([self._ffprobe, "-v", "error", "-select_streams", "v:0",
+                         "-show_entries", "stream=width,height", "-of", "json",
+                         str(video_path)], capture_output=True, text=True, timeout=60)
+            st = (_json.loads(r.stdout or "{}").get("streams") or [{}])[0]
+            return (int(st.get("width") or 1280), int(st.get("height") or 720))
+        except Exception:
+            return (1280, 720)
+
+    def _overlay_filter(self, overlays: list, width: int = 1280,
+                        height: int = 720, logo_start: int = 1) -> str:
+        """Filter_complex kieu A overlay.py build_filter (dau ra [vout]).
+
+        - box: drawbox toa do tuong doi (giong A _px chan).
+        - logo: [{cur}][{n}:v]overlay + scale truoc, input bat dau tu logo_start
+          (input 0 la video). blur/text: van OVERLAY_UNSUPPORTED (local engine
+          chua co chuoi filter + font).
+        """
+        if not overlays:
+            return "null[vout]"
+        parts: list[str] = []
+        cur = "0:v"
+        step = 0  # dem buoc filter (nhan v{step}); logo input dem rieng
+        li = logo_start  # input index cua logo ke tiep (0=video, sau la logo...)
+        for ov in overlays:
             kind = ov.get("type")
-            x, y, w, h = (float(ov.get(k, 0)) for k in ("x", "y", "w", "h"))
-            expr = (f"x={x}*iw:y={y}*ih:w={w}*iw:h={h}*ih")
             if kind == "box":
-                parts.append(f"drawbox={expr}:color=black@0.6:t=fill")
+                x = self._px_even(float(ov.get("x", 0)), width)
+                y = self._px_even(float(ov.get("y", 0)), height)
+                w = self._px_even(float(ov.get("w", 0)), width)
+                h = self._px_even(float(ov.get("h", 0)), height)
+                if w <= 0:
+                    w = self._px_even(0.5, width)
+                if h <= 0:
+                    h = self._px_even(0.5, height)
+                parts.append(f"[{cur}]drawbox=x={x}:y={y}:w={w}:h={h}:"
+                             f"color=black@0.6:t=fill[v{step}]")
+                cur = f"v{step}"
+            elif kind == "logo":
+                scale_pct = float(ov.get("scale", 0.15))
+                opacity = float(ov.get("opacity", 1.0))
+                margin = int(ov.get("margin", 20))
+                logo_w = max(2, int(width * scale_pct) // 2 * 2)
+                anchor = str(ov.get("anchor", "tr"))
+                if anchor == "tl":
+                    pos = f"x={margin}:y={margin}"
+                elif anchor == "bl":
+                    pos = f"x={margin}:y='main_h-overlay_h-{margin}'"
+                elif anchor == "br":
+                    pos = (f"x='main_w-overlay_w-{margin}'"
+                           f":y='main_h-overlay_h-{margin}'")
+                else:
+                    pos = f"x='main_w-overlay_w-{margin}':y={margin}"
+                parts.append(f"[{li}:v]scale={logo_w}:-1,format=rgba,"
+                             f"colorchannelmixer=aa={opacity}[lg{step}]")
+                parts.append(f"[{cur}][lg{step}]overlay={pos}[v{step}]")
+                cur = f"v{step}"
+                li += 1
             else:
                 raise PipelineError(
-                    f"OVERLAY_UNSUPPORTED: loai '{kind}' can font/asset ngoai; "
-                    "local engine ho tro 'box' (blur can chuoi filter rieng).")
-        return ",".join(parts)
+                    f"OVERLAY_UNSUPPORTED: loai '{kind}' can font/chuoi filter rieng; "
+                    "local engine ho tro 'box' + 'logo'.")
+            step += 1
+        parts.append(f"[{cur}]null[vout]")
+        return ";".join(parts)
+
+    @staticmethod
+    def _px_even(v: float, size: int) -> int:
+        return max(0, int(round(v * size)) // 2 * 2)
 
 
 def _escape_sub(path: str) -> str:

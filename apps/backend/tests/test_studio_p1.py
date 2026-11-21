@@ -104,8 +104,8 @@ def test_mix_overflow_timing_exact(tmp_path):
     assert entry.get("overflow_secs") == 1.5
 
 
+# P1 ghi nhan 3: test render-preview that — duration <=20s + scale 640.
 def test_render_video_preview_that_20s_640(tmp_path):
-    # P1 ghi nhan 3: test render-preview that — duration <=20s + scale 640.
     import shutil
     import subprocess
     if not shutil.which("ffmpeg") or not shutil.which("ffprobe"):
@@ -131,3 +131,58 @@ def test_render_video_preview_that_20s_640(tmp_path):
          "-show_entries", "stream=width", "-of", "csv=p=0", str(out)],
         capture_output=True, text=True, timeout=60)
     assert p.stdout.strip() == "640", p.stdout
+
+
+def test_logo_overlay_khong_con_code_chet(tmp_path):
+    # P1 ghi nhan 4a: logo co -i + filter [n:v] dung thu tu, chay that ra video.
+    import shutil
+    import subprocess
+    if not shutil.which("ffmpeg"):
+        pytest.skip("khong co ffmpeg")
+    engine = LocalEngine()
+    src = tmp_path / "src.mp4"
+    subprocess.run(
+        ["ffmpeg", "-y", "-v", "error", "-f", "lavfi",
+         "-i", "testsrc=size=640x360:rate=15:duration=3",
+         "-f", "lavfi", "-i", "sine=frequency=440:duration=3",
+         "-c:v", "libx264", "-preset", "ultrafast", "-c:a", "aac",
+         "-shortest", str(src)], check=True, timeout=120)
+    logo = tmp_path / "logo.png"
+    subprocess.run(
+        ["ffmpeg", "-y", "-v", "error", "-f", "lavfi",
+         "-i", "color=c=red:size=64x64:duration=1",
+         "-frames:v", "1", str(logo)], check=True, timeout=60)
+    mix = _wav(tmp_path / "mix.wav", 3.0, rate=engine.SAMPLE_RATE)
+    out = tmp_path / "logo.mp4"
+    engine.render_video(str(src), str(mix), out,
+                        overlays=[{"type": "logo", "path": str(logo)}])
+    assert out.is_file() and out.stat().st_size > 1000
+
+
+def test_audio_map_nhay_theo_logo_input(tmp_path, monkeypatch):
+    # P1 ghi nhan 4b: audio_map tinh dong — 1 logo -> mix la input 2 -> "2:a".
+    import shutil
+    import subprocess
+    engine = LocalEngine()
+    logo = tmp_path / "logo.png"
+    logo.write_bytes(b"fake")
+    mix = _wav(tmp_path / "mix.wav", 1.0, rate=engine.SAMPLE_RATE)
+    captured = {}
+
+    def fake_run(cmd, **kw):
+        captured["cmd"] = cmd
+        Path(cmd[-1]).write_bytes(b"x")
+        return subprocess.CompletedProcess(cmd, 0, "", "")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    monkeypatch.setattr(Path, "is_file", lambda self: True)
+    monkeypatch.setattr(LocalEngine, "_overlay_filter",
+                        lambda self, ov, w=1280, h=720, logo_start=1: "null[vout]")
+    monkeypatch.setattr(LocalEngine, "_probe_dims",
+                        lambda self, p: (1280, 720))
+    engine.render_video("v.mp4", str(mix), tmp_path / "o.mp4",
+                        overlays=[{"type": "logo", "path": str(logo)}])
+    cmd = captured["cmd"]
+    assert "-map" in cmd
+    idx = cmd.index("2:a")
+    assert cmd[idx - 1] == "-map", cmd
