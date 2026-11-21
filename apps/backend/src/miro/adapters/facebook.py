@@ -49,3 +49,26 @@ def reconcile_candidates(before_ids: list, after_ids: list) -> list[str]:
     """Port reconcile candidate-diff: ID moi sau Post."""
     before = set(map(str, before_ids or []))
     return [i for i in (after_ids or []) if str(i) not in before]
+
+
+def send_comment(post_url: str = "", text: str = "", account: str = "",
+                 live_page=None) -> dict:
+    """Comment Facebook — CHUA PORT (UNSUPPORTED).
+
+    Chua trinh sat REA Q1-Q10 cho comment FB (composer/ack/receipt/guard
+    chua co Evidence). Khong tu bia flow. Khi du checklist, port theo mau
+    TikTok engage: guard trung + journal + cap.
+    """
+    return {"error": "UNSUPPORTED_COMMENT_FACEBOOK",
+            "hint": "chua trinh sat REA Q1-Q10; chua viet adapter",
+            "post_url": post_url, "account": account,
+            "comment_chars": len(str(text or ""))}
+
+
+def send_message(thread_id: str = "", text: str = "", account: str = "",
+                 live_page=None) -> dict:
+    """Message/DM Facebook — CHUA PORT (UNSUPPORTED, ly do nhu send_comment)."""
+    return {"error": "UNSUPPORTED_MESSAGE_FACEBOOK",
+            "hint": "chua trinh sat REA Q1-Q10; chua viet adapter",
+            "thread_id": thread_id, "account": account,
+            "message_chars": len(str(text or ""))}

@@ -458,6 +458,118 @@ class LivePage:
                 "hint": "reconcile read-only theo tung platform; "
                         "chua verify -> giu submitted, khong replay"}
 
+    async def _engage_tiktok(self, req: dict) -> dict:
+        """Port tiktok_engage_one._do_action: view/like/repost/comment/follow.
+
+        1 action/lan tren managed tab caller inject. Comment text tu req
+        (manifest/CLI), khong hard-code. Loi truoc click -> before_submit=True.
+        """
+        from contextlib import suppress as _suppress
+        page = self._page
+        action = str(req.get("action") or "").strip().lower()
+        comment_text = str(req.get("comment_text") or req.get("comment") or "")
+        url = str(req.get("url") or "")
+        if url and url.startswith("http"):
+            with _suppress(Exception):
+                if (getattr(page, "url", "") or "") != url:
+                    await page.goto(url, wait_until="domcontentloaded",
+                                    timeout=30000)
+        if action == "view":
+            await page.mouse.wheel(0, 400)
+            await page.wait_for_timeout(8000)
+            await page.mouse.wheel(0, -200)
+            await page.wait_for_timeout(3000)
+            return {"engaged": True, "action": "view"}
+        if action == "like":
+            for sel in ('button[data-e2e="like-button"]',
+                        'span[data-e2e="like-icon"]',
+                        'button[aria-label*="Like"]'):
+                with _suppress(Exception):
+                    el = page.locator(sel).first
+                    await el.scroll_into_view_if_needed(timeout=5000)
+                    await el.click(timeout=8000)
+                    await page.wait_for_timeout(2000)
+                    return {"engaged": True, "action": "like", "via": sel}
+            raise LiveChromeError("Khong thay nut Like.", before_submit=True)
+        if action == "repost":
+            for sel in ('button[data-e2e="share-button"]',
+                        'button[aria-label*="Share"]'):
+                with _suppress(Exception):
+                    el = page.locator(sel).first
+                    await el.scroll_into_view_if_needed(timeout=5000)
+                    await el.click(timeout=8000)
+                    await page.wait_for_timeout(2000)
+                    break
+            with _suppress(Exception):
+                rp = page.locator(
+                    '[data-e2e="share-repost"], button:has-text("Repost")'
+                ).first
+                await rp.click(timeout=8000)
+                await page.wait_for_timeout(2000)
+                return {"engaged": True, "action": "repost"}
+            raise LiveChromeError("Khong thay nut Repost.", before_submit=True)
+        if action == "comment":
+            if not comment_text.strip():
+                raise LiveChromeError("Thieu noi dung comment.",
+                                      before_submit=True)
+            box = None
+            for sel in ('div[data-e2e="comment-input"] '
+                        '[contenteditable="true"]',
+                        'div[contenteditable="true"]'):
+                with _suppress(Exception):
+                    cand = page.locator(sel).first
+                    await cand.scroll_into_view_if_needed(timeout=5000)
+                    await cand.click(timeout=5000)
+                    box = cand
+                    break
+            if box is None:
+                raise LiveChromeError("Khong thay o comment.",
+                                      before_submit=True)
+            await box.fill(comment_text[:150])
+            await page.wait_for_timeout(1000)
+            with _suppress(Exception):
+                await page.locator(
+                    'div[data-e2e="comment-post"]').first.click(timeout=8000)
+                await page.wait_for_timeout(2000)
+                return {"engaged": True, "action": "comment"}
+            raise LiveChromeError("Khong gui duoc comment.",
+                                  before_submit=True)
+        if action == "follow":
+            for sel in ('button[data-e2e="follow-button"]',
+                        'button:has-text("Follow")'):
+                with _suppress(Exception):
+                    el = page.locator(sel).first
+                    await el.scroll_into_view_if_needed(timeout=5000)
+                    await el.click(timeout=8000)
+                    await page.wait_for_timeout(2000)
+                    return {"engaged": True, "action": "follow", "via": sel}
+            raise LiveChromeError("Khong thay nut Follow (co the da follow).",
+                                  before_submit=True)
+        raise LiveChromeError(f"UNSUPPORTED_ENGAGE_ACTION: {action}",
+                              before_submit=True)
+
+    def engage(self, req: dict) -> dict:
+        """Chay 1 action engage tren tab that (hien chi TikTok co port)."""
+        if self.platform != "tiktok":
+            return {"error": f"UNSUPPORTED_ENGAGE_{self.platform.upper()}",
+                    "hint": "chua trinh sat REA Q1-Q10; chua viet adapter",
+                    "action": req.get("action"),
+                    "shortcode": req.get("shortcode")}
+        import asyncio as _asyncio
+        import concurrent.futures as _fut
+
+        async def _run():
+            return await self._engage_tiktok(req)
+
+        try:
+            loop = _asyncio.get_running_loop()
+        except RuntimeError:
+            loop = None
+        if loop and loop.is_running():
+            with _fut.ThreadPoolExecutor(max_workers=1) as pool:
+                return pool.submit(_asyncio.run, _run()).result(timeout=600)
+        return _asyncio.run(_run())
+
     def release(self) -> None:
         return None
 

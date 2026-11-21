@@ -326,3 +326,23 @@ Lệnh: `cd C:\Miro\apps\backend && python -m pytest tests -q -p no:warnings` �
 **Đóng:** crosscheck-foundation L2 (history mất khi launcher restart) — đã persist per-service;
 P-D6 verify-foundation (scheduler+launcher ngoài scope) — wiring xong, còn live-run.
 **Đã commit, chưa push** (theo yêu cầu checker).
+
+---
+
+## § Engage/comment-message (ngày 2026-11-21) — **ĐẠT**
+
+Checker thường trực đọc diff + đối chiếu nguồn port duy nhất
+(`C:\dubtool\scripts\tiktok_engage_one.py`: guard_action, _daily_count,
+_do_action view/like/repost/comment/follow, comment text từ manifest/CLI)
++ tự chạy full suite trong `C:\Miro\apps\backend` → **258 passed, 2 skipped**.
+
+| Mục | Bằng chứng | Kết quả |
+|---|---|---|
+| TikTok engage port thật | `adapters/tiktok.py`: `engage_job_id/guard_engage/merge_engage/daily_engage_count/describe_engage` + `ENGAGE_ACTIONS/DAILY_CAPS/ENGAGE_PUBLICATION`; `live.py::LivePage._engage_tiktok/_engage` port `_do_action` (view/like/repost/comment/follow, comment ≤150 ký tự từ req, fail trước click → `before_submit=True`) | **ĐẠT** |
+| Stub UNSUPPORTED các platform còn lại | `send_comment/send_message` trả `UNSUPPORTED_COMMENT/MESSAGE_<PLATFORM>` + ghi rõ "chua trinh sat REA Q1-Q10" ở Threads/FB/IG; `youtube.send_comment` ghi rõ chờ checklist API; `live.engage` platform khác port trả `UNSUPPORTED_ENGAGE_*` — không tự bịa flow | **ĐẠT** |
+| Guard + never replay | `guard_engage` (publication-engage + journal) + test skip `ALREADY_IN_PUBLICATION`/`UNRECONCILED_ATTEMPT`; `NO_COMMENT_TEXT` khi thiếu text (không hard-code spam) | **ĐẠT** |
+| Test mới | `tests/test_engage_comment.py` — 7 passed (describe/guard/daily-cap/live-unsupported/stub); full suite 258 passed, 2 skipped | **ĐẠT** |
+
+**Phần mở:** live engage/comment thật cần duyệt + test trên Chrome managed tab; comment/message Threads/FB/IG/YT chờ trinh sát REA Q1–Q10 đủ Evidence mới port (đúng AGENTS.md).
+
+**Đã commit, chưa push** (theo yêu cầu checker).

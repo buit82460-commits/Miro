@@ -15,3 +15,16 @@ SPEC = SPECS["youtube"]
 
 def make_worker() -> PlatformWorker:
     return PlatformWorker(SPEC)
+
+
+def send_comment(video_id: str = "", text: str = "", account: str = "") -> dict:
+    """Comment YouTube — CHUA PORT (UNSUPPORTED).
+
+    Chua trinh sat REA/API checklist (commentThreads.insert + quota +
+    read-back + guard chua co Evidence). Khong tu bia flow. Dung Data API
+    (khong browser click) khi port, theo mau reconcile/set_visibility.
+    """
+    return {"error": "UNSUPPORTED_COMMENT_YOUTUBE",
+            "hint": "chua trinh sat checklist; chua viet adapter",
+            "videoId": video_id, "account": account,
+            "comment_chars": len(str(text or ""))}

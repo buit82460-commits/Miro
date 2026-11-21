@@ -113,3 +113,29 @@ def set_audience(shortcode=None, audience=None, base=None) -> dict:
 def edit_caption(post_url=None, caption=None, account=None, base=None) -> dict:
     return {"error": "UNSUPPORTED_CAPTION_EDIT",
             "hint": "chi verify, khong sua caption"}
+
+
+def send_comment(post_url: str = "", text: str = "", account: str = "",
+                 live_page=None) -> dict:
+    """Comment Instagram — CHUA PORT (UNSUPPORTED).
+
+    Chua trinh sat REA Q1-Q10 cho comment IG. Khong tu bia flow. Khi du
+    checklist, port theo mau TikTok engage: guard trung + journal + cap.
+    """
+    return {"error": "UNSUPPORTED_COMMENT_INSTAGRAM",
+            "hint": "chua trinh sat REA Q1-Q10; chua viet adapter",
+            "post_url": post_url, "account": account,
+            "comment_chars": len(str(text or ""))}
+
+
+def send_message(thread_id: str = "", text: str = "", account: str = "",
+                 live_page=None) -> dict:
+    """Message/DM Instagram — CHUA PORT (UNSUPPORTED, ly do nhu send_comment).
+
+    Luu y: Miro live.py `_pre_submit` instagram da doc `/direct/inbox/`
+    de verify login (read-only). Gui DM that van chua port.
+    """
+    return {"error": "UNSUPPORTED_MESSAGE_INSTAGRAM",
+            "hint": "chua trinh sat REA Q1-Q10; chua viet adapter",
+            "thread_id": thread_id, "account": account,
+            "message_chars": len(str(text or ""))}
