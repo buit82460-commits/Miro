@@ -68,6 +68,10 @@
 3. Chỉ khi cần tổng quan đọc `README.md`; kiến trúc đọc source trực tiếp theo task;
    quyết định đọc `docs/crosscheck-foundation.md`. Tra cứu quy trình 3-agent
    (2 reader → code → Checker ĐẠT mới commit → push): `docs/ba-ben/`.
+3a. Khi vào task đăng bài: đọc `docs/PLATFORM_RUNBOOK.md` TRƯỚC (bảng adapter +
+   flow chuẩn + checklist trinh sát REA), mở tiếp báo cáo verify mới nhất trong
+   `docs/verify-threads-loop.md` cho đúng platform/account để biết hôm nay lấy gì,
+   đăng lúc nào, suất nào bị hoãn — trước khi đọc bất kỳ module nào khác.
 4. Theo task, chọn module từ source, tìm symbol bằng grep và đọc source/test
    liên quan. Tài liệu là chỉ dẫn; code và bằng chứng hiện tại quyết định kết luận.
 5. `docs/ba-ben/` là ngoài luồng: đọc/ghi tự do, KHÔNG bao giờ
@@ -78,10 +82,15 @@
 
 ## Quy chuẩn platform (Threads/FB/YT/TikTok/platform mới)
 
-- Mỗi platform có đúng 1 adapter được duy trì. Muốn đăng lên platform nào thì chỉ gọi
-  adapter của platform đó. CẤM tạo script mới cho từng batch/account/video.
-  Thêm platform mới = tạo 1 adapter theo mẫu hiện có và đăng ký; không đăng ký
-  thì không dùng cho production.
+- Mỗi platform có đúng 1 adapter được duy trì; xem bảng trong
+  `docs/PLATFORM_RUNBOOK.md`. Muốn đăng lên platform nào thì chỉ gọi adapter
+  của platform đó. CẤM tạo script mới cho từng batch/account/video.
+  Thêm platform mới = tạo 1 adapter theo mẫu runbook và đăng ký vào bảng;
+  không đăng ký thì không dùng cho production.
+- **Cấm viết adapter mới khi chưa điền đủ checklist trinh sát REA 10 câu
+  (Q1–Q10) trong runbook.** Trinh sát read-only: chỉ điều hướng + đọc
+  snapshot/console/network, KHÔNG bấm nút tạo/sửa/xóa, KHÔNG điền form,
+  KHÔNG gửi request có side-effect.
 - Guard chống trùng trước mọi lần Post: đã có trong publication → skip; đã có
   attempt journal → chỉ reconcile, KHÔNG replay UNKNOWN. Caption/account lấy
   từ manifest, không hard-code trong script.
