@@ -480,3 +480,17 @@ Nghiem thu **DOM title read-only LIVE PASS** (log + code khop). **Chua chot REA 
 | Sua toi thieu truoc Evidence live | 1) background tu chung thuc gesture 2) tach /read-result khoi registry 3) origin check bang currentUrl tai luc doc 4) complete mac dinh False |
 | Bao cao | `docs/REA_READ_SECURITY_REVIEW.md` (file:dong cu the) |
 | Test | full suite giu **310 passed, 2 skipped** (khong doi code production) |
+
+---
+
+## § Remediation B1/B2/B3/W3 review (2026-11-22) — **DAT o tang unit**
+
+| Muc | Ket qua (Phien B doc + chay lai) |
+|---|---|
+| B1 gesture tu khai bao | PASS — `grants.py:33` bo tham so gesture; `/grant` doi `grant_seq` don dieu + tab trong registry; background tu kiem active-tab. Ton du: backend van tin session (chua chu ky Chrome) — khong quang cao la gesture-da-xac-minh |
+| B2 origin tai luc doc | PASS co luu y — `check()` exact-match `live_origin`, mismatch thu hoi; `/read-result` + background race-check truoc/sau. Luu y: `/read` van check bang URL registry cu, nen that tiep truoc Evidence |
+| B3 tach kenh read-result | PASS — `/read-result` luu OBSERVATIONS untrusted (cat field ≤2000), khong cham registry; `/push` khong nhan DOM. Ton du: RAM mat khi restart; DOM van untrusted |
+| W3 complete mac dinh | PASS — thieu `complete is True` → khong xoa; reconcile fail-closed |
+| Test | bridge unit 7/7 + 4/4 + channel/e2e/security/registry/importer PASS, khong vo |
+| Duyet | Cho phep live `/read-result` (chi title, chi tab grant, giu untrusted, chua Evidence, chua WRITE) |
+| Bao cao | `docs/REA_REMEDIATION_REVIEW_B.md` |
