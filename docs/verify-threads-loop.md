@@ -448,3 +448,20 @@ Tu `2d7047d`, khong dung `experiments/extension-bridge/`, khong push.
 | Contract Phien A | `docs/security-contract-extension.md` (identity/capability/8+3 dieu kien WRITE/transport interface/E2E matrix) + `docs/SECURITY_INTEGRATION_REPORT.md` | **DAT** |
 | Harness | Khong co config MCP/harness trong repo → khong sua duoc tu day; bao cao giu nguyen de quan tri ap dung; shell/code la duong vong tiem nang, production han che | **CHUA (ngoai repo)** |
 | Test | full suite **310 passed, 2 skipped** (`python -m pytest tests -q` trong `C:\Miro\apps\backend`); commit `c744453` chi 7 file Phien B | **DAT** |
+
+---
+
+## § Integration Security Review Phien B → Phien A (2026-11-22) — **DAT (review, khong sua code)**
+
+Base `6ef6c80`. Phien B khong sua `experiments/extension-bridge/`, khong sua code production dot nay.
+
+| Muc | Ket qua |
+|---|---|
+| Contract channel (pairing 6 so/replay seq/TTL 120s/revoke/event read-only/ACTION_FORBIDDEN) | **PASS (code)** — doc `bridge/channel.py`, chua chay live |
+| Interface `discover_tabs/read_tab/close_transport` cho Gateway | **NOT TESTED** — Phien A moi co registry/importer/server, chua expose 3 ham; chua co page-handle that |
+| Event → Evidence (chi qua `read_via_eye`) | **PASS (thiet ke)** — README Phien A ghi REA Integration CHUA DANH DAU |
+| Idempotency WRITE: publisher + core.PlatformWorker | **PASS** — claim/guard/journal/reconcile, khong replay khi UNKNOWN |
+| Idempotency WRITE: 3 adapter freelance (vlance/freelancer_vn/upwork) | **FAIL (thieu)** — moi chi `job_for` validate, chua co guard; giu `UNSUPPORTED` toi khi port guard + test |
+| youtube_api.upload_video | **NOT TESTED** — ngoai contract, review rieng truoc production |
+| Harness allowlist runtime | **CHUA (ngoai repo)** — tai lieu cho, chua ap dung |
+| Test | full suite giu **310 passed, 2 skipped** (khong doi code); bao cao `docs/INTEGRATION_SECURITY_REVIEW.md` |
