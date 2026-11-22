@@ -196,3 +196,24 @@ scale=640:-1` riêng); logo path không tồn tại bị lọc im lặng (không
 
 - Lệnh: `python -m pytest tests/test_studio_p1.py tests/test_studio_render_audio_map.py tests/test_studio_idempotency.py tests/test_studio_real_pipeline.py tests/test_studio_p0_t3t4.py -q` (trong `C:\Miro\apps\backend`)
 - Kết quả: `32 passed`
+
+---
+
+# VERIFY Edit full 100% (commit d84c24c, ngày 2026-11-22) — KẾT LUẬN: **ĐẠT**
+
+Checker: full suite BE + tsc FE, đối chiếu 6 mục Checker cũ + smoke render thật.
+
+- Lệnh BE: `python -m pytest tests -q -p no:warnings` (trong `C:\Miro\apps\backend`)
+- Kết quả BE: **266 passed, 2 skipped** (2 skip có sẵn, không liên quan Edit)
+- Lệnh FE: `npx tsc --noEmit` (trong `C:\Miro\apps\web`) → **exit 0, không lỗi**
+
+| # | Mục Checker cũ CHƯA ĐẠT | Fix trong d84c24c | Kết quả |
+|---|---|---|---|
+| 1 | `glow` raise ValueError (không nguồn dubtool) | `effect_filter("glow")` render thật: split + gblur + blend screen (ffmpeg chuẩn); đấu nối pipeline qua placeholder `[IN]`/`[OUT]` (multi-statement). Smoke: `_overlay_filter` glow → chain `split/gblur/blend` đúng. | **ĐẠT** |
+| 2 | `slide_*` raise "chưa xác minh render" | `transition_filter(slide_*)` render thật: split + overlay trượt theo T + fade alpha (multi-statement); `_XFADE_MAP` thêm smoothleft/right/up/down; `_valid_transitions` chuẩn hóa `wipe_left→wipe`, `circle_open→circle`. | **ĐẠT** |
+| 3 | `beat_detect` stub NotImplementedError | Port thật từ dubtool `reference_blueprint.py:36-65` (RMS 20ms + flux + peak picking local-max, không scipy/librosa; chỉ numpy + ffmpeg có sẵn). Smoke: wav giả 3s → 2 beats + 3 silences. Route `POST /studio/beat` + handler. | **ĐẠT** |
+| 4 | `separate`/`tracking` chưa route+FE | Route `POST /studio/separate`, `POST /studio/track` + handlers + FE (`StudioService.separate/track` + nút panel). `separate_clip` Demucs ≤180s fail-closed (`DEMUCS_MISSING` khi thiếu lib, không bịa); `tracking` NCC pure-PIL/numpy, fallback `static_roi` không bịa. | **ĐẠT** |
+| 5 | bg-remove / 4K-ladder / realtime preview thiếu | bg-remove = `chroma_key` effect thật (`chromakey=` ffmpeg) + FE nút "Xóa nền xanh". Ladder 480p/720p/1080p/4K = `canvas.export_ladder` scale lanczos thật (ghi rõ không AI-upscale) + route `POST /studio/export/ladder` + FE. Realtime preview = `POST /studio/preview/live` render 20s ultrafast thật (không fake). `upscale_filter` lanczos 1–4x ghi rõ không AI. | **ĐẠT** |
+| 6 | FE StudioService thiếu ~8 API | Thêm đủ 13 API: overlay, revoice, timelineOp/Undo/Redo, audioFx, beat, separate, track, canvasSet, exportPlan, exportLadder, livePreview + panel Edit mới (hiệu ứng/overlay/chuyển cảnh + timeline/audio/nhịp/tách/tracking/canvas/export). | **ĐẠT** |
+
+Đường studio → platform giữ nguyên thiết kế đã duyệt: `submit_studio`/`handoff` chỉ queue `awaiting_review` (CẤM đăng tự động); publish thật qua adapter 8 platform + approval bound fingerprint + journal trước click (xem `docs/verify-publisher.md`). **Đã commit, chưa push.**
