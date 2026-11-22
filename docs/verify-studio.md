@@ -217,3 +217,18 @@ Checker: full suite BE + tsc FE, đối chiếu 6 mục Checker cũ + smoke rend
 | 6 | FE StudioService thiếu ~8 API | Thêm đủ 13 API: overlay, revoice, timelineOp/Undo/Redo, audioFx, beat, separate, track, canvasSet, exportPlan, exportLadder, livePreview + panel Edit mới (hiệu ứng/overlay/chuyển cảnh + timeline/audio/nhịp/tách/tracking/canvas/export). | **ĐẠT** |
 
 Đường studio → platform giữ nguyên thiết kế đã duyệt: `submit_studio`/`handoff` chỉ queue `awaiting_review` (CẤM đăng tự động); publish thật qua adapter 8 platform + approval bound fingerprint + journal trước click (xem `docs/verify-publisher.md`). **Đã commit, chưa push.**
+
+## Bổ sung test Edit full (commit sau d84c24c) — **ĐẠT, 281 passed**
+
+File mới `tests/test_studio_edit_full.py` (15 test) bao phủ từng module Phase A–J:
+fx (glow/slide/chroma_key/la), `_overlay_filter` glow+transition, timeline_ops
+14 op + undo/redo, captions (parse/export/cues/words/merge/retime), audio_fx
+(filter/mix/LUFS/beat thật trên wav giả), canvas (preset/fit/validate/ladder/
+upscale), translate_mt (fail rõ khi thiếu backend), tracking/separate
+(fail-closed), handlers + routes mới tồn tại.
+
+- Lệnh: `python -m pytest tests -q -p no:warnings` → **281 passed, 2 skipped**
+  (266 cũ + 15 mới, 0 fail).
+- Phát hiện + sửa 1 bug thật nhờ test mới: `_op_batch` gọi `project.clear()`
+  TRƯỚC `apply_operation` làm mất project khi batch (fix: apply trước rồi mới
+  clear/update). **Đã commit, chưa push.**

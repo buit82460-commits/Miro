@@ -399,8 +399,9 @@ def _op_batch(project, params):
     if any(not isinstance(item, dict) or item.get("type") == "batch" for item in operations):
         raise ValueError("Khong ho tro batch long nhau hoac op khong hop le.")
     for item in operations:
+        updated = apply_operation(project, item)
         project.clear()
-        project.update(apply_operation(project, item))
+        project.update(updated)
 
 
 class History:
