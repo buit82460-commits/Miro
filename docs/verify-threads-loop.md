@@ -465,3 +465,18 @@ Base `6ef6c80`. Phien B khong sua `experiments/extension-bridge/`, khong sua cod
 | youtube_api.upload_video | **NOT TESTED** — ngoai contract, review rieng truoc production |
 | Harness allowlist runtime | **CHUA (ngoai repo)** — tai lieu cho, chua ap dung |
 | Test | full suite giu **310 passed, 2 skipped** (khong doi code); bao cao `docs/INTEGRATION_SECURITY_REVIEW.md` |
+
+---
+
+## § REA Read-Only Security Review (2026-11-22) — **DAT (review, khong sua code)**
+
+Nghiem thu **DOM title read-only LIVE PASS** (log + code khop). **Chua chot REA Evidence PASS.**
+
+| Muc | Ket qua |
+|---|---|
+| PASS | manifest (khong debugger), pairing⊥grant doc lap, grant instance+tab+origin+TTL, revoke/navigation/restart, read_spec co dinh, /read PENDING + chua tin cay, channel cam WRITE |
+| WARNING | W1 activeTab doi giua grant-read (log tabId de doi chieu) / W2 optional_host_permissions hoi user lan dau / W3 `complete` mac dinh True nen False / W4 README dong "chua live" da cu |
+| BLOCKER (chan noi vao `read_via_eye`) | **B1** gesture tu khai bao, backend tin mu (`server.py:160-177` + `grants.py:33-34`) / **B2** /read check origin bang URL registry cu, khong phai URL hien tai / **B3** read-result ve qua /push lan event thuong, co the dau doc registry qua document.title |
+| Sua toi thieu truoc Evidence live | 1) background tu chung thuc gesture 2) tach /read-result khoi registry 3) origin check bang currentUrl tai luc doc 4) complete mac dinh False |
+| Bao cao | `docs/REA_READ_SECURITY_REVIEW.md` (file:dong cu the) |
+| Test | full suite giu **310 passed, 2 skipped** (khong doi code production) |
