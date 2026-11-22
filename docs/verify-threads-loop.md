@@ -369,3 +369,17 @@ Bang fix rut tu test live tay tren Chrome Profile 16 (hank667735 / Quang Dao): T
 | Don anh root vao evidence | `evidence-20261122-p16/` (24 file) | **DAT** |
 | Live comment 3 platform (tay, co anh) | TikTok `@baotangnhac` Drill mix 38s (xem het, comment `hankhank068` top panel); FB Hoshimiya "I'M BACK" (comment Quang Dao len); IG reel `mr.good.luck_` (comment `hank667735`, nut Post bien mat) | **DAT (tay)** — receipt la anh trong `evidence-20261122-p16/`, chua co post_id trong publication |
 | Test | `python -m pytest tests -q` trong `C:\Miro\apps\backend` → **266 passed, 2 skipped** | **DAT** |
+
+### Live-test Profile 16 (22-11, user duyet full quyen) — do dac that
+
+Do truc tiep tren Chrome Profile 16 dang mo (TikTok/FB/IG), khong dang them, chi do thao tac:
+
+| Platform | Actor verify | Do that | Ket qua |
+|---|---|---|---|
+| TikTok | feed moi (video 97.4K likes/473 comments) | nav 1542ms; snapshot 26-39ms (len ~7k); video `readyState=0` (chua tai metadata — can cho ~8s); JS click `comment-icon` 1050-1175ms; o `Add comment` chua mo ngay (can doi + bam lai) | **DAT ve toc do doc; mo o can 2 nhịp** |
+| Facebook | `Quang-Dao` (snapshot match) | mo tab 3627ms; snapshot 86-243ms (len ~19.7k); JS click nut `Comment on...` 546-1077ms; o `Write a comment` chua mo ngay lan 1 (feed moi, nut doi sau render) | **DAT ve toc do; can retry sau render** |
+| Instagram | `hank667735` (snapshot match) | mo tab 2775ms; snapshot 134ms (len ~16.8k); icon `Comment` co san trong snapshot | **DAT** |
+| Suite | — | `python -m pytest tests -q` → **266 passed, 2 skipped** (39.55s), 0 failed | **DAT** |
+
+Nhan xet: `browser_snapshot` re (18-243ms) — khong phai nut co that; `browser_evaluate` JS click on dinh 0.5-1.2s moi platform. Bang `interaction_fix` dung huong: TikTok/FB bat buoc JS click (nut la DIV custom), IG mo panel bang click icon. Video TikTok can doi `readyState>0` truoc khi do duration — lan toi bo sung cho `video_eval` trong bang fix.
+| Test | `python -m pytest tests -q` trong `C:\Miro\apps\backend` → **266 passed, 2 skipped** | **DAT** |
