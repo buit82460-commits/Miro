@@ -401,3 +401,19 @@ Khoa 2 loi van hanh: (1) agent tuong mo tab = da ket noi (sai) — Manager kiem 
 | Test | `python -m pytest tests -q` trong `C:\Miro\apps\backend` → **297 passed, 2 skipped** (12 gateway T1–T12 + 3 freelance + 1 khoa + cu) | **DAT** |
 
 Phan mo: live Profile 20 read-only 3 site qua Gateway (can restart 1 lan voi remote-debugging de REA noi CDP) → dien not Q1–Q10 → post that van UNSUPPORTED.
+
+---
+
+## § Session Manager dynamic-port + Eye Gate 8 diem (ngay 2026-11-22) — **DAT**
+
+Theo chi thi 3 diem: khong hardcode 9222, Evidence khong phai giay phep vinh vien, audit full duong bypass.
+
+| Muc | Bang chung | Ket qua |
+|---|---|---|
+| Session Manager dynamic port | `session_manager.py` viet lai: cong doc tu `DevToolsActivePort` (dong) + `verify_cdp_instance` (`/json/version` that) + `check_process` (tasklist/wmic cmdline Profile 20) + `check_profile_dir`; `inspect_session` them `BLOCKED_WRONG_INSTANCE/BLOCKED_NO_PROFILE`; `ensure_session` chi connect khi CONNECTED | **DAT** |
+| Eye Gate 8 diem | `docs/eye-gate.md` + `gateway.check_write_gate` (provenance/tab/instance/tuoi/actor/url/lease/approval) fail-closed; `write_via_adapter` wire gate (release truoc khi raise); `read_via_eye` gan `instance_id` vao evidence | **DAT** |
+| Test gate | `test_browser_gateway.py` T13–T17 (sai instance/doi actor/navigate/thieu approval/happy path) → **17 passed**; full suite **302 passed, 2 skipped** (`python -m pytest tests -q` trong `C:\Miro\apps\backend`) | **DAT** |
+| Audit bypass + bao cao harness | `docs/harness-allowlist-report.md`: liet ke 27 tool bypass/profile (snapshot/click/type/evaluate/run_code_unsafe/navigate/tabs/console/...); production chi giu REA read-only + Gateway code; `test_no_direct_browser.py` chi khoa duong code, KHONG khoa duoc MCP runtime | **DAT (bao cao)** — cho harness ap dung |
+| Extension Bridge | Giu `experiments/extension-bridge/` read-only (Tab Discovery, chua cai extension that); khong sua `.bat`, khong kill Chrome, khong doi MCP config | **DAT (giữ phạm vi)** |
+
+Phan mo: live Profile 20 read-only Q1/Q3/Q5/Q6/Q7 (can restart 1 lan user-data-dir rieng de REA noi CDP) → dien not Q1–Q10 → post that van UNSUPPORTED.

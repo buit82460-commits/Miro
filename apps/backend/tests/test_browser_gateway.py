@@ -146,9 +146,88 @@ def test_t7_no_evidence_no_write(tmp_path):
 # T8: evidence tab A khong dung cho tab B
 def test_t8_evidence_wrong_tab(tmp_path):
     ev = {"url": "https://example.com/a", "tab_id": "tab-A",
+          "provenance": "rea-eye",
           "observed_at": time.time()}
     with pytest.raises(RegistryError, match="TAB_MISMATCH"):
         gateway.check_evidence(ev, tab_id="tab-B")
+
+
+def _fresh_evidence(page, actor="user-1", instance="inst-1"):
+    return {"url": page.url, "tab_id": page.target_id,
+            "instance_id": instance, "actor": actor,
+            "provenance": "rea-eye", "observed_at": time.time()}
+
+
+async def _ok_adapter(p):
+    return {"posted": True}
+
+
+# T13: evidence sai instance -> WRITE bi tu choi
+def test_t13_write_wrong_instance_denied(tmp_path):
+    page = FakePage("https://example.com/a")
+    session = make_session(tmp_path, [page])
+    seed_tab(session, page)
+    with pytest.raises(RegistryError, match="WRONG_INSTANCE"):
+        asyncio.run(gateway.write_via_adapter(
+            session, platform_id="demo", url="https://example.com/a",
+            caller="t", evidence=_fresh_evidence(page, instance="inst-khac"),
+            approval={"approved": True}, adapter_fn=_ok_adapter))
+
+
+# T14: actor doi giua mat-doc va write -> tu choi (fail-closed)
+def test_t14_write_actor_changed_denied(tmp_path):
+    page = FakePage("https://example.com/a", account="user-1")
+    session = make_session(tmp_path, [page])
+    seed_tab(session, page, account="user-1")
+    page._account = "user-2"
+    with pytest.raises((WorkerStopped, RegistryError),
+                       match="ACTOR_CHANGED|ACCOUNT_MISMATCH"):
+        asyncio.run(gateway.write_via_adapter(
+            session, platform_id="demo", url="https://example.com/a",
+            caller="t", evidence=_fresh_evidence(page, actor="user-1"),
+            approval={"approved": True}, adapter_fn=_ok_adapter))
+
+
+# T15: tab navigate sau mat-doc -> tu choi
+def test_t15_write_tab_navigated_denied(tmp_path):
+    page = FakePage("https://example.com/a")
+    session = make_session(tmp_path, [page])
+    seed_tab(session, page)
+    ev = _fresh_evidence(page)
+    page.url = "https://example.com/khac"
+    with pytest.raises(RegistryError, match="ORIGIN_CHANGED"):
+        asyncio.run(gateway.write_via_adapter(
+            session, platform_id="demo", url="https://example.com/khac",
+            caller="t", evidence=ev,
+            approval={"approved": True}, adapter_fn=_ok_adapter))
+
+
+# T16: thieu approval dung task -> WRITE bi tu choi
+def test_t16_write_no_approval_denied(tmp_path):
+    page = FakePage("https://example.com/a")
+    session = make_session(tmp_path, [page])
+    seed_tab(session, page)
+    with pytest.raises(RegistryError, match="WRITE_DENIED"):
+        asyncio.run(gateway.write_via_adapter(
+            session, platform_id="demo", url="https://example.com/a",
+            caller="t", evidence=_fresh_evidence(page),
+            approval=None, adapter_fn=_ok_adapter))
+
+
+# T17: evidence hop le day du -> WRITE pass + read gan instance_id
+def test_t17_write_happy_path_and_read_instance(tmp_path):
+    page = FakePage("https://example.com/a")
+    session = make_session(tmp_path, [page])
+    seed_tab(session, page)
+    ev = asyncio.run(gateway.read_via_eye(
+        session, platform_id="demo", url="https://example.com/a",
+        caller="reader", eye_fn=fake_eye))
+    assert ev["instance_id"] == "inst-1"
+    receipt = asyncio.run(gateway.write_via_adapter(
+        session, platform_id="demo", url="https://example.com/a",
+        caller="t", evidence=ev,
+        approval={"approved": True}, adapter_fn=_ok_adapter))
+    assert receipt == {"posted": True}
 
 
 # T9: lease het han/stale -> tu choi (qua read_via_eye verify fail)
