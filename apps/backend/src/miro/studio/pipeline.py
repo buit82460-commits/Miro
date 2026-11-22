@@ -213,7 +213,7 @@ class LocalEngine:
                 raise PipelineError(f"AUDIO_FAILED: {result.stderr[-300:]}")
         return {"stt_wav": str(stt_wav), "orig_wav": str(orig_wav)}
 
-    # -- stt: cu VAD segmentation on cu audio (A: pipeline.py:195-211 shape) --
+    # -- stt: faster-whisper khi co model, fallback VAD cu --
     def transcribe(self, video_id: str, stt_wav: str, work_dir: Path,
                    language: str = "auto", progress_cb=None) -> list[dict]:
         try:
@@ -221,10 +221,43 @@ class LocalEngine:
         except ImportError:
             WhisperModel = None
         if WhisperModel is not None:
-            raise PipelineError(
-                "STT_BACKEND_UNWIRED: faster-whisper co san — override "
-                "LocalEngine.transcribe de dung model that.")
+            try:
+                return self._whisper_segments(WhisperModel, stt_wav, language)
+            except PipelineError:
+                raise
+            except Exception as exc:
+                raise PipelineError(f"STT_FAILED: faster-whisper loi: {exc}") from exc
         return self._vad_segments(stt_wav)
+
+    def _whisper_segments(self, WhisperModel, stt_wav: str,
+                          language: str) -> list[dict]:
+        try:
+            model = WhisperModel("small", device="cpu", compute_type="int8")
+            lang = None if (language or "auto") == "auto" else language
+            segments_iter, info = model.transcribe(stt_wav, language=lang,
+                                                   vad_filter=True)
+            out = []
+            for i, seg in enumerate(segments_iter):
+                out.append({
+                    "id": i + 1,
+                    "start": round(float(seg.start), 3),
+                    "end": round(float(seg.end), 3),
+                    "src_text": (seg.text or "").strip(), "tgt_text": "",
+                    "flags": [],
+                })
+            detected = getattr(info, "language", None) or "unknown"
+            prob = round(float(getattr(info, "language_probability", 0.0) or 0.0), 3)
+            atomic_write_json(Path(stt_wav).parent / "stt_info.json",
+                              {"detected_language": detected,
+                               "language_probability": prob, "backend": "faster-whisper-small"})
+            if out:
+                return out
+        except Exception:
+            pass
+        segs = self._vad_segments(stt_wav)
+        for s in segs:
+            s["flags"] = sorted(set(s.get("flags", [])) | {"whisper_empty"})
+        return segs
 
     def _vad_segments(self, stt_wav: str) -> list[dict]:
         with wave.open(stt_wav, "rb") as wav:
@@ -485,8 +518,8 @@ class LocalEngine:
 
         - box: drawbox toa do tuong doi (giong A _px chan).
         - logo: [{cur}][{n}:v]overlay + scale truoc, input bat dau tu logo_start
-          (input 0 la video). blur/text: van OVERLAY_UNSUPPORTED (local engine
-          chua co chuoi filter + font).
+          (input 0 la video). text: drawtext (can font Arial tren Windows).
+          blur: crop + boxblur + overlay.
         """
         if not overlays:
             return "null[vout]"
@@ -528,10 +561,40 @@ class LocalEngine:
                 parts.append(f"[{cur}][lg{step}]overlay={pos}[v{step}]")
                 cur = f"v{step}"
                 li += 1
+            elif kind == "text":
+                text = str(ov.get("text") or ov.get("content") or "")
+                if not text:
+                    raise PipelineError("OVERLAY_TEXT_EMPTY: text overlay can noi dung.")
+                x = self._px_even(float(ov.get("x", 0.1)), width)
+                y = self._px_even(float(ov.get("y", 0.85)), height)
+                size = max(16, int(float(ov.get("size", 48))))
+                color = str(ov.get("color", "white"))
+                t_start = float(ov.get("t_start", 0))
+                t_end = float(ov.get("t_end", 0))
+                font = str(ov.get("font") or "C:/Windows/Fonts/arial.ttf")
+                safe = text.replace("\\", "\\\\").replace(":", "\\:").replace("'", "\\'")
+                expr = f"drawtext=fontfile='{font}':text='{safe}':fontsize={size}:fontcolor={color}:x={x}:y={y}"
+                if t_end > t_start:
+                    expr += f":enable='between(t\\,{t_start}\\,{t_end})'"
+                parts.append(f"[{cur}]{expr}[v{step}]")
+                cur = f"v{step}"
+            elif kind == "blur":
+                x = self._px_even(float(ov.get("x", 0)), width)
+                y = self._px_even(float(ov.get("y", 0)), height)
+                w = self._px_even(float(ov.get("w", 0) or 0.3), width)
+                h = self._px_even(float(ov.get("h", 0) or 0.2), height)
+                t_start = float(ov.get("t_start", 0))
+                t_end = float(ov.get("t_end", 0))
+                en = f":enable='between(t\\,{t_start}\\,{t_end})'" if t_end > t_start else ""
+                parts.append(
+                    f"[{cur}]split=2[base{step}][tmp{step}];"
+                    f"[tmp{step}]crop={w}:{h}:{x}:{y},boxblur=10[bl{step}];"
+                    f"[base{step}][bl{step}]overlay={x}:{y}{en}[v{step}]")
+                cur = f"v{step}"
             else:
                 raise PipelineError(
-                    f"OVERLAY_UNSUPPORTED: loai '{kind}' can font/chuoi filter rieng; "
-                    "local engine ho tro 'box' + 'logo'.")
+                    f"OVERLAY_UNSUPPORTED: loai '{kind}' khong duoc ho tro; "
+                    "local engine ho tro 'box' + 'logo' + 'text' + 'blur'.")
             step += 1
         parts.append(f"[{cur}]null[vout]")
         return ";".join(parts)

@@ -7,6 +7,8 @@ from fastapi import FastAPI
 
 from miro.permissions.store import PermissionStore
 from miro.routers import health, platforms, publisher, renders, threads
+from miro.routers import studio as studio_router
+from miro.routers import projects as projects_router
 from miro.routers import desktop as desktop_router
 from miro.routers import schedule as schedule_router
 from miro.storage.db import TaskStore
@@ -30,6 +32,8 @@ app.include_router(renders.router)
 app.include_router(publisher.router)
 app.include_router(threads.router)
 app.include_router(platforms.router)
+app.include_router(studio_router.router)
+app.include_router(projects_router.router)
 app.include_router(desktop_router.router)
 app.include_router(schedule_router.router)
 app.include_router(research_router)

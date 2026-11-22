@@ -333,6 +333,13 @@ class StudioHandlers:
             plan, method = local_plan(base, instruction, segments=segments)
             project["plan"] = plan
             from .pipeline import atomic_write_json
+            import json as _json
+            if plan_file.is_file():
+                try:
+                    atomic_write_json(plan_file.with_name("edit_plan.bak.json"),
+                                      _json.loads(plan_file.read_text(encoding="utf-8")))
+                except (OSError, ValueError):
+                    pass
             atomic_write_json(plan_file, plan)
             kept = keep_ranges(plan)
             return {"video_id": video_id, "method": method, "plan": plan,
@@ -415,12 +422,20 @@ class StudioHandlers:
                        expected_revision=None) -> dict:
         def work():
             project, plan_file = self._editor_state(video_id)
+            from .pipeline import atomic_write_json
+            bak = plan_file.with_name("edit_plan.bak.json")
+            if bak.is_file():
+                import json as _json
+                plan = _json.loads(bak.read_text(encoding="utf-8"))
+                project["plan"] = plan
+                atomic_write_json(plan_file, plan)
+                return {"video_id": video_id, "plan": plan,
+                        "message": "Da khoi phuc ban truoc edit (tu backup)."}
             plan = empty_plan(video_id, 60.0)
             project["plan"] = plan
-            from .pipeline import atomic_write_json
             atomic_write_json(plan_file, plan)
             return {"video_id": video_id, "plan": plan,
-                    "message": "Da khoi phuc ban truoc edit."}
+                    "message": "Chua co backup — da tao ke hoach trong."}
 
         return self._run_idempotent(
             request_id, {"op": "editor_restore", "video_id": video_id},
