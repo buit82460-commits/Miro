@@ -383,3 +383,21 @@ Do truc tiep tren Chrome Profile 16 dang mo (TikTok/FB/IG), khong dang them, chi
 
 Nhan xet: `browser_snapshot` re (18-243ms) — khong phai nut co that; `browser_evaluate` JS click on dinh 0.5-1.2s moi platform. Bang `interaction_fix` dung huong: TikTok/FB bat buoc JS click (nut la DIV custom), IG mo panel bang click icon. Video TikTok can doi `readyState>0` truoc khi do duration — lan toi bo sung cho `video_eval` trong bang fix.
 | Test | `python -m pytest tests -q` trong `C:\Miro\apps\backend` → **266 passed, 2 skipped** | **DAT** |
+
+---
+
+## § Session Manager + Gateway + 3 adapter freelance (ngay 2026-11-22) — **DAT**
+
+Khoa 2 loi van hanh: (1) agent tuong mo tab = da ket noi (sai) — Manager kiem tra that process/port-file/CDP; (2) agent bypass REA bang snapshot/click truc tiep — Gateway tu choi tai runtime + test khoa CI.
+
+| Muc | Bang chung | Ket qua |
+|---|---|---|
+| Session Manager | `miro/browser/session_manager.py`: `inspect_session` (CONNECTED/BLOCKED_NO_CDP/BLOCKED_BAD_FILE), `diagnose_connection`, `ensure_session` (bat buoc CONNECTED + connect that, khong coi mo-Chrome = ket noi), `reuse_or_open_tab` (khong tab trung) | **DAT** |
+| Gateway | `miro/browser/gateway.py`: `read_via_eye` (acquire→verify→eye→release, khong side-effect) + `write_via_adapter` (evidence tuoi dung tab + approval, khong receipt → UNKNOWN) + `deny_direct_browser` (BYPASS_DENIED); `gateway.check_evidence` (url + tab_id + observed_at <300s) | **DAT** |
+| Eye 3 site | `miro/eye/freelance.py`: `vlance_record/freelancer_vn_record/upwork_record` read-only qua `tab_state` | **DAT** |
+| 3 adapter + dang ky | `adapters/vlance.py + freelancer_vn.py + upwork.py` (`job_for` validate; vlance chan contact-info, upwork skills≤10); post that `UNSUPPORTED` toi khi du Q1–Q10 live; bang runbook §1 them 3 dong | **DAT** |
+| Trinh sat buoc 1 | 3 agent read-only webfetch: vlance thay composer `/dang-du-an` + gate OTP/CCCD + kiem duyet; freelancer thay wizard `/post-project` + phi 3%/10%; upwork `403` an danh, lay pricing + wizard 11 buoc tu docs | **DAT** (Q1/Q3/Q5/Q6/Q7 cho live Profile 20) |
+| Siet luat + khoa CI | `AGENTS.md` § REA-MAT: moi thao tac qua Gateway, truc tiep = BYPASS; `test_no_direct_browser.py` quet loi goi `browser_*(` that ngoai eye/live/gateway | **DAT** |
+| Test | `python -m pytest tests -q` trong `C:\Miro\apps\backend` → **297 passed, 2 skipped** (12 gateway T1–T12 + 3 freelance + 1 khoa + cu) | **DAT** |
+
+Phan mo: live Profile 20 read-only 3 site qua Gateway (can restart 1 lan voi remote-debugging de REA noi CDP) → dien not Q1–Q10 → post that van UNSUPPORTED.

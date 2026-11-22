@@ -110,8 +110,13 @@
 - Publication + journal là source of truth, không suy đoán trạng thái đăng.
 - Dry-run mặc định; post thật cần approval bound fingerprint + revision.
 - **LUẬT CỨNG REA-MẮT (khóa cứng, áp dụng mọi agent, mọi platform, mọi thao tác
-  trình duyệt): mọi thao tác trên trình duyệt BẮT BUỘC đi qua REA dò đường làm
-  mắt trước — không ngoại lệ, không được thiếu:**
+  trình duyệt): mọi thao tác trên trình duyệt BẮT BUỘC đi qua Browser Gateway
+  (`miro/browser/gateway.py`): READ qua REA + eye collector (`read_via_eye`),
+  WRITE qua adapter (`write_via_adapter` + approval + evidence tươi đúng tab).
+  "Cho phép đọc/trinh sát" KHÔNG BAO GIỜ bao gồm `browser_snapshot/click/type/
+  evaluate` trực tiếp — gọi trực tiếp = BYPASS, Gateway từ chối tại runtime
+  (`BYPASS_DENIED`), test `test_no_direct_browser.py` fail CI. Không dùng kết
+  quả snapshot ngoài Gateway làm Evidence:**
   1. Mắt đọc trước (read-only: snapshot/console/network, eye collectors trong
      `miro/eye/`) → trả eye-record `{author, tag, url, post_id, has_video, text}`
      hoặc `{author, text, time, post_id}` cho comment.
