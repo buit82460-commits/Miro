@@ -7,6 +7,7 @@ import { Suspense, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useApproveProject, useEditorCommand, useLibrary, useProject, useRender } from "@/hooks/data/useMiro";
 import { subtitleSchema, type SubtitleInput } from "@/lib/schemas/miro.schema";
+import { StudioService } from "@/lib/services/miro.service";
 
 type Clip = { id: string; kind: string; start: number; duration: number; text?: string };
 type Track = { id: string; kind: string; clips: Clip[] };
@@ -268,6 +269,7 @@ function EditorInner() {
                 Duyệt bản cuối
               </button>
             </div>
+            <StudioDubPanel projectId={projectId} onDone={(m) => { setMsg(m); refetch(); }} />
           </>
         ) : null}
       </div>
@@ -280,5 +282,215 @@ export default function EditorPage() {
     <Suspense>
       <EditorInner />
     </Suspense>
+  );
+}
+
+type StudioSeg = { id: number; start: number; end: number; src_text?: string; tgt_text?: string };
+
+// Panel mới "Studio Dub" dùng API thật (/studio/*). UI cũ phía trên giữ nguyên.
+function StudioDubPanel({ projectId, onDone }: { projectId: string; onDone: (m: string) => void }) {
+  const [source, setSource] = useState("");
+  const [videoId, setVideoId] = useState(projectId);
+  const [segs, setSegs] = useState<StudioSeg[]>([]);
+  const [srtText, setSrtText] = useState("");
+  const [planText, setPlanText] = useState("cắt 10s đầu");
+  const [plan, setPlan] = useState<Record<string, unknown> | null>(null);
+  const [info, setInfo] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const reqId = () => `web-${Date.now().toString(36)}`;
+  const summarize = (r: unknown) => {
+    const o = r as Record<string, unknown>;
+    const job = (o?.job ?? o?.render ?? null) as Record<string, unknown> | null;
+    const rev = o?.revision ?? (o?.project as Record<string, unknown> | undefined)?.revision;
+    const out = (o?.output ?? (o?.project as Record<string, unknown> | undefined)?.output) as string | undefined;
+    return `job=${String(job?.id ?? job?.job_id ?? "—")} status=${String(job?.status ?? o?.status ?? "ok")}`
+      + (rev !== undefined ? ` rev=${String(rev)}` : "")
+      + (out ? ` out=${out}` : "");
+  };
+  const failMsg = (e: unknown) =>
+    (e as { response?: { data?: { detail?: string; error?: string } } })?.response?.data?.detail
+    ?? (e as { response?: { data?: { error?: string } } })?.response?.data?.error
+    ?? (e as Error)?.message ?? "lỗi không rõ";
+
+  const run = async (label: string, fn: () => Promise<unknown>) => {
+    setBusy(true);
+    setInfo("");
+    try {
+      const r = await fn();
+      const line = `${label}: ${summarize(r)}`;
+      setInfo(line);
+      onDone(line);
+    } catch (e) {
+      setInfo(`${label} thất bại: ${failMsg(e)}`);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const reloadSubs = async (vid: string) => {
+    const r = await StudioService.loadSubs(vid);
+    setSegs((r.segments ?? []) as StudioSeg[]);
+  };
+
+  return (
+    <section data-testid="studio-dub" style={{ marginTop: 16, border: "1px solid #ddd", borderRadius: 12, padding: 12, background: "#fff" }}>
+      <h2 style={{ marginTop: 0 }}>Studio Dub <small>(API thật /studio)</small></h2>
+
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+        <label>Video ID <input data-testid="studio-video-id" value={videoId} onChange={(e) => setVideoId(e.target.value)} style={{ width: 140 }} /></label>
+        <label style={{ flex: 1, minWidth: 240 }}>Source (URL reel/TikTok/YT hoặc path local)
+          <input data-testid="studio-source" value={source} onChange={(e) => setSource(e.target.value)} style={{ width: "100%" }} placeholder="https://... hoặc C:\videos\a.mp4" />
+        </label>
+        <button
+          data-testid="studio-download"
+          disabled={busy || !source.trim()}
+          onClick={() => run("Tải + STT + Dịch", async () => {
+            const dl = await StudioService.download(source.trim(), reqId());
+            const vid = String((dl as Record<string, unknown>).video_id ?? videoId);
+            setVideoId(vid);
+            const tr = await StudioService.translate(vid, reqId());
+            await reloadSubs(vid);
+            return tr;
+          })}
+        >
+          Tải + STT + Dịch
+        </button>
+      </div>
+
+      <h3>Segments ({segs.length})</h3>
+      {segs.length === 0 ? (
+        <p><small>Chưa có segments — bấm “Tải + STT + Dịch” hoặc nhập Video ID rồi “Tải lại sub”.</small></p>
+      ) : null}
+      <div style={{ display: "flex", flexDirection: "column", gap: 6, maxHeight: 260, overflow: "auto" }}>
+        {segs.map((s) => (
+          <div key={s.id} data-testid={`studio-seg-${s.id}`} style={{ display: "flex", gap: 6, alignItems: "center" }}>
+            <span style={{ width: 110, fontSize: 12 }}>{s.start.toFixed(1)}–{s.end.toFixed(1)}s</span>
+            <input
+              data-testid={`studio-seg-tgt-${s.id}`}
+              value={s.tgt_text ?? ""}
+              onChange={(e) => setSegs((prev) => prev.map((x) => (x.id === s.id ? { ...x, tgt_text: e.target.value } : x)))}
+              style={{ flex: 1 }}
+              aria-label={`Câu dịch ${s.id}`}
+            />
+            <span style={{ width: 200, fontSize: 12, color: "#666" }}>{(s.src_text ?? "").slice(0, 60)}</span>
+          </div>
+        ))}
+      </div>
+      <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
+        <button data-testid="studio-subs-reload" disabled={busy || !videoId} onClick={() => run("Tải lại sub", () => reloadSubs(videoId).then(() => ({ status: "loaded" })))}>Tải lại sub</button>
+        <button
+          data-testid="studio-subs-save"
+          disabled={busy || segs.length === 0}
+          onClick={() => run("Lưu sub", () => StudioService.saveSubs(videoId, reqId(), segs.map((s) => ({ id: s.id, start: s.start, end: s.end, tgt_text: s.tgt_text ?? "" }))))}
+        >
+          Lưu sub đã sửa
+        </button>
+        <button data-testid="studio-render" disabled={busy || !videoId} onClick={() => run("TTS + Mix + Render", () => StudioService.render(videoId, reqId()))}>
+          TTS + Mix + Render
+        </button>
+        <button data-testid="studio-render-final" disabled={busy || !videoId} onClick={() => run("Render cuối + burn sub", () => StudioService.renderFinal(videoId, reqId()))}>
+          Render cuối + burn sub
+        </button>
+      </div>
+
+      <h3>Import / Export SRT</h3>
+      <textarea data-testid="studio-srt" rows={4} value={srtText} onChange={(e) => setSrtText(e.target.value)} placeholder="Dán nội dung SRT vào đây…" style={{ width: "100%" }} />
+      <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
+        <button data-testid="studio-srt-import" disabled={busy || !videoId || !srtText.trim()} onClick={() => run("Import SRT", () => StudioService.importCaptions(videoId, reqId(), srtText))}>
+          Import SRT
+        </button>
+        <button
+          data-testid="studio-srt-export"
+          disabled={busy || !videoId}
+          onClick={() => run("Export SRT", async () => {
+            const r = await StudioService.exportCaptions(videoId);
+            const txt = typeof r === "string" ? r : JSON.stringify(r);
+            setSrtText(txt.slice(0, 4000));
+            return r;
+          })}
+        >
+          Export SRT
+        </button>
+      </div>
+
+      <h3>Lệnh plan</h3>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <input data-testid="studio-plan-cmd" value={planText} onChange={(e) => setPlanText(e.target.value)} style={{ flex: 1, minWidth: 240 }} placeholder="cắt 10s đầu, thêm chữ ..." />
+        <button data-testid="studio-plan" disabled={busy || !videoId || !planText.trim()} onClick={() => run("Plan", async () => {
+          const r = await StudioService.plan(videoId, reqId(), planText.trim());
+          const pl = (r as Record<string, unknown>).plan as Record<string, unknown> | undefined;
+          if (pl) setPlan(pl);
+          return r;
+        })}>
+          Gửi plan
+        </button>
+        <button data-testid="studio-editor-preview" disabled={busy || !videoId || !plan} onClick={() => run("Preview plan", () => StudioService.editorRender(videoId, reqId(), plan ?? {}, true))}>
+          Preview
+        </button>
+        <button data-testid="studio-editor-final" disabled={busy || !videoId || !plan} onClick={() => run("Final plan", () => StudioService.editorRender(videoId, reqId(), plan ?? {}, false))}>
+          Final
+        </button>
+        <button data-testid="studio-editor-restore" disabled={busy || !videoId} onClick={() => run("Khôi phục", () => StudioService.editorRestore(videoId, reqId()))}>
+          Khôi phục
+        </button>
+      </div>
+
+      <h3>Hiệu ứng / Overlay / Chuyển cảnh</h3>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <button data-testid="studio-fx-glow" disabled={busy || !videoId} onClick={() => run("Glow", () => StudioService.overlay(videoId, reqId(), { type: "effect", name: "glow", params: { glow: 0.8 } }))}>
+          Glow
+        </button>
+        <button data-testid="studio-fx-chroma" disabled={busy || !videoId} onClick={() => run("Chroma-key (xóa nền xanh)", () => StudioService.overlay(videoId, reqId(), { type: "effect", name: "chroma_key", params: { color: "0x00FF00", similarity: 0.15 } }))}>
+          Xóa nền xanh
+        </button>
+        <button data-testid="studio-fx-slide" disabled={busy || !videoId} onClick={() => run("Slide mở đầu", () => StudioService.overlay(videoId, reqId(), { type: "transition", name: "slide_left", duration: 1.0 }))}>
+          Slide mở đầu
+        </button>
+        <button data-testid="studio-fx-fade" disabled={busy || !videoId} onClick={() => run("Fade mở đầu", () => StudioService.overlay(videoId, reqId(), { type: "transition", name: "fade", duration: 0.8 }))}>
+          Fade mở đầu
+        </button>
+      </div>
+
+      <h3>Timeline / Audio FX / Nhịp / Tách nhạc / Tracking / Canvas / Export</h3>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <button data-testid="studio-timeline-op" disabled={busy || !videoId} onClick={() => run("Timeline op (add_track)", () => StudioService.timelineOp(videoId, reqId(), { type: "add_track", kind: "video" }))}>
+          Timeline: thêm track
+        </button>
+        <button data-testid="studio-timeline-undo" disabled={busy || !videoId} onClick={() => run("Undo", () => StudioService.timelineUndo(videoId, reqId()))}>
+          Undo
+        </button>
+        <button data-testid="studio-timeline-redo" disabled={busy || !videoId} onClick={() => run("Redo", () => StudioService.timelineRedo(videoId, reqId()))}>
+          Redo
+        </button>
+        <button data-testid="studio-audiofx" disabled={busy || !videoId} onClick={() => run("AudioFX bass", () => StudioService.audioFx(videoId, reqId(), "bass", { gain_db: 6 }))}>
+          AudioFX: bass
+        </button>
+        <button data-testid="studio-beat" disabled={busy || !videoId} onClick={() => run("Phân tích nhịp", () => StudioService.beat(videoId, reqId()))}>
+          Phân tích nhịp
+        </button>
+        <button data-testid="studio-separate" disabled={busy || !videoId} onClick={() => run("Tách nhạc", () => StudioService.separate(videoId, reqId()))}>
+          Tách nhạc
+        </button>
+        <button data-testid="studio-track" disabled={busy || !videoId} onClick={() => run("Tracking ROI", () => StudioService.track(videoId, reqId(), { x: 0.4, y: 0.4, w: 0.2, h: 0.2 }))}>
+          Tracking ROI
+        </button>
+        <button data-testid="studio-canvas" disabled={busy || !videoId} onClick={() => run("Canvas 9:16", () => StudioService.canvasSet(videoId, reqId(), "9:16"))}>
+          Canvas 9:16
+        </button>
+        <button data-testid="studio-export-plan" disabled={busy || !videoId} onClick={() => run("Kế hoạch export", () => StudioService.exportPlan(videoId, reqId(), {}, true))}>
+          Kế hoạch export
+        </button>
+        <button data-testid="studio-export-ladder" disabled={busy || !videoId} onClick={() => run("Ladder 480p-1080p", () => StudioService.exportLadder(videoId, reqId(), ["480p", "720p", "1080p"]))}>
+          Ladder 480p–1080p
+        </button>
+        <button data-testid="studio-live-preview" disabled={busy || !videoId} onClick={() => run("Preview nhanh", () => StudioService.livePreview(videoId, reqId()))}>
+          Preview nhanh
+        </button>
+      </div>
+
+      {info ? <p data-testid="studio-info">{info}</p> : null}
+      {busy ? <p>Đang chạy…</p> : null}
+    </section>
   );
 }

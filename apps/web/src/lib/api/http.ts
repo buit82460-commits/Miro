@@ -1,9 +1,11 @@
 import axios, { type AxiosRequestConfig } from "axios";
 
-// Axios instance duy nhất cho FE Miro. Mặc định gọi fixture/mock nội bộ
-// (/api/...) theo contract BE; sau nối runtime thật qua env NEXT_PUBLIC_API_BASE.
+// Axios instance duy nhất cho FE Miro. Luôn gọi tương đối /api/... để
+// Next rewrite quyết định đích: fixture nội bộ (không env) hoặc proxy sang
+// BE thật (khi có NEXT_PUBLIC_API_BASE). Không gắn baseURL tuyệt đối ở đây
+// để request đi qua rewrite (giữ strip prefix /api → BE).
 export const http = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_BASE ?? "",
+  baseURL: "",
   headers: { "Content-Type": "application/json" },
   timeout: 30_000,
 });

@@ -215,36 +215,55 @@ class LocalEngine:
 
     # -- stt: faster-whisper khi co model, fallback VAD cu --
     def transcribe(self, video_id: str, stt_wav: str, work_dir: Path,
-                   language: str = "auto", progress_cb=None) -> list[dict]:
+                   language: str = "auto", progress_cb=None,
+                   words: bool = False) -> list[dict]:
         try:
             from faster_whisper import WhisperModel  # type: ignore
         except ImportError:
             WhisperModel = None
         if WhisperModel is not None:
             try:
-                return self._whisper_segments(WhisperModel, stt_wav, language)
+                return self._whisper_segments(WhisperModel, stt_wav, language,
+                                              words=words)
             except PipelineError:
                 raise
             except Exception as exc:
                 raise PipelineError(f"STT_FAILED: faster-whisper loi: {exc}") from exc
-        return self._vad_segments(stt_wav)
+        return self._vad_segments(stt_wav, words=words)
 
     def _whisper_segments(self, WhisperModel, stt_wav: str,
-                          language: str) -> list[dict]:
+                          language: str, words: bool = False) -> list[dict]:
         try:
             model = WhisperModel("small", device="cpu", compute_type="int8")
             lang = None if (language or "auto") == "auto" else language
             segments_iter, info = model.transcribe(stt_wav, language=lang,
-                                                   vad_filter=True)
+                                                   vad_filter=True,
+                                                   word_timestamps=True)
             out = []
             for i, seg in enumerate(segments_iter):
-                out.append({
+                entry = {
                     "id": i + 1,
                     "start": round(float(seg.start), 3),
                     "end": round(float(seg.end), 3),
                     "src_text": (seg.text or "").strip(), "tgt_text": "",
                     "flags": [],
-                })
+                }
+                word_list = []
+                for w in (getattr(seg, "words", None) or []):
+                    text = (getattr(w, "word", None) or "").strip()
+                    try:
+                        ws, we = float(w.start), float(w.end)
+                    except (TypeError, ValueError):
+                        continue
+                    if text and we > ws:
+                        word_list.append({"w": text, "start": round(ws, 3),
+                                          "end": round(we, 3)})
+                if word_list:
+                    entry["words"] = word_list
+                    entry["flags"] = ["word_timestamp_asr"]
+                elif words:
+                    entry["flags"] = ["words_unavailable"]
+                out.append(entry)
             detected = getattr(info, "language", None) or "unknown"
             prob = round(float(getattr(info, "language_probability", 0.0) or 0.0), 3)
             atomic_write_json(Path(stt_wav).parent / "stt_info.json",
@@ -254,12 +273,12 @@ class LocalEngine:
                 return out
         except Exception:
             pass
-        segs = self._vad_segments(stt_wav)
+        segs = self._vad_segments(stt_wav, words=words)
         for s in segs:
             s["flags"] = sorted(set(s.get("flags", [])) | {"whisper_empty"})
         return segs
 
-    def _vad_segments(self, stt_wav: str) -> list[dict]:
+    def _vad_segments(self, stt_wav: str, words: bool = False) -> list[dict]:
         with wave.open(stt_wav, "rb") as wav:
             if wav.getsampwidth() != 2 or wav.getnchannels() != 1:
                 raise PipelineError("STT_FAILED: stt.wav phai la mono 16-bit.")
@@ -297,14 +316,18 @@ class LocalEngine:
         if not segments:
             total = len(samples) / rate
             segments = [(0, len(energies))] if total > 0.2 else []
+        want_words = bool(words)
         out = []
         for i, (a, b) in enumerate(segments):
+            flags = ["vad", "needs_review"]
+            if want_words:
+                flags.append("words_unavailable")
             out.append({
                 "id": i + 1,
                 "start": round(max(0.0, a * 0.02 - 0.05), 3),
                 "end": round(min(len(samples) / rate, b * 0.02 + 0.05), 3),
                 "src_text": "", "tgt_text": "",
-                "flags": ["vad", "needs_review"],
+                "flags": flags,
             })
         info = {"detected_language": "unknown", "backend": "vad"}
         atomic_write_json(Path(stt_wav).parent / "stt_info.json", info)
@@ -322,6 +345,28 @@ class LocalEngine:
             raise PipelineError(f"TRANSLATE_FAILED: chua ho tro dich tu '{src}'.")
         if src == "auto":
             src = "en"
+        texts = [(seg.get("src_text") or "").strip() for seg in segments]
+        if src != tgt and any(texts) and src in ("vi", "en", "zh") \
+                and tgt in ("vi", "en", "zh"):
+            try:
+                from miro.studio import translate_mt as _mt
+                outs = _mt.translate_batch_llm(
+                    texts, src, tgt,
+                    endpoint=os.environ.get("LLM_API_ENDPOINT", "") or None,
+                    api_key=os.environ.get("LLM_API_KEY", "") or None,
+                    model=os.environ.get("LLM_MODEL", "") or None,
+                    provider=os.environ.get("LLM_PROVIDER", "") or None)
+                return [self._with_tgt(seg, o, "llm")
+                        for seg, o in zip(segments, outs)]
+            except RuntimeError:
+                pass
+            try:
+                from miro.studio import translate_mt as _mt2
+                outs = _mt2.translate_batch_nllb(texts, src, tgt)
+                return [self._with_tgt(seg, o, "nllb")
+                        for seg, o in zip(segments, outs)]
+            except RuntimeError:
+                pass
         out = []
         for seg in segments:
             text = (seg.get("src_text") or "").strip()
@@ -342,8 +387,24 @@ class LocalEngine:
             out.append({**seg, "tgt_text": tgt_text, "flags": sorted(flags)})
         return out
 
-    # -- tts: deterministic tone synthesis, cu wav per sentence --
+    @staticmethod
+    def _with_tgt(seg: dict, tgt_text: str, backend: str) -> dict:
+        """Gan ban dich MT + flag backend; cau rong giu nguyen + untranslated."""
+        if not (seg.get("src_text") or "").strip():
+            flags = sorted(set(seg.get("flags", [])) | {"untranslated"})
+            return {**seg, "tgt_text": seg.get("tgt_text") or "",
+                    "flags": flags}
+        flags = sorted(set(seg.get("flags", [])) | {backend})
+        return {**seg, "tgt_text": (tgt_text or "").strip(), "flags": flags}
+
+    # -- tts: engine that (vieneu/piper) truoc, tone mau fallback --
     def synthesize(self, text: str, voice: str, out_path: Path, duration: float) -> Path:
+        engine_name = (os.environ.get("MIRO_TTS_ENGINE", "") or "").strip().lower()
+        if engine_name in ("vieneu", "piper"):
+            try:
+                return self._synthesize_real(text, voice, out_path)
+            except Exception:
+                pass
         duration = max(0.3, float(duration))
         rate = self.SAMPLE_RATE
         freq = 220.0 + (int(hash_text(text + voice)[:4], 16) % 220)
@@ -360,6 +421,35 @@ class LocalEngine:
             wav.setframerate(rate)
             wav.writeframes(frames.tobytes())
         return out_path
+
+    def _synthesize_real(self, text: str, voice: str, out_path: Path) -> Path:
+        """Goi engine TTS that tu C:/dubtool/core/tts (lazy, khong copy code).
+
+        Raises Exception de caller fallback ve tone mau.
+        """
+        import sys
+        engine_name = (os.environ.get("MIRO_TTS_ENGINE", "") or "").strip().lower()
+        lang = "vi" if engine_name == "vieneu" else "en"
+        dubtool_root = os.environ.get("MIRO_DUBTOOL_ROOT", "C:/dubtool")
+        added = False
+        if dubtool_root not in sys.path:
+            sys.path.insert(0, dubtool_root)
+            added = True
+        try:
+            from core.tts import get_engine as _get_engine
+            try:
+                from core.textnorm import normalize_for_tts as _norm
+                text = _norm(text, lang)
+            except Exception:
+                pass
+            engine = _get_engine(lang)
+            return Path(engine.synthesize(text, voice, out_path))
+        finally:
+            if added:
+                try:
+                    sys.path.remove(dubtool_root)
+                except ValueError:
+                    pass
 
     def wav_duration(self, path) -> float:
         with wave.open(str(path), "rb") as wav:
@@ -381,7 +471,14 @@ class LocalEngine:
         return ",".join(parts)
 
     def _sped_clip(self, seg_wav: Path, speed: float, rate: int) -> "array.array":
-        """Doc wav + ap atempo khi speed != 1 bang ffmpeg file tam."""
+        """Doc wav + ap atempo khi speed != 1 bang ffmpeg file tam.
+
+        Ghi chu Phase B: KHONG thay atempo_chain bang fx.speed_filter hoan
+        toan. fx.speed_filter chi chap nhan speed 0.25-4 (studio_model gioi
+        han), con timeline sync co the cho speed < 0.25 (do ngan/slot dai).
+        Nen thu fx.speed_filter truoc, ValueError -> fallback atempo_chain cu
+        de giu hanh vi cu.
+        """
         import shutil
         import subprocess
         import tempfile
@@ -394,8 +491,13 @@ class LocalEngine:
             raise PipelineError("FFMPEG_MISSING: khong ap atempo duoc.")
         with tempfile.TemporaryDirectory() as td:
             tmp = Path(td) / "sped.wav"
+            try:
+                from miro.studio import fx as _fx
+                chain = _fx.speed_filter(float(speed))
+            except (ImportError, ValueError):
+                chain = self.atempo_chain(float(speed))
             cmd = [ffmpeg, "-y", "-v", "error", "-i", str(seg_wav), "-af",
-                   self.atempo_chain(float(speed)), "-ar", str(rate), "-ac", "1",
+                   chain, "-ar", str(rate), "-ac", "1",
                    "-c:a", "pcm_s16le", str(tmp)]
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
             if result.returncode or not tmp.is_file():
@@ -456,9 +558,17 @@ class LocalEngine:
     # :92-107 — thieu la loi caller). preview boolean (A start_render: out temp/,
     # kep 20s, scale 640). audio_map tinh dong theo so logo input (P1 ghi nhan 4:
     # logo chen input vao giua -> "1:a" cung tro nham sang anh logo).
+    # Blend (port dubtool _composite:280-296): overlay co "blend" != normal thi
+    # dung blend=all_mode=... tren canvas full-size roi tra alpha goc, thay vi
+    # overlay thuong. 6 mode: normal/multiply/screen/overlay/addition/difference.
+    # Reverse: reverse=True -> `-vf reverse -af areverse` (khong overlay thi -vf
+    # truc tiep; co overlay thi chen reverse vao dau chain + areverse cho audio).
+    BLEND_MODES = frozenset(
+        {"normal", "multiply", "screen", "overlay", "addition", "difference"})
+
     def render_video(self, video_path: str, mix_wav: str, out_path: Path,
                      overlays: list | None = None, subtitles: str | None = None,
-                     preview: bool = False) -> str:
+                     preview: bool = False, reverse: bool = False) -> str:
         ffmpeg = self._require_ffmpeg()
         overlays = list(overlays or [])
         # Logo input rieng (A overlay.py): overlay type logo co "path" -> -i theo thu tu.
@@ -477,17 +587,25 @@ class LocalEngine:
         filt = ""
         if overlays and not preview:
             width, height = self._probe_dims(video_path)
-            filt = self._overlay_filter(overlays, width, height, logo_start=1)
+            if reverse:
+                filt = self._overlay_filter(overlays, width, height, logo_start=1,
+                                            reverse=True)
+            else:
+                filt = self._overlay_filter(overlays, width, height, logo_start=1)
         vlabel = "vout"
         if subtitles and not preview:
             filt += (";" if filt else "") + f"[vout]subtitles='{_escape_sub(subtitles)}'[vsub]"
             vlabel = "vsub"
+        audio_args = ["-map", audio_map]
+        if reverse:
+            audio_args = ["-af", "areverse", "-map", audio_map]
         if preview:
-            cmd += ["-t", "20", "-vf", "scale=640:-1",
-                    "-map", "0:v", "-map", audio_map]
+            vf = "reverse,scale=640:-1" if reverse else "scale=640:-1"
+            cmd += ["-t", "20", "-vf", vf, "-map", "0:v"] + audio_args
         elif filt:
-            cmd += ["-filter_complex", filt, "-map", f"[{vlabel}]",
-                    "-map", audio_map]
+            cmd += ["-filter_complex", filt, "-map", f"[{vlabel}]"] + audio_args
+        elif reverse:
+            cmd += ["-vf", "reverse", "-map", "0:v"] + audio_args
         else:
             cmd += ["-map", "0:v", "-map", audio_map]
         cmd += ["-c:v", "libx264", "-preset", "veryfast", "-c:a", "aac",
@@ -513,19 +631,45 @@ class LocalEngine:
             return (1280, 720)
 
     def _overlay_filter(self, overlays: list, width: int = 1280,
-                        height: int = 720, logo_start: int = 1) -> str:
+                        height: int = 720, logo_start: int = 1,
+                        reverse: bool = False, **_) -> str:
         """Filter_complex kieu A overlay.py build_filter (dau ra [vout]).
 
         - box: drawbox toa do tuong doi (giong A _px chan).
         - logo: [{cur}][{n}:v]overlay + scale truoc, input bat dau tu logo_start
           (input 0 la video). text: drawtext (can font Arial tren Windows).
           blur: crop + boxblur + overlay.
+          Neu overlay co "blend" != normal trong 6 mode (port dubtool _composite
+          :280-296): dung blend=all_mode=... tren canvas full-size roi tra
+          alpha goc, thay vi overlay thuong. blend la/unknown -> overlay thuong
+          (backward compat).
+        - effect: fx.effect_filter(name, params) rap noi tiep [cur]->[v{step}].
+        - color: fx.color_filter(adj) rap noi tiep [cur]->[v{step}].
+        - transform: fx.transform_filter(t, w, h) rap noi tiep [cur]->[v{step}]
+          (x/y trong t la toa do overlay, khong tieu thu o day — giu hanh vi
+          dubtool: transform_filter khong dung x/y; neu can dich overlay thi
+          dung them type khac).
+        - transition: chi ho tro khi danh dau noi 2 doan; trong chain hien
+          tai (1 video dau vao) raise PipelineError ro rang, khong bia.
+        - mask: fx.mask_alpha qua filter noi tiep [cur]->[v{step}] (format=rgba
+          truoc khi ap alpha). Neu mask rong (khong shape/chroma nao kich hoat)
+          thi la no-op giu nguyen [cur]->[v{step}].
+        - reverse=True: chen `reverse` vao dau chain (nguon video dao truoc
+          khi overlay; audio dao bang `-af areverse` trong render_video).
         """
-        if not overlays:
+        from miro.studio import fx as _fx  # lazy import de tranh vong lap
+        if not overlays and not reverse:
             return "null[vout]"
         parts: list[str] = []
         cur = "0:v"
-        step = 0  # dem buoc filter (nhan v{step}); logo input dem rieng
+        step = 0
+        if reverse:
+            parts.append(f"[0:v]reverse[v{step}]")
+            cur = f"v{step}"
+            step += 1
+        if not overlays:
+            parts.append(f"[{cur}]null[vout]")
+            return ";".join(parts)
         li = logo_start  # input index cua logo ke tiep (0=video, sau la logo...)
         for ov in overlays:
             kind = ov.get("type")
@@ -558,7 +702,26 @@ class LocalEngine:
                     pos = f"x='main_w-overlay_w-{margin}':y={margin}"
                 parts.append(f"[{li}:v]scale={logo_w}:-1,format=rgba,"
                              f"colorchannelmixer=aa={opacity}[lg{step}]")
-                parts.append(f"[{cur}][lg{step}]overlay={pos}[v{step}]")
+                blend = str(ov.get("blend", "normal") or "normal").lower()
+                if blend != "normal" and blend in self.BLEND_MODES:
+                    # Port dubtool _composite:280-296 — blend RGB tren canvas
+                    # full-size roi tra alpha goc truoc khi overlay cuoi.
+                    parts.append(
+                        f"[{cur}]split[keep{step}][blendbase{step}];"
+                        f"color=c=black@0:s={width}x{height}:r=30,"
+                        f"format=rgba[blank{step}];"
+                        f"[blank{step}][lg{step}]overlay={pos}:format=auto,"
+                        f"format=gbrap,split[blendrgb{step}][blenda{step}];"
+                        f"[blenda{step}]alphaextract[originalalpha{step}];"
+                        f"[blendbase{step}]format=gbrap[blendbg{step}];"
+                        f"[blendbg{step}][blendrgb{step}]blend=all_mode={blend}"
+                        f"[blended{step}];"
+                        f"[blended{step}][originalalpha{step}]alphamerge"
+                        f"[alphablend{step}];"
+                        f"[keep{step}][alphablend{step}]overlay=0:0:format=auto"
+                        f"[v{step}]")
+                else:
+                    parts.append(f"[{cur}][lg{step}]overlay={pos}[v{step}]")
                 cur = f"v{step}"
                 li += 1
             elif kind == "text":
@@ -591,10 +754,54 @@ class LocalEngine:
                     f"[tmp{step}]crop={w}:{h}:{x}:{y},boxblur=10[bl{step}];"
                     f"[base{step}][bl{step}]overlay={x}:{y}{en}[v{step}]")
                 cur = f"v{step}"
+            elif kind == "effect":
+                try:
+                    flt = _fx.effect_filter(str(ov.get("name", "")),
+                                            ov.get("params") or ov)
+                except ValueError as exc:
+                    raise PipelineError(f"EFFECT_UNSUPPORTED: {exc}") from exc
+                if "[IN]" in flt and "[OUT]" in flt:
+                    # Effect da-statement (glow split/blend): thay placeholder.
+                    parts.append(flt.replace("[IN]", f"[{cur}]")
+                                    .replace("[OUT]", f"[v{step}]"))
+                else:
+                    parts.append(f"[{cur}]{flt}[v{step}]")
+                cur = f"v{step}"
+            elif kind == "color":
+                flt = _fx.color_filter(ov.get("adj") or ov)
+                if flt:
+                    parts.append(f"[{cur}]{flt}[v{step}]")
+                    cur = f"v{step}"
+            elif kind == "transform":
+                flt = _fx.transform_filter(ov.get("t") or ov, width, height)
+                if flt:
+                    parts.append(f"[{cur}]{flt}[v{step}]")
+                    cur = f"v{step}"
+            elif kind == "transition":
+                dur = float(ov.get("duration", ov.get("d", 1.0)) or 1.0)
+                try:
+                    tflt = _fx.transition_filter(str(ov.get("name", "fade")),
+                                                 max(0.05, dur))
+                except ValueError as exc:
+                    raise PipelineError(f"TRANSITION_UNSUPPORTED: {exc}") from exc
+                if "[IN]" in tflt and "[OUT]" in tflt:
+                    parts.append(tflt.replace("[IN]", f"[{cur}]")
+                                     .replace("[OUT]", f"[v{step}]"))
+                else:
+                    parts.append(f"[{cur}]{tflt}[v{step}]")
+                cur = f"v{step}"
+            elif kind == "mask":
+                flt = _fx.mask_alpha(ov.get("mask") or ov)
+                if flt:
+                    parts.append(f"[{cur}]format=rgba,{flt}[v{step}]")
+                    cur = f"v{step}"
             else:
                 raise PipelineError(
                     f"OVERLAY_UNSUPPORTED: loai '{kind}' khong duoc ho tro; "
-                    "local engine ho tro 'box' + 'logo' + 'text' + 'blur'.")
+                    "local engine ho tro 'box' + 'logo' + 'text' + 'blur' + "
+                    "'effect' (gồm glow/chroma_key) + 'color' + 'transform' + "
+                    "'transition' (fade/wipe/circle/slide mo dau clip) + 'mask' "
+                    "(chroma = bg-remove bang chroma key that).")
             step += 1
         parts.append(f"[{cur}]null[vout]")
         return ";".join(parts)
@@ -602,6 +809,42 @@ class LocalEngine:
     @staticmethod
     def _px_even(v: float, size: int) -> int:
         return max(0, int(round(v * size)) // 2 * 2)
+
+
+def freeze_frame(video_path: str, at: float, duration: float, out: Path) -> str:
+    """Dung 1 frame tai `at` (giay) thanh clip tinh dai `duration` giay.
+
+    Helper cho freeze_clip sau nay: grab 1 frame PNG roi loop thanh video.
+    """
+    ffmpeg = shutil.which("ffmpeg")
+    if not ffmpeg:
+        raise PipelineError("FFMPEG_MISSING: khong dung duoc freeze_frame.")
+    at, duration = max(0.0, float(at)), max(0.1, float(duration))
+    out = Path(out)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    frame = out.parent / f".{out.stem}.frame.png"
+    try:
+        grab = subprocess.run(
+            [ffmpeg, "-y", "-v", "error", "-ss", f"{at:.3f}", "-i", str(video_path),
+             "-frames:v", "1", str(frame)],
+            capture_output=True, text=True, timeout=300)
+        if grab.returncode or not frame.is_file():
+            raise PipelineError(f"FREEZE_FAILED: {grab.stderr[-300:]}")
+        loop = subprocess.run(
+            [ffmpeg, "-y", "-v", "error", "-loop", "1", "-framerate", "30",
+             "-i", str(frame), "-t", f"{duration:.3f}",
+             "-c:v", "libx264", "-preset", "veryfast", "-pix_fmt", "yuv420p",
+             str(out)],
+            capture_output=True, text=True, timeout=300)
+        if loop.returncode or not out.is_file():
+            raise PipelineError(f"FREEZE_FAILED: {loop.stderr[-300:]}")
+        return str(out)
+    finally:
+        try:
+            if frame.is_file():
+                frame.unlink()
+        except OSError:
+            pass
 
 
 def _escape_sub(path: str) -> str:
@@ -842,15 +1085,16 @@ class Pipeline:
             ctx["stt_wav"] = str(work / "stt.wav")
             ctx["orig_wav"] = str(work / "orig.wav")
 
-    def _step_stt(self, ctx, src_lang=None, **_):
+    def _step_stt(self, ctx, src_lang=None, words=None, **_):
         vid = ctx["video_id"]
-        ih = signature_of([hash_file(ctx["stt_wav"]), src_lang])
+        want_words = bool(words if words is not None else ctx.get("words", False))
+        ih = signature_of([hash_file(ctx["stt_wav"]), src_lang, want_words])
         work = self._work_dir(vid)
         if ctx["force"] or not done_path(work, "stt", ih).is_file() or not (
                 work / "segments.json").is_file():
             segments = self._guarded("stt", self.engine.transcribe, vid,
                                      ctx["stt_wav"], work, src_lang or "auto",
-                                     ctx.get("progress_cb"))
+                                     ctx.get("progress_cb"), want_words)
             ctx["segments"] = segments
             self._save_segments(vid, segments)
             self._mark_step(vid, "stt", ih)
@@ -1012,12 +1256,13 @@ class Pipeline:
     # ---- run (A: pipeline.py:415-448) ----
     def run(self, source, src_lang="auto", tgt_lang="vi", default_voice=None,
             steps=None, progress_cb=None, overlays=None,
-            burn_subtitles=False) -> dict:
+            burn_subtitles=False, words: bool = False) -> dict:
         vid = self._find_video_id(source)
         if vid is None:
             vid = "pending-" + hash_text(source)
         ctx = {"video_id": vid, "ran": [], "force": False,
-               "progress_cb": progress_cb, "output": None, "source": source}
+                "progress_cb": progress_cb, "output": None, "source": source,
+                "words": bool(words)}
         requested = set(steps) if steps else None
         if requested:
             self._hydrate(ctx)
@@ -1033,7 +1278,7 @@ class Pipeline:
                     getattr(self, f"_step_{step}")(
                         ctx, source=source, src_lang=src_lang, tgt_lang=tgt_lang,
                         default_voice=default_voice, overlays=overlays,
-                        burn_subtitles=burn_subtitles)
+                        burn_subtitles=burn_subtitles, words=words)
                 except KeyboardInterrupt:
                     raise
                 except PipelineError:

@@ -11,6 +11,7 @@ from pathlib import Path
 
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
+from typing import Any
 
 from miro.studio.handlers import StudioHandlers
 from miro.studio.media import extract_facebook_id, guess_platform, resolve_media_url
@@ -110,6 +111,44 @@ class RevoiceIn(BaseModel):
     request_id: str
     seg_id: int
     voice: str
+    expected_revision: int | None = None
+
+
+class TimelineOpIn(BaseModel):
+    video_id: str
+    request_id: str
+    op: dict
+    expected_revision: int | None = None
+
+
+class CaptionsImportIn(BaseModel):
+    video_id: str
+    request_id: str
+    srt_text: str = Field(min_length=1)
+    expected_revision: int | None = None
+
+
+class AudioFxIn(BaseModel):
+    video_id: str
+    request_id: str
+    effect: str = Field(min_length=1)
+    params: dict = Field(default_factory=dict)
+    expected_revision: int | None = None
+
+
+class CanvasSetIn(BaseModel):
+    video_id: str
+    request_id: str
+    preset_or_wh: Any = "16:9"
+    background: str = "black"
+    expected_revision: int | None = None
+
+
+class ExportPlanIn(BaseModel):
+    video_id: str
+    request_id: str
+    export: dict = Field(default_factory=dict)
+    preview: bool = False
     expected_revision: int | None = None
 
 
@@ -303,3 +342,142 @@ def media(video_id: str):
         raise
     except Exception as exc:
         raise _err(exc, 404)
+
+
+@router.post("/timeline/op")
+def timeline_op(body: TimelineOpIn):
+    try:
+        return _handlers.timeline_op(body.video_id, body.op,
+                                     request_id=body.request_id,
+                                     expected_revision=body.expected_revision)
+    except Exception as exc:
+        raise _err(exc, 422)
+
+
+@router.post("/timeline/undo")
+def timeline_undo(body: SimpleIn):
+    try:
+        return _handlers.timeline_undo(body.video_id, request_id=body.request_id,
+                                       expected_revision=body.expected_revision)
+    except Exception as exc:
+        raise _err(exc, 422)
+
+
+@router.post("/timeline/redo")
+def timeline_redo(body: SimpleIn):
+    try:
+        return _handlers.timeline_redo(body.video_id, request_id=body.request_id,
+                                       expected_revision=body.expected_revision)
+    except Exception as exc:
+        raise _err(exc, 422)
+
+
+@router.post("/captions/import")
+def captions_import(body: CaptionsImportIn):
+    try:
+        return _handlers.import_captions(body.video_id, body.srt_text,
+                                         request_id=body.request_id,
+                                         expected_revision=body.expected_revision)
+    except Exception as exc:
+        raise _err(exc, 422)
+
+
+@router.get("/captions/export/{video_id}")
+def captions_export(video_id: str):
+    try:
+        return _handlers.export_captions(video_id)
+    except Exception as exc:
+        raise _err(exc, 404)
+
+
+@router.post("/audiofx/preview")
+def audiofx_preview(body: AudioFxIn):
+    try:
+        return _handlers.audio_fx_preview(body.video_id, body.effect, body.params,
+                                          request_id=body.request_id,
+                                          expected_revision=body.expected_revision)
+    except Exception as exc:
+        raise _err(exc, 422)
+
+
+@router.post("/canvas/set")
+def canvas_set(body: CanvasSetIn):
+    try:
+        return _handlers.canvas_set(body.video_id, body.preset_or_wh,
+                                    request_id=body.request_id,
+                                    expected_revision=body.expected_revision,
+                                    background=body.background)
+    except Exception as exc:
+        raise _err(exc, 422)
+
+
+@router.post("/export/plan")
+def export_plan(body: ExportPlanIn):
+    try:
+        return _handlers.export_plan(body.video_id, body.export, body.preview,
+                                     request_id=body.request_id,
+                                     expected_revision=body.expected_revision)
+    except Exception as exc:
+        raise _err(exc, 422)
+
+
+class TrackIn(BaseModel):
+    video_id: str
+    request_id: str
+    roi: dict = Field(default_factory=dict)
+    expected_revision: int | None = None
+
+
+@router.post("/beat")
+def beat(body: SimpleIn):
+    try:
+        return _handlers.beat(body.video_id, request_id=body.request_id,
+                              expected_revision=body.expected_revision)
+    except Exception as exc:
+        raise _err(exc, 422)
+
+
+@router.post("/separate")
+def separate(body: SimpleIn):
+    try:
+        return _handlers.separate(body.video_id, request_id=body.request_id,
+                                  expected_revision=body.expected_revision)
+    except Exception as exc:
+        raise _err(exc)
+
+
+@router.post("/track")
+def track(body: TrackIn):
+    try:
+        return _handlers.track(body.video_id, body.roi,
+                               request_id=body.request_id,
+                               expected_revision=body.expected_revision)
+    except Exception as exc:
+        raise _err(exc, 422)
+
+
+class LadderIn(BaseModel):
+    video_id: str
+    request_id: str
+    rungs: list = Field(default_factory=lambda: ["480p", "720p", "1080p"])
+    expected_revision: int | None = None
+
+
+@router.post("/export/ladder")
+def export_ladder(body: LadderIn):
+    try:
+        return _handlers.export_ladder(body.video_id, body.rungs,
+                                       request_id=body.request_id,
+                                       expected_revision=body.expected_revision)
+    except Exception as exc:
+        raise _err(exc, 422)
+
+
+@router.post("/preview/live")
+def preview_live(body: SimpleIn):
+    try:
+        return _handlers.realtime_preview(body.video_id,
+                                          request_id=body.request_id,
+                                          expected_revision=body.expected_revision)
+    except Exception as exc:
+        raise _err(exc)
