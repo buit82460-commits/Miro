@@ -433,4 +433,18 @@ Tai commit d49cf01, khong dung Extension Bridge, khong push.
 | Test | `test_browser_gateway.py` T18–T21 (profile sai instance / navigate giua doc / lease mat giua write / actor khong verify) → **22 passed** (gateway+allowlist); full suite **306 passed, 2 skipped** (`python -m pytest tests -q` trong `C:\Miro\apps\backend`) | **DAT** |
 | Chua khoa tai harness | MCP tool truc tiep (`playwright-profile*`, `capture_browser_scenario` recon) van goi duoc neu harness cap; `run_code_unsafe/evaluate` co side-effect du ten doc — xem `docs/harness-allowlist-report.md` de loai khoi allowlist production | **CHUA (ngoai repo)** |
 
-Phan mo: live Profile 20 read-only Q1/Q3/Q5/Q6/Q7 (can restart 1 lan user-data-dir rieng de REA noi CDP) → dien not Q1–Q10 → post that van UNSUPPORTED.
+Phan mo (hardening): live Profile 20 read-only Q1/Q3/Q5/Q6/Q7 (can restart 1 lan user-data-dir rieng de REA noi CDP) → dien not Q1–Q10 → post that van UNSUPPORTED.
+
+---
+
+## § Security Integration Phien B (2026-11-22) — **DAT**
+
+Tu `2d7047d`, khong dung `experiments/extension-bridge/`, khong push.
+
+| Muc | Bang chung | Ket qua |
+|---|---|---|
+| Bo auto-trust legacy | `runtime.acquire_tab`: profile thieu `browserInstanceId` → `PROFILE_UNVERIFIED` (khong tu gan instance); seed test legacy sua theo gate (khong noi gate) | **DAT** |
+| Test P0 | T22 (legacy khong auto-trust), T23 (cross-instance), T24 (2 agent tranh 1 tab → TAB_BUSY), T25 (lease het han giua write → UNKNOWN) → gateway **25 passed** | **DAT** |
+| Contract Phien A | `docs/security-contract-extension.md` (identity/capability/8+3 dieu kien WRITE/transport interface/E2E matrix) + `docs/SECURITY_INTEGRATION_REPORT.md` | **DAT** |
+| Harness | Khong co config MCP/harness trong repo → khong sua duoc tu day; bao cao giu nguyen de quan tri ap dung; shell/code la duong vong tiem nang, production han che | **CHUA (ngoai repo)** |
+| Test | full suite **310 passed, 2 skipped** (`python -m pytest tests -q` trong `C:\Miro\apps\backend`); commit `c744453` chi 7 file Phien B | **DAT** |
