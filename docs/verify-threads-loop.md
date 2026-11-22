@@ -345,4 +345,27 @@ _do_action view/like/repost/comment/follow, comment text từ manifest/CLI)
 
 **Phần mở:** live engage/comment thật cần duyệt + test trên Chrome managed tab; comment/message Threads/FB/IG/YT chờ trinh sát REA Q1–Q10 đủ Evidence mới port (đúng AGENTS.md).
 
-**Đã commit, chưa push** (theo yêu cầu checker).
+---
+
+## § REA-eye khoa luat cung + tay chi dung selector mat-thay (bce7934 + 58bf6a4, ngay 2026-11-22) — **DAT**
+
+Checker doc diff 2 commit + tu chay full suite trong `C:\Miro\apps\backend` → **263 passed, 2 skipped**.
+
+| Muc | Bang chung | Ket qua |
+|---|---|---|
+| Khoa luat cung mat-nao-tay + eye du 8 platform | `runbook §7` + `eye/EYE_COVERAGE` (threads/facebook/tiktok/instagram/youtube/shopee/chatgpt/flow/desktop); test `test_eye_coverage` assert du key | **DAT** |
+| Tay chi dung selector mat-thay | `live.py::fill_composer` chi dung `seen_box_sel/seen_submit_sel` khi visible+enabled, loi -> `FAILED_BEFORE_POST`; `submit_once` doc eye-truoc | **DAT** |
+| 8 adapter + live driver + engage | YT API CRUD, TikTok draft/preflight/discover, FB caption/verify, IG download/validate, Shopee research, ChatGPT CRUD, Flow download; engage TikTok 5 actions | **DAT** |
+
+---
+
+## § interaction_fix + wire + live Profile 16 (b3342f5 + tiep, ngay 2026-11-22) — **DAT**
+
+Bang fix rut tu test live tay tren Chrome Profile 16 (hank667735 / Quang Dao): TikTok `evaluate` click, FB JS-click+Enter, IG click-icon + Post-x2-verify-gone.
+
+| Muc | Bang chung | Ket qua |
+|---|---|---|
+| Bang fix + wire vao live | `adapters/interaction_fix.py` (`click_for/post_for/verify_for`); `live.py::fill_composer` fallback `INTERACTION_FIX[platform].click_selectors` qua JS click; test `test_interaction_fix.py` 3 passed | **DAT** |
+| Don anh root vao evidence | `evidence-20261122-p16/` (24 file) | **DAT** |
+| Live comment 3 platform (tay, co anh) | TikTok `@baotangnhac` Drill mix 38s (xem het, comment `hankhank068` top panel); FB Hoshimiya "I'M BACK" (comment Quang Dao len); IG reel `mr.good.luck_` (comment `hank667735`, nut Post bien mat) | **DAT (tay)** — receipt la anh trong `evidence-20261122-p16/`, chua co post_id trong publication |
+| Test | `python -m pytest tests -q` trong `C:\Miro\apps\backend` → **266 passed, 2 skipped** | **DAT** |

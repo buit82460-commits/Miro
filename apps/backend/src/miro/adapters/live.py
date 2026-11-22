@@ -15,6 +15,7 @@ import time
 from contextlib import suppress
 
 from miro.adapters.core import LiveChromeError
+from miro.adapters.interaction_fix import INTERACTION_FIX
 
 
 def _norm_low(text) -> str:
@@ -115,6 +116,25 @@ async def fill_composer(page, platform: str, text: str,
             await page.wait_for_timeout(1200)
     else:
         opened = await _click_first_visible(page, COMPOSER_OPEN.get(platform, ()))
+        if not opened:
+            # Wire interaction_fix: platform chua co COMPOSER_OPEN (vd TikTok
+            # engage, Instagram comment) thi dung click_selectors cua bang
+            # fix (JS click, an div custom/placeholder nhu test live 22-11).
+            fix = INTERACTION_FIX.get(platform, {})
+            if fix.get("click") in ("evaluate", "browser_click-icon"):
+                for sel in fix.get("click_selectors", ()):
+                    with suppress(Exception):
+                        await page.evaluate(
+                            """(s) => { const el = document.querySelector(s);
+                                if (!el) return false;
+                                el.scrollIntoView({block: 'center'});
+                                (el.click ? el.click()
+                                 : el.dispatchEvent(new MouseEvent('click',
+                                     {bubbles: true})));
+                                return true; }""", sel)
+                        await page.wait_for_timeout(1200)
+                        opened = f"fix:{sel}"
+                        break
         if not opened and platform in ("threads", "flow"):
             with suppress(Exception):
                 await page.keyboard.press("n")
