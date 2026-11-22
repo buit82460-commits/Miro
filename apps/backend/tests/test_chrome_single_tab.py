@@ -136,7 +136,8 @@ def test_acquire_missing_tab_required_open_first_no_goto(tmp_path):
     browser = FakeBrowser([page])
     runtime = BrowserRuntime(browser=browser, instance_id="inst-1", store=store,
                              allowed_origins=("https://www.threads.com/",))
-    runtime.profiles["prof-1"] = {"id": "prof-1", "status": "verified"}
+    runtime.profiles["prof-1"] = {"id": "prof-1", "status": "verified",
+                                   "browserInstanceId": runtime.instance_id}
     req = {"profileBindingId": "prof-1", "platformId": "threads",
            "url": URL_A, "leaseTtl": 300}
     with pytest.raises(RegistryError, match="TAB_REQUIRED_OPEN_FIRST"):
@@ -150,7 +151,9 @@ def test_utm_query_same_destination_reused(tmp_path):
         session, URL_A, platform_id="threads", profile_id="prof-1"))
     assert first["targetId"] == page_a.target_id
     assert len(session.runtime.store.list("tab")) == 1
-    session.runtime.profiles["prof-1"] = {"id": "prof-1", "status": "verified"}
+    session.runtime.profiles["prof-1"] = {"id": "prof-1", "status": "verified",
+                                            "browserInstanceId":
+                                            session.runtime.instance_id}
     utm_url = URL_A + "?utm_source=x&fbclid=abc"
     req = {"profileBindingId": "prof-1", "platformId": "threads",
            "url": utm_url, "leaseTtl": 300}
@@ -166,7 +169,9 @@ def test_protected_candidate_continues_to_next(tmp_path):
     page_prot = FakePage(URL_A)
     page_plain = FakePage(URL_B)
     session = make_session(tmp_path, [page_prot, page_plain])
-    session.runtime.profiles["prof-1"] = {"id": "prof-1", "status": "verified"}
+    session.runtime.profiles["prof-1"] = {"id": "prof-1", "status": "verified",
+                                            "browserInstanceId":
+                                            session.runtime.instance_id}
     store = session.runtime.store
     rec_prot = {
         "id": "inst-1:pp", "targetId": "pp", "url": URL_A,
@@ -198,7 +203,9 @@ def test_all_protected_raises_after_loop(tmp_path):
     from miro.browser.errors import TabProtected
     page_prot = FakePage(URL_A)
     session = make_session(tmp_path, [page_prot])
-    session.runtime.profiles["prof-1"] = {"id": "prof-1", "status": "verified"}
+    session.runtime.profiles["prof-1"] = {"id": "prof-1", "status": "verified",
+                                            "browserInstanceId":
+                                            session.runtime.instance_id}
     store = session.runtime.store
     rec_prot = {
         "id": "inst-1:pp", "targetId": "pp", "url": URL_A,

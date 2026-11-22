@@ -354,7 +354,10 @@ class BrowserRuntime:
                       and r.get("platformId") == platform_id
                       and r.get("status") == "open"]
         if not str(profile.get("browserInstanceId") or ""):
-            profile["browserInstanceId"] = self.instance_id
+            raise ProfileUnverified(
+                "PROFILE_UNVERIFIED: profile thieu browserInstanceId "
+                "(legacy, chua verify tren instance nay); rebind "
+                "chrome://version tren instance hien tai truoc")
         if str(profile.get("browserInstanceId") or "") != self.instance_id:
             raise ProfileUnverified(
                 "PROFILE_UNVERIFIED: profile bound to different browser "

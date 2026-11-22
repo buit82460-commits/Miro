@@ -82,7 +82,8 @@ def seed_tab(store, target="t1", url="https://example.com/a", profile="prof-1",
 
 
 def seed_profile(runtime, profile_id="prof-1"):
-    runtime.profiles[profile_id] = {"id": profile_id, "status": "verified"}
+    runtime.profiles[profile_id] = {"id": profile_id, "status": "verified",
+                                    "browserInstanceId": runtime.instance_id}
     return profile_id
 
 

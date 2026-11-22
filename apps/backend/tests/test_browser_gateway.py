@@ -253,6 +253,79 @@ def test_t18_profile_wrong_instance_rejected(tmp_path):
             caller="t", eye_fn=fake_eye))
 
 
+# T22: legacy profile thieu browserInstanceId -> KHONG auto-trust, bat rebind
+def test_t22_legacy_profile_no_instance_no_autotrust(tmp_path):
+    page = FakePage("https://example.com/a")
+    session = make_session(tmp_path, [page])
+    del session.runtime.profiles["prof-1"]["browserInstanceId"]
+    seed_tab(session, page)
+    with pytest.raises(RegistryError, match="PROFILE_UNVERIFIED"):
+        asyncio.run(gateway.read_via_eye(
+            session, platform_id="demo", url="https://example.com/a",
+            caller="t", eye_fn=fake_eye))
+
+
+# T23: tab cua instance khac du co targetId giong -> khong dung chung
+def test_t23_cross_instance_tab_not_shared(tmp_path):
+    page = FakePage("https://example.com/a")
+    session = make_session(tmp_path, [page])
+    session.runtime.instance_id = "inst-spoofed"
+    session.runtime.profiles["prof-1"]["browserInstanceId"] = "inst-spoofed"
+    with pytest.raises(RegistryError, match="TAB_REQUIRED_OPEN_FIRST"):
+        asyncio.run(gateway.read_via_eye(
+            session, platform_id="demo", url="https://example.com/a",
+            caller="t", eye_fn=fake_eye))
+
+
+# T24: hai agent tranh 1 tab — agent 2 TAB_BUSY, khong chiem duoc
+def test_t24_two_agents_one_tab_single_owner(tmp_path):
+    from miro.browser.errors import TabBusy
+
+    page = FakePage("https://example.com/a")
+    session = make_session(tmp_path, [page])
+    seed_tab(session, page)
+    first = asyncio.run(gateway.read_via_eye(
+        session, platform_id="demo", url="https://example.com/a",
+        caller="agent-1", eye_fn=fake_eye))
+    assert first["tab_id"] == page.target_id
+    hold = asyncio.run(session.acquire_managed_tab(
+        platform_id="demo", url="https://example.com/a", caller="agent-1"))
+    try:
+        with pytest.raises(TabBusy):
+            asyncio.run(session.acquire_managed_tab(
+                platform_id="demo", url="https://example.com/a",
+                caller="agent-2"))
+    finally:
+        asyncio.run(hold.release())
+    second = asyncio.run(gateway.read_via_eye(
+        session, platform_id="demo", url="https://example.com/a",
+        caller="agent-2", eye_fn=fake_eye))
+    assert second["tab_id"] == page.target_id
+
+
+# T25: lease het han GIUA luc write (khong chi invalidate) -> UNKNOWN
+def test_t25_write_lease_expired_mid_write_unknown(tmp_path):
+    now = [2000.0]
+    page = FakePage("https://example.com/a")
+    session = make_session(tmp_path, [page])
+    session.runtime.store.clock = lambda: now[0]
+    seed_tab(session, page)
+
+    async def slow_adapter(p):
+        now[0] += 400.0
+        return {"posted": True}
+
+    ev = asyncio.run(gateway.read_via_eye(
+        session, platform_id="demo", url="https://example.com/a",
+        caller="reader", eye_fn=fake_eye))
+    out = asyncio.run(gateway.write_via_adapter(
+        session, platform_id="demo", url="https://example.com/a",
+        caller="t", evidence=ev,
+        approval={"approved": True}, adapter_fn=slow_adapter))
+    assert out["posted"] is False
+    assert out["receipt"] == "UNCONFIRMED_NO_REPLAY"
+
+
 # T19: tab navigate GIUA luc mat-doc -> bo evidence, khong tra du lieu cu
 def test_t19_read_race_navigate_discarded(tmp_path):
     page = FakePage("https://example.com/a")

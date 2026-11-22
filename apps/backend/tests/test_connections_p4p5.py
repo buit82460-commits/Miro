@@ -39,7 +39,8 @@ def _runtime_with_profile(tmp_path, page, profile_path):
         allowed_origins=("https://example.com",),
         verify_actor=(lambda p, r: p._account))
     runtime.profiles["prof-1"] = {"id": "prof-1", "status": "verified",
-                                  "profilePath": profile_path}
+                                  "profilePath": profile_path,
+                                  "browserInstanceId": "inst-1"}
     return runtime, store
 
 
