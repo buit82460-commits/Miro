@@ -417,3 +417,20 @@ Theo chi thi 3 diem: khong hardcode 9222, Evidence khong phai giay phep vinh vie
 | Extension Bridge | Giu `experiments/extension-bridge/` read-only (Tab Discovery, chua cai extension that); khong sua `.bat`, khong kill Chrome, khong doi MCP config | **DAT (giữ phạm vi)** |
 
 Phan mo: live Profile 20 read-only Q1/Q3/Q5/Q6/Q7 (can restart 1 lan user-data-dir rieng de REA noi CDP) → dien not Q1–Q10 → post that van UNSUPPORTED.
+
+---
+
+## § Hardening instance identity + Evidence race + lease + allowlist (2026-11-22) — **DAT**
+
+Tai commit d49cf01, khong dung Extension Bridge, khong push.
+
+| Muc | Bang chung | Ket qua |
+|---|---|---|
+| Instance identity | `runtime.acquire_tab`: profile thieu/khac `browserInstanceId` → `PROFILE_UNVERIFIED` (tuong thich legacy: thieu thi gan instance hien tai); `session_manager.ensure_session` khoa endpoint da verify, truyen thang vao `open` + doi chieu sau connect (chong TOCTOU port-file) | **DAT** |
+| Evidence race | `gateway.read_via_eye`: sau eye doc → validate lai lease + destination + verify lai actor (doi giua luc doc → bo evidence); doi account cu the ma mat khong verify duoc → `EVIDENCE_UNVERIFIED` | **DAT** |
+| Tab lease | `gateway.write_via_adapter`: validate lai lease sau adapter_fn (het quyen giua luc bam → receipt vo hieu → `UNCONFIRMED_NO_REPLAY` giu UNKNOWN) | **DAT** |
+| Allowlist test | `test_no_direct_browser.py`: pattern mo rong full 27 tool bypass (them run_code_unsafe/navigate_back/console/network/screenshot/resize/emulate/drop) | **DAT** |
+| Test | `test_browser_gateway.py` T18–T21 (profile sai instance / navigate giua doc / lease mat giua write / actor khong verify) → **22 passed** (gateway+allowlist); full suite **306 passed, 2 skipped** (`python -m pytest tests -q` trong `C:\Miro\apps\backend`) | **DAT** |
+| Chua khoa tai harness | MCP tool truc tiep (`playwright-profile*`, `capture_browser_scenario` recon) van goi duoc neu harness cap; `run_code_unsafe/evaluate` co side-effect du ten doc — xem `docs/harness-allowlist-report.md` de loai khoi allowlist production | **CHUA (ngoai repo)** |
+
+Phan mo: live Profile 20 read-only Q1/Q3/Q5/Q6/Q7 (can restart 1 lan user-data-dir rieng de REA noi CDP) → dien not Q1–Q10 → post that van UNSUPPORTED.

@@ -219,14 +219,19 @@ async def ensure_session(connect, user_data_dir: str, database,
     if report["status"] != "CONNECTED":
         raise RegistryError("BLOCKED_" + report["status"] + ": "
                             + report["detail"])
-    try:
-        endpoint = chrome_endpoint(user_data_dir or default_user_data_dir())
-    except RegistryError as error:
-        raise RegistryError("BLOCKED_CDP_UNAVAILABLE: " + str(error)) from None
-    if endpoint != report.get("endpoint", endpoint):
-        endpoint = report["endpoint"]
+    # Chong TOCTOU: khoa endpoint da verify, truyen thang vao open thay vi
+    # doc lai port-file (co the doi giua inspect va connect).
+    endpoint = report.get("endpoint", "")
+    if not endpoint:
+        raise RegistryError("BLOCKED_CDP_UNAVAILABLE: thieu endpoint "
+                            "da verify") from None
     session = await ManagedChromeSession.open(
-        connect, user_data_dir or default_user_data_dir(), database, **kwargs)
+        connect, user_data_dir or default_user_data_dir(), database,
+        endpoint=endpoint, **kwargs)
+    if session.endpoint != endpoint:
+        await session.close()
+        raise RegistryError("BLOCKED_WRONG_INSTANCE: endpoint sau connect "
+                            "lech endpoint da verify; khong dung session nay")
     return session
 
 

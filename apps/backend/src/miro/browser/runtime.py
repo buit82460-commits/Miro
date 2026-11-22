@@ -353,6 +353,12 @@ class BrowserRuntime:
                       and r.get("browserInstanceId") == self.instance_id
                       and r.get("platformId") == platform_id
                       and r.get("status") == "open"]
+        if not str(profile.get("browserInstanceId") or ""):
+            profile["browserInstanceId"] = self.instance_id
+        if str(profile.get("browserInstanceId") or "") != self.instance_id:
+            raise ProfileUnverified(
+                "PROFILE_UNVERIFIED: profile bound to different browser "
+                "instance; rebind chrome://version on this instance first")
         channel_id = request.get("channelId")
         flag = request.get("flag")
         if url:

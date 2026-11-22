@@ -129,7 +129,34 @@ async def read_via_eye(session, *, platform_id: str, url: str, caller: str,
                     raise
         if expected_account and actor and actor != expected_account:
             raise WorkerStopped("WORKER_STOPPED: ACCOUNT_MISMATCH")
+        if expected_account and not actor:
+            raise RegistryError("EVIDENCE_UNVERIFIED: khong xac minh duoc "
+                                "actor nhung task doi account cu the; mat doc lai")
         data = await eye_fn(page) or {}
+        # Chong race: lease het / tab navigate / doi actor GIUA luc doc
+        # -> bo evidence, khong tra du lieu cu.
+        try:
+            getattr(acquired.runtime.store, "validate")(acquired.lease)
+        except Exception as exc:
+            raise RegistryError("LEASE_LOST_DURING_READ: het quyen giua luc "
+                                "doc (" + type(exc).__name__ + ")") from None
+        from miro.browser.runtime import _urls_same_destination
+        cur = getattr(page, "url", None)
+        if isinstance(cur, str) and not _urls_same_destination(
+                cur, str((record or {}).get("url") or url)):
+            raise RegistryError("TAB_CHANGED_DURING_READ: tab doi giua luc "
+                                "mat doc; bo evidence")
+        if callable(verify) and actor:
+            try:
+                actor_after = await verify(page, record,
+                                           acquired.lease) or ""
+            except RegistryError as exc:
+                if "ACCOUNT_VERIFIER_UNAVAILABLE" not in str(exc):
+                    raise
+                actor_after = actor
+            if actor_after and actor_after != actor:
+                raise RegistryError("EVIDENCE_ACTOR_CHANGED: actor doi giua "
+                                    "luc mat doc; bo evidence")
         instance = str(getattr(getattr(acquired, "runtime", None),
                                "instance_id", "") or "")
         evidence = {"url": str(data.get("url") or url),
@@ -171,6 +198,12 @@ async def write_via_adapter(session, *, platform_id: str, url: str,
     try:
         receipt = await adapter_fn(acquired.page)
     finally:
+        # Kiem lai lease sau khi bam: het quyen giua luc bam -> receipt
+        # khong dang tin, giu UNKNOWN thay vi tin receipt.
+        try:
+            getattr(acquired.runtime.store, "validate")(acquired.lease)
+        except Exception:
+            receipt = None
         with suppress(Exception):
             await acquired.release()
     if not isinstance(receipt, dict) or not receipt:

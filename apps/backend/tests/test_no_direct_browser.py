@@ -16,9 +16,14 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 ROOT = Path(__file__).resolve().parents[1] / "src" / "miro"
 # Chi bat loi goi ham that: browser_xxx( ... Khong bat comment/string mo ta
 # chien thuat (vd interaction_fix.py ghi "dung browser_click icon" trong doc).
-PAT = re.compile(r"browser_(snapshot|click|type|evaluate|navigate|tabs|"
-                 r"fill_form|select_option|file_upload|drag|hover|press_key|"
-                 r"wait_for|take_screenshot|find|handle_dialog|close)\s*\(")
+# Bao gom full duong bypass MCP: snapshot/read (console/network/screenshot/
+# tabs/find/resize) + write (click/type/evaluate/run_code/navigate/fill/...).
+PAT = re.compile(r"browser_(snapshot|click|type|evaluate|run_code_unsafe|"
+                 r"navigate|navigate_back|tabs|fill_form|select_option|"
+                 r"file_upload|drag|drop|hover|press_key|wait_for|"
+                 r"take_screenshot|screenshot|find|handle_dialog|close|"
+                 r"console_messages|network_request|network_requests|"
+                 r"resize|emulate_media)\s*\(")
 ALLOW = ("/eye/", "adapters/live.py", "browser/session_manager.py",
          "browser/gateway.py")
 

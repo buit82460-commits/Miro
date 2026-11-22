@@ -241,6 +241,75 @@ def test_t9_stale_lease_rejected(tmp_path):
             caller="t", eye_fn=fake_eye, expected_account="user-1"))
 
 
+# T18: profile bind instance khac -> acquire bi tu choi
+def test_t18_profile_wrong_instance_rejected(tmp_path):
+    page = FakePage("https://example.com/a")
+    session = make_session(tmp_path, [page])
+    session.runtime.profiles["prof-1"]["browserInstanceId"] = "inst-khac"
+    seed_tab(session, page)
+    with pytest.raises(RegistryError, match="PROFILE_UNVERIFIED"):
+        asyncio.run(gateway.read_via_eye(
+            session, platform_id="demo", url="https://example.com/a",
+            caller="t", eye_fn=fake_eye))
+
+
+# T19: tab navigate GIUA luc mat-doc -> bo evidence, khong tra du lieu cu
+def test_t19_read_race_navigate_discarded(tmp_path):
+    page = FakePage("https://example.com/a")
+    session = make_session(tmp_path, [page])
+    seed_tab(session, page)
+
+    async def sneaky_eye(p):
+        p.url = "https://example.com/khac"
+        return {"url": "https://example.com/a", "actor": p._account}
+
+    with pytest.raises(RegistryError, match="CHANGED_DURING_READ"):
+        asyncio.run(gateway.read_via_eye(
+            session, platform_id="demo", url="https://example.com/a",
+            caller="t", eye_fn=sneaky_eye))
+
+
+# T20: lease bi thu hoi giua luc write -> receipt khong dang tin (UNKNOWN)
+def test_t20_write_lease_lost_mid_write_unknown(tmp_path):
+    from miro.browser.lease_store import tab_resource
+
+    page = FakePage("https://example.com/a")
+    session = make_session(tmp_path, [page])
+    seed_tab(session, page)
+
+    async def evil_adapter(p):
+        session.runtime.store.invalidate(
+            tab_resource("inst-1", page.target_id))
+        return {"posted": True}
+
+    ev = asyncio.run(gateway.read_via_eye(
+        session, platform_id="demo", url="https://example.com/a",
+        caller="reader", eye_fn=fake_eye))
+    out = asyncio.run(gateway.write_via_adapter(
+        session, platform_id="demo", url="https://example.com/a",
+        caller="t", evidence=ev,
+        approval={"approved": True}, adapter_fn=evil_adapter))
+    assert out["posted"] is False
+    assert out["receipt"] == "UNCONFIRMED_NO_REPLAY"
+
+
+# T21: task doi account cu the nhung mat khong verify duoc -> tu choi
+def test_t21_read_unverified_actor_with_expected_denied(tmp_path):
+    page = FakePage("https://example.com/a")
+    session = make_session(tmp_path, [page])
+    seed_tab(session, page)
+
+    async def blind_eye(p):
+        return {"url": p.url, "text": "x"}
+
+    session.runtime.verify_actor = None
+    session.runtime.account_providers = {}
+    with pytest.raises(RegistryError, match="EVIDENCE_UNVERIFIED|VERIFIER"):
+        asyncio.run(gateway.read_via_eye(
+            session, platform_id="demo", url="https://example.com/a",
+            caller="t", eye_fn=blind_eye, expected_account="user-1"))
+
+
 # T10: goi lai mo website -> khong tao tab trung
 def test_t10_no_duplicate_tab(tmp_path):
     page = FakePage("https://example.com/a")
