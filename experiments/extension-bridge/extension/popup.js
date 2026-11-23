@@ -77,3 +77,21 @@ document.getElementById("grant").addEventListener("click", async () => {
     st.textContent = "FAIL: " + String(e && e.message || e);
   }
 });
+
+document.getElementById("feed").addEventListener("click", async () => {
+  const st = document.getElementById("st");
+  st.textContent = "...";
+  try {
+    const tabs = await chrome.tabs.query(
+      { active: true, currentWindow: true });
+    const tab = tabs && tabs[0];
+    if (!tab) { st.textContent = "FAIL: khong thay tab"; return; }
+    const rd = await chrome.runtime.sendMessage(
+      { type: "miro-read", tabId: tab.id, spec: "feed-video" });
+    st.textContent = (rd && rd.ok)
+      ? ("Da doc feed-video tab " + tab.id + ".")
+      : ("Doc feed that bai: " + ((rd && rd.error) || "no backend"));
+  } catch (e) {
+    st.textContent = "FAIL: " + String(e && e.message || e);
+  }
+});

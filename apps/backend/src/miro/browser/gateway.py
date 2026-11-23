@@ -330,3 +330,59 @@ async def read_video_via_bridge(session_id: str, token: str, *,
                                    "url": url or page_url,
                                    "grant_epoch": obs.get("grant_epoch", 0)}},
             "observation": obs}
+
+
+async def read_feed_video_via_bridge(session_id: str, token: str, *,
+                                     instance_id: str, tab_id: int,
+                                     live_origin: str, grant_epoch=None,
+                                     base: str = "",
+                                     timeout: int = 30) -> dict:
+    """Production READ video dau feed TikTok qua Bridge (trang chu).
+
+    Spec "feed-video": mo anchor /video/ that dau tien trong DOM (feed
+    For You), tra Evidence rea-eye {author, aweme_id, video_url,
+    caption_preview, has_video}. Mat doc truoc, adapter quyet dinh sau.
+    URL trang van la homepage — dung video_url mo duoc, khong dung page_url.
+    """
+    import re
+    from miro.browser.bridge_transport import (
+        BRIDGE_BASE, read_via_bridge as _read_bridge)
+
+    r = await _read_bridge(
+        session_id, token, instance_id=instance_id, tab_id=tab_id,
+        live_origin=live_origin, spec="feed-video",
+        base=base or BRIDGE_BASE, timeout=timeout,
+        grant_epoch=grant_epoch, url=live_origin)
+    if not isinstance(r, dict) or not r.get("ok"):
+        return r if isinstance(r, dict) else {
+            "ok": False, "error": "BRIDGE_READ_FAILED"}
+    obs = r.get("observation") or {}
+    data = obs.get("data") if isinstance(obs.get("data"), dict) else {}
+    aweme = str(data.get("aweme_id") or "")
+    video_url = str(data.get("video_url") or "")
+    if not aweme:
+        hit = re.search(r"/video/(\d+)", video_url or "")
+        if hit:
+            aweme = hit.group(1)
+    if not aweme or not re.match(r"^\d{5,30}$", aweme):
+        return {"ok": False, "error": "FEED_VIDEO_IDENTITY_MISSING"}
+    if not str(data.get("has_video") or ""):
+        return {"ok": False, "error": "FEED_VIDEO_ELEMENT_MISSING"}
+    return {"ok": True,
+            "evidence": {"url": video_url or live_origin,
+                         "tab_id": str(tab_id),
+                         "instance_id": str(instance_id),
+                         "aweme_id": aweme,
+                         "author": str(data.get("author") or ""),
+                         "caption_preview": str(
+                             data.get("caption_preview") or "")[:300],
+                         "has_video": True,
+                         "observed_at": obs.get("observed_at") or _now(),
+                         "record": {"observation": data},
+                         "provenance": "rea-eye",
+                         "platform": "tiktok",
+                         "lease": {"instance_id": str(instance_id),
+                                   "tab_id": int(tab_id),
+                                   "url": live_origin,
+                                   "grant_epoch": obs.get("grant_epoch", 0)}},
+            "observation": obs}

@@ -23,7 +23,6 @@ const READ_FUNCS = {
     const q = (s) => document.querySelector(s);
     const loginBtn = q('[data-e2e="top-login-button"]')
       || q('[data-e2e="nav-login-button"]')
-      || q('button:has-text("Log in")')
       || [...document.querySelectorAll("a,button")].find(
         (el) => /^\s*log\s*in\s*$/i.test(el.innerText || ""));
     let profileHref = "";
@@ -48,6 +47,7 @@ const READ_FUNCS = {
   },
   // Video identity TikTok: aweme_id tu URL that + caption preview hep.
   // KHONG caption day du/comment — chi du de REA/Eye xac dinh dung video.
+  // TRANG /video/... (URL chua aweme). Feed homepage dung "feed-video".
   "video-identity": () => {
     const url = location.href || "";
     let aweme = "";
@@ -62,6 +62,44 @@ const READ_FUNCS = {
       url: url,
       aweme_id: aweme,
       caption_preview: ((cap || {}).innerText || "").slice(0, 300),
+      has_video: hasVideo ? "1" : "",
+    };
+  },
+  // Video dau tien trong feed For You (trang chu https://www.tiktok.com/).
+  // URL trang van la homepage nen phai mo anchor /video/ that trong DOM.
+  // KHONG caption day du/comment — chi preview 300 ky tu.
+  "feed-video": () => {
+    const url = location.href || "";
+    const anchors = [...document.querySelectorAll('a[href*="/video/"]')];
+    let videoUrl = "", aweme = "", author = "";
+    for (const a of anchors) {
+      const href = a.getAttribute("href") || "";
+      const m = href.match(/\/video\/(\d+)/);
+      if (!m) continue;
+      const am = href.match(/\/@([^/?]+)/);
+      if (!am) continue;
+      aweme = m[1];
+      author = "@" + am[1];
+      videoUrl = href.startsWith("http") ? href
+        : ("https://www.tiktok.com" + (href.startsWith("/") ? href : "/" + href));
+      break;
+    }
+    let caption = "";
+    if (videoUrl) {
+      const scope = anchors.length
+        ? (anchors[0].closest('[data-e2e="recommend-list-item-container"]')
+          || anchors[0].closest("div")) : null;
+      caption = (((scope || document.body) || {}).innerText || "")
+        .slice(0, 300);
+    }
+    const hasVideo = !!document.querySelector("video");
+    return {
+      title: document.title,
+      url: url,
+      video_url: videoUrl,
+      aweme_id: aweme,
+      author: author,
+      caption_preview: caption,
       has_video: hasVideo ? "1" : "",
     };
   },

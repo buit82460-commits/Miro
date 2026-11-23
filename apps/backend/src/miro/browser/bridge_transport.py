@@ -21,7 +21,7 @@ BRIDGE_BASE = "http://127.0.0.1:18767"
 OBS_TTL_S = 300
 
 READ_SPECS = ("title", "meta", "text-limited", "actor-login",
-              "video-identity")
+              "video-identity", "feed-video")
 SPEC_FIELDS = {
     "title": ("title", "url"),
     "meta": ("title", "url", "description", "h1"),
@@ -30,6 +30,8 @@ SPEC_FIELDS = {
                     "has_upload_link"),
     "video-identity": ("title", "url", "aweme_id", "caption_preview",
                        "has_video"),
+    "feed-video": ("title", "url", "video_url", "aweme_id", "author",
+                   "caption_preview", "has_video"),
 }
 
 

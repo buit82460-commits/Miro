@@ -112,6 +112,44 @@ async def tiktok_video_record(page) -> dict:
             "counts": counts}
 
 
+async def tiktok_feed_video_record(page) -> dict:
+    """Eye feed-video TikTok: video DAU TIEN trong feed For You.
+
+    Trang chu URL van la homepage nen phai mo anchor /video/ that trong
+    DOM: lay anchor dau tien co ca /video/<id> + /@handle. Tra record
+    {author, post_id, url, text} cung 1 khung (khong ghep cheo).
+    """
+    import re
+    page_url = ""
+    with suppress(Exception):
+        page_url = str(page.url or "")
+    author, aweme, video_url, caption = "", "", "", ""
+    with suppress(Exception):
+        anchors = await page.locator('a[href*="/video/"]').all()
+        for a in anchors or []:
+            href = (await a.get_attribute("href")) or ""
+            m = re.search(r"/video/(\d+)", href or "")
+            am = re.search(r"/@([^/?]+)", href or "")
+            if not (m and am):
+                continue
+            aweme = m.group(1)
+            author = "@" + am.group(1)
+            video_url = href if href.startswith("http") else \
+                "https://www.tiktok.com" + (
+                    href if href.startswith("/") else "/" + href)
+            with suppress(Exception):
+                scope = a.locator(
+                    'xpath=ancestor-or-self::*[@data-e2e='
+                    '"recommend-list-item-container"][1]')
+                if await scope.count() > 0:
+                    caption = (((await scope.first.inner_text())
+                                or "").strip())[:300]
+            break
+    return {"url": video_url or page_url, "post_id": aweme,
+            "author": author, "text": caption,
+            "has_video": bool(aweme)}
+
+
 async def tiktok_profile_record(page) -> dict:
     """Eye profile TikTok: nickname + handle + counts + bio."""
     import re
@@ -352,6 +390,7 @@ EYE_COVERAGE = {
                  "ack_state (toast/network/composer-closed)",
                  "tab_state (profile/verify/navigate/read)"],
     "tiktok": ["tiktok_comment_records", "tiktok_video_record",
+               "tiktok_feed_video_record (video dau feed homepage)",
                "tiktok_profile_record", "tiktok_actor_record (actor-login)",
                "engage_records (like/repost/follow/view + receipt)",
                "composer_state (composer/post_btn/upload)",
