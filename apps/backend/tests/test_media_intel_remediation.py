@@ -69,3 +69,21 @@ def test_native_candidates_env_override(monkeypatch):
     monkeypatch.delenv("MIRO_REA_VIDEO_PYTHON")
     cands2 = mi._native_candidates()
     assert "rea-video" in str(cands2[0])
+
+
+def test_app_boot_runs_sweep_lifespan():
+    """Boot that: workspace chet bi sweep khi app lifespan chay."""
+    import json
+    import time
+    from fastapi.testclient import TestClient
+    from miro import main as app_main
+    ws_info = mi.new_job_workspace("bootverify")
+    ws = Path(ws_info["path"])
+    mf = json.loads((ws / "manifest.json").read_text(encoding="utf-8"))
+    mf["created_at"] = time.time() - 7200
+    mf["pid"] = 999999999
+    (ws / "manifest.json").write_text(json.dumps(mf), encoding="utf-8")
+    with TestClient(app_main.app):
+        swept = app_main.app.state.media_sweep.get("swept", [])
+        assert "bootverify" in swept
+    assert not ws.exists()
