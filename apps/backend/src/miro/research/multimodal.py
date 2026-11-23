@@ -95,6 +95,40 @@ async def _maybe_await(fn: Callable, *args: Any) -> Any:
     return res
 
 
+def _video_duration_s(media: Any) -> float | None:
+    """Thoi luong VIDEO (giay), khac wall-clock phan tich.
+
+    Tim theo thu tu: metadata.duration (ephemeral) -> breakdown tong
+    shot end -> None (khong doan). Khong bao gio tra wall-clock.
+    """
+    if not isinstance(media, dict):
+        return None
+    meta = media.get("metadata") or {}
+    try:
+        dur = float(meta.get("duration") or 0)
+        if dur > 0:
+            return round(dur, 3)
+    except (TypeError, ValueError):
+        pass
+    bd = media.get("breakdown") if isinstance(
+        media.get("breakdown"), dict) else None
+    inner = media.get("analysis") if isinstance(
+        media.get("analysis"), dict) else None
+    shots = None
+    if isinstance(bd, dict):
+        shots = bd.get("shots")
+    if shots is None and isinstance(inner, dict):
+        shots = inner.get("shots")
+    try:
+        ends = [float(s.get("end", s.get("end_time", 0)) or 0)
+                for s in (shots or []) if isinstance(s, dict)]
+        if ends and max(ends) > 0:
+            return round(max(ends), 3)
+    except (TypeError, ValueError):
+        pass
+    return None
+
+
 async def run_multimodal_task(
     session,
     *,
@@ -137,6 +171,7 @@ async def run_multimodal_task(
                 "agent_text": "",
                 "elapsed_s": round(time.time() - t0, 2)}
     agent_text = build_agent_text(media if isinstance(media, dict) else {})
+    elapsed = round(time.time() - t0, 2)
     return {
         "ok": True,
         "agent_text": agent_text,
@@ -150,7 +185,9 @@ async def run_multimodal_task(
             "platform": eye_evidence.get("platform")},
         "media": media,
         "provenance": {"browser": "rea-eye", "media": "media-analysis"},
-        "elapsed_s": round(time.time() - t0, 2),
+        "elapsed_s": elapsed,
+        "analysis_wall_clock_s": elapsed,
+        "video_duration_s": _video_duration_s(media),
     }
 
 

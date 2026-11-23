@@ -1,7 +1,13 @@
 """Multimodal Agent E2E: Browser REA/Eye + rea-video trong CUNG 1 task.
 
-- Positive: fake tab (Gateway) + analyze_native THAT tren fixture local
-  (khong mang), Agent tieu thu qua summarize_for_agent.
+PHAM VI HONEST LABEL:
+- M1-M10: INTEGRATION E2E voi BROWSER MOCK (FakePage + fake Gateway
+  session: tab t-N / inst-1 / user-1 la gia lap) + MEDIA THAT
+  (analyze_native tren fixture local). Chua phai FULL LIVE.
+- M11-M12: ephemeral cleanup voi download mock (khong mang).
+- FULL LIVE (Chrome Profile 20 + tab TikTok that + Gateway that) la
+  buoc nghiem thu rieng, khong nam trong file nay.
+
 - Negative: stale/revoke/wrong-tab/media failure/timeout/spoofing.
 - Khong Browser WRITE, khong bypass, khong Library.
 
@@ -273,6 +279,24 @@ def test_m12_batch_ephemeral_partial(tmp_path, monkeypatch):
     assert "error" in res[1]
     leftovers_after = set(Path(tempfile.gettempdir()).glob("mi-ephem-*"))
     assert leftovers_after <= leftovers_before
+
+
+# M13: verdict tieng Trung nguyen ven den Agent (UTF-8, khong hong)
+def test_m13_verdict_utf8_intact(tmp_path):
+    if not FIXTURE.is_file():
+        pytest.skip("thieu fixture")
+    page = FakePage("https://example.com/a")
+    session = make_session(tmp_path, [page])
+    seed_tab(session, page)
+    res = asyncio.run(multimodal.run_multimodal_task(
+        session, platform_id="demo", url="https://example.com/a",
+        caller="agent-e2e", eye_fn=video_eye,
+        analyze_fn=native_on_fixture))
+    assert res["ok"] is True
+    assert "\ufffd" not in res["agent_text"]
+    assert "代码" in res["agent_text"] or "code_render" in res["agent_text"]
+    assert res["analysis_wall_clock_s"] >= 0
+    assert res["video_duration_s"] == 4.0
 
 
 # M10: batch tuan tu — url thu 2 sai destination thi bi chan, loat van chay
