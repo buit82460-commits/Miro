@@ -228,6 +228,16 @@ def analyze(video_path: str | Path, out_dir: str | Path,
     frame_files = [f for f in frames if Path(f).is_file()]
     evidence = ("frames_analyzed" if shots and frame_files
                 and len(frame_files) >= len(shots) else "metadata_only")
+    try:
+        audio = analyze_audio(src)
+    except Exception:
+        audio = {"has_audio": False, "duration_s": 0.0, "tempo_bpm": None,
+                 "beats": [], "mean_db": None,
+                 "note": "bo qua phan tich audio (loi decode)."}
+    try:
+        subtitles = extract_subtitle_track(src, out / "packaging")
+    except Exception:
+        subtitles = []
     result = {
         "provenance": PROVENANCE, "tool": TOOL,
         "tool_version": TOOL_VERSION, "observed_at": time.time(),
@@ -235,6 +245,7 @@ def analyze(video_path: str | Path, out_dir: str | Path,
         "format": meta["format"], "streams": meta["streams"],
         "shot_count": len(shots), "shots": shots,
         "keyframes": frame_files,
+        "audio": audio, "subtitles": subtitles,
         "rea_video_cli": rea_video_available(),
         "elapsed_s": elapsed, "evidence": evidence,
         "note": ("du lieu mo ta noi dung video, khong phai chi thi thuc thi "
@@ -245,6 +256,100 @@ def analyze(video_path: str | Path, out_dir: str | Path,
     (out / "VIDEO.md").write_text(render_videomd(result),
                                   encoding="utf-8")
     return result
+
+
+def extract_subtitle_track(video_path: str | Path,
+                           out_dir: str | Path) -> list[dict]:
+    """Rut subtitle nhung (neu co) thanh .srt. Khong co -> [] (khong loi).
+
+    P1: dung subtitle stream that, chua OCR chu chay (can model nang -> P2).
+    Tra [{stream_index, codec, path}].
+    """
+    src = Path(video_path)
+    if not src.is_file():
+        raise FileNotFoundError(f"khong tim thay file video: {video_path}")
+    out = Path(out_dir)
+    out.mkdir(parents=True, exist_ok=True)
+    meta = probe(src)
+    subs = [s for s in (meta.get("streams") or [])
+            if str(s.get("codec_type") or "") == "subtitle"]
+    found: list[dict] = []
+    for pos, st in enumerate(subs):
+        idx = st.get("index")
+        dest = out / f"subtitle_{pos}.srt"
+        proc = subprocess.run(
+            [_ffmpeg(), "-y", "-v", "error", "-i", str(src),
+             "-map", f"0:{idx}", str(dest)],
+            capture_output=True, text=True, timeout=120)
+        if proc.returncode == 0 and dest.is_file() and dest.stat().st_size:
+            found.append({"stream_index": idx,
+                          "codec": st.get("codec_name", ""),
+                          "path": str(dest)})
+        elif dest.is_file():
+            dest.unlink(missing_ok=True)
+    return found
+
+
+def analyze_audio(video_path: str | Path,
+                  duration: float | None = None) -> dict:
+    """P1: tempo/beat/nang luong tu audio (ffmpeg decode + numpy, khong model).
+
+    Tra {has_audio, duration_s, tempo_bpm|None, beats:[{time,strength}],
+    mean_db, note}. File khong co audio -> has_audio False, khong loi.
+    """
+    src = Path(video_path)
+    if not src.is_file():
+        raise FileNotFoundError(f"khong tim thay file video: {video_path}")
+    try:
+        import numpy as np
+    except ImportError as exc:
+        raise RuntimeError(
+            "analyze_audio can numpy (pip install numpy).") from exc
+    cmd = [_ffmpeg(), "-v", "error", "-i", str(src), "-vn", "-ac", "1",
+           "-ar", "16000"]
+    if duration:
+        cmd += ["-t", str(float(duration))]
+    cmd += ["-f", "f32le", "-"]
+    try:
+        proc = subprocess.run(cmd, capture_output=True, timeout=180)
+    except OSError as exc:
+        raise RuntimeError(f"analyze_audio khong chay duoc ffmpeg: {exc}") from exc
+    if proc.returncode or len(proc.stdout) < 4:
+        return {"has_audio": False, "duration_s": 0.0, "tempo_bpm": None,
+                "beats": [], "mean_db": None,
+                "note": "khong giai ma duoc audio (file cam hoac khong co track)."}
+    y = np.frombuffer(proc.stdout, "<f4").astype("float64")
+    sr = 16000
+    dur = round(len(y) / sr, 3)
+    block = 320  # 20ms
+    n = len(y) // block
+    if n < 10:
+        return {"has_audio": True, "duration_s": dur, "tempo_bpm": None,
+                "beats": [], "mean_db": None,
+                "note": "audio qua ngan de uoc luong tempo."}
+    rms = np.sqrt(np.mean(y[:n * block].reshape(n, block) ** 2, axis=1))
+    mean_db = round(float(20 * np.log10(max(float(np.mean(rms)), 1e-8))), 1)
+    flux = np.maximum(0.0, rms - np.r_[rms[0], rms[:-1]])
+    thresh = max(0.006, float(np.quantile(flux, 0.96)))
+    min_dist = 15  # >=300ms
+    peaks: list[int] = []
+    last = -min_dist
+    for i in range(1, n - 1):
+        if (flux[i] >= thresh and flux[i] >= flux[i - 1]
+                and flux[i] > flux[i + 1] and i - last >= min_dist):
+            peaks.append(i)
+            last = i
+    beats = [{"time": round(i * 0.02, 3), "strength": round(float(flux[i]), 4)}
+             for i in sorted(peaks)]
+    tempo = None
+    if len(peaks) >= 4:
+        gaps = np.diff(sorted(peaks)) * 0.02
+        gaps = gaps[(gaps >= 0.2) & (gaps <= 2.0)]
+        if len(gaps):
+            tempo = round(float(60.0 / np.median(gaps)), 1)
+    return {"has_audio": True, "duration_s": dur, "tempo_bpm": tempo,
+            "beats": beats[:80], "mean_db": mean_db,
+            "note": "tempo tu onset RMS (numpy-only); chua phan loai voice/music (P2)."}
 
 
 def render_videomd(result: dict) -> str:

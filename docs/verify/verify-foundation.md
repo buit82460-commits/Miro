@@ -195,3 +195,36 @@
 ### Ket luan
 
 **841e5ab DAT** (D1/D2/L1/T5 DAT: window-lock chung serialize that + select-tab truoc write + stop cat backoff + RECOVER-auto dung budget; 214/214 test pass ke ca test cu da cap nhat dung spec). **Chua push.**
+
+## Verify Media Intel P0+P1 (commit tiep theo, 2026-11-23)
+
+- Commit kiểm tra: Media Intel P0 (adapter duy nhất + trust boundary + cost gate, `d61260e`) + P1 (`analyze_audio` numpy-only, `extract_subtitle_track`, `merge_ocr_cues`).
+- Luật khóa 3 lớp REA-MEDIA: `AGENTS.md` (§RE A-MEDIA) + CI (`tests/test_no_direct_media.py`: quét `cv2|rea_video|sherpa_onnx` ngoài adapter, check `check_media_evidence`/`deny_direct_media`/`require_generation_approval`) + runtime (`gateway.py` từ chối `media-analysis` làm Evidence WRITE).
+- Test: `test_media_intel_p0.py` (4) + `test_media_intel_p1.py` (4: audio fixture 4s có track AAC, subtitle [], merge OCR outrank ASR + ocr-only) + `test_no_direct_media.py` (2) + full suite — **320 passed, 2 skipped**.
+- P2 (stems/SenseVoice/diarize/classify, cần model nặng + uncertainty) + P3–P5 chưa làm.
+
+### Kết luận
+
+**Media Intel P0+P1 DAT** (adapter read-only, provenance `media-analysis` tách `rea-eye`, no-bypass, no auto-run generation). **Chưa push.**
+
+## Verify bo sung W-R1: media_intel → Research/Agent + don sach (2026-11-23)
+
+- File moi: `research/media_provider.py` — `MediaIntelProvider` cam vao
+  `ResearchProvider.video_detail` (diem cam duy nhat, khong dung
+  Library/Studio/Publisher).
+- Vong doi ephemeral (bat buoc): yt-dlp tai (max 200MB / 30 phut, 360p)
+  vao `TemporaryDirectory` → `mi.analyze()` → tra dict NHE
+  (videomd + shots + audio + hash) → temp TU XOA (video + keyframes +
+  analysis.json deu bay). Loi 1 video khong dung ca loat (batch tuan tu).
+- Khong fallback ffmpeg-native: moi video content analysis qua adapter.
+- Kiem chung live video YouTube that (Muse.ai 11:02): `frames_analyzed=True`,
+  5 shots, tempo 115.4, 80 beats, VIDEO.md 882 chars, temp con lai **0**.
+- Khoa CI: `test_no_direct_media.py` + `test_provider_goes_through_adapter`
+  (provider chi subprocess yt-dlp lay media, phan tich chi qua `mi.analyze`).
+- Test: `test_research_media_provider.py` (4) + full suite — **325 passed, 2 skipped**.
+- W0 (Library auto-tag) / W1 (Studio step analyze) / W3 (Publisher gate)
+  de sau, theo thu tu: Agent/Research chay that truoc.
+
+### Kết luận
+
+**W-R1 DAT** (Agent/Research dung duoc rea-video, temp + don sach, qua du 3 lop khoa). **Chua push.**

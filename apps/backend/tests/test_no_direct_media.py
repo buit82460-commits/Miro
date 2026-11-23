@@ -20,7 +20,8 @@ ROOT = Path(__file__).resolve().parents[1] / "src" / "miro"
 PAT = re.compile(r"^\s*(import\s+cv2|from\s+cv2\s+import|"
                  r"import\s+rea_video|from\s+rea_video\s+import|"
                  r"import\s+sherpa_onnx|from\s+sherpa_onnx\s+import)")
-ALLOW = ("/media_intel/", "studio/separate.py")
+ALLOW = ("/media_intel/", "studio/separate.py",
+         "research/media_provider.py")
 
 
 def test_no_direct_media_analysis_outside_adapter():
@@ -60,3 +61,24 @@ def test_media_trust_boundary_and_cost_gate():
         mi.require_generation_approval({"approved": False})
     assert mi.require_generation_approval(
         {"approved": True})["approved"] is True
+
+
+def test_media_provider_goes_through_adapter_only():
+    """research/media_provider: lay media bang yt-dlp, phan tich CHI QUA
+    media_intel. Cam goi ffmpeg/cv2 truc tiep de phan tich trong provider."""
+    import ast
+    src = (ROOT / "research" / "media_provider.py").read_text(encoding="utf-8")
+    tree = ast.parse(src)
+    calls = [n.func.attr if isinstance(n.func, ast.Attribute) else
+             getattr(n.func, "id", "")
+             for n in ast.walk(tree) if isinstance(n, ast.Call)]
+    assert "analyze" in calls  # phai goi mi.analyze
+    assert "cv2" not in src and "rea_video" not in src
+    # subprocess trong provider chi duoc phep goi yt-dlp (lay media),
+    # khong duoc goi ffmpeg/ffprobe truc tiep (phan tich).
+    for n in ast.walk(tree):
+        if isinstance(n, ast.Call) and getattr(
+                getattr(n, "func", None), "attr", "") == "run":
+            args = ast.dump(n)
+            assert "yt-dlp" in args or "_yt_dlp" in args, \
+                "subprocess ngoai yt-dlp trong provider = BYPASS"

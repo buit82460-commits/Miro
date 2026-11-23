@@ -22,6 +22,7 @@ __all__ = [
     "words_from_whisper",
     "merge_words_to_cues",
     "retime_cues",
+    "merge_ocr_cues",
 ]
 
 _TS_RE = re.compile(
@@ -223,4 +224,44 @@ def retime_cues(cues: list, offset: float, scale: float = 1.0) -> list:
         item["start"] = start
         item["end"] = end
         out.append(item)
+    return out
+
+
+def merge_ocr_cues(stt_cues: list, ocr_cues: list, tol: float = 0.5) -> list[dict]:
+    """Hop nhat cue STT voi cue OCR (chu chay tren man hinh).
+
+    Nguyen tac tu rea-video speech.py: chu tren man hinh outrank ASR khi
+    trung khop thoi gian (±tol giay) nhung text khac nhau -> lay text OCR,
+    danh dau {"fixed_by": "ocr"}. Cue OCR khong trung STT nao duoc giu lai
+    voi {"fixed_by": "ocr-only"}. Khong thay doi thu tu thoi gian.
+    """
+    stt = [dict(c) for c in (stt_cues or [])]
+    ocr = [dict(c) for c in (ocr_cues or [])]
+    used = [False] * len(ocr)
+    out: list[dict] = []
+    for cue in stt:
+        s = float(cue["start"])
+        best = -1
+        for j, o in enumerate(ocr):
+            if used[j]:
+                continue
+            if abs(float(o["start"]) - s) <= tol:
+                best = j
+                break
+        item = dict(cue)
+        if best >= 0:
+            otext = str(ocr[best].get("text") or "").strip()
+            if otext and otext != str(item.get("text") or "").strip():
+                item["text"] = otext
+                item["fixed_by"] = "ocr"
+            used[best] = True
+        out.append(item)
+    for j, o in enumerate(ocr):
+        if not used[j]:
+            item = dict(o)
+            item["fixed_by"] = "ocr-only"
+            out.append(item)
+    out.sort(key=lambda c: (float(c["start"]), float(c["end"])))
+    for i, c in enumerate(out, 1):
+        c.setdefault("id", i)
     return out
