@@ -94,6 +94,27 @@ class GrantStore:
             return {"ok": False, "error": "ORIGIN_MISMATCH"}
         return {"ok": True}
 
+    def epoch(self, browser_instance_id, tab_id):
+        """Grant epoch hien tai cua tab (grant_seq luc cap).
+
+        Tra int epoch, hoac None khi khong co grant hop le. Transport dung
+        de gan lease binding: observation chi duoc doc khi epoch khop.
+        """
+        try:
+            tab_id = int(tab_id)
+        except (TypeError, ValueError):
+            return None
+        g = self._grants.get((str(browser_instance_id), tab_id))
+        if g is None:
+            return None
+        if g["expires_at"] <= self._clock():
+            self._grants.pop((str(browser_instance_id), tab_id), None)
+            return None
+        try:
+            return int(g.get("grant_seq"))
+        except (TypeError, ValueError):
+            return None
+
     def revoke_tab(self, browser_instance_id, tab_id):
         """Thu hoi grant khi navigation khac origin / dong tab / revoke."""
         return self._grants.pop((str(browser_instance_id), int(tab_id)),
