@@ -16,6 +16,7 @@ import json
 import re
 import shutil
 import subprocess
+import tempfile
 import time
 from pathlib import Path
 
@@ -210,6 +211,112 @@ def native_engine_info() -> dict:
             "python": str(exe),
             "rea_video_version": (ver.stdout or "").strip() or "unknown",
             "rea_video_sha": sha}
+
+
+def workspace_root() -> Path:
+    """Thu muc goc cho moi workspace phan tich (ben vung qua restart)."""
+    root = Path(tempfile.gettempdir()) / "mi-work"
+    root.mkdir(parents=True, exist_ok=True)
+    return root
+
+
+def new_job_workspace(job_id: str | None = None) -> dict:
+    """Tao workspace rieng cho 1 job: manifest + ownership (pid).
+
+    Tra {"job_id", "path"}. Manifest ghi chu, chi workspace nay duoc xoa
+    boi chinh job do hoac startup sweep khi chu da chet.
+    """
+    import os
+    import uuid
+    jid = job_id or uuid.uuid4().hex[:12]
+    path = workspace_root() / f"mi-{jid}"
+    path.mkdir(parents=True, exist_ok=True)
+    manifest = {"job_id": jid, "pid": os.getpid(),
+                "created_at": time.time(), "status": "running",
+                "tool": TOOL, "provider": PROVIDER_NATIVE}
+    (path / "manifest.json").write_text(
+        json.dumps(manifest), encoding="utf-8")
+    return {"job_id": jid, "path": path}
+
+
+def finish_job_workspace(path: str | Path, status: str = "done") -> bool:
+    """Danh dau xong + xoa workspace cua chinh job. Tra True neu da xoa."""
+    import shutil
+    p = Path(path)
+    mf = p / "manifest.json"
+    try:
+        if mf.is_file():
+            data = json.loads(mf.read_text(encoding="utf-8"))
+            data["status"] = status
+            data["finished_at"] = time.time()
+            mf.write_text(json.dumps(data), encoding="utf-8")
+    except (ValueError, OSError):
+        pass
+    if p.parent != workspace_root():
+        return False
+    if not p.name.startswith("mi-"):
+        return False
+    shutil.rmtree(p, ignore_errors=True)
+    return not p.exists()
+
+
+def _owner_alive(pid: int) -> bool:
+    """Chu workspace con song khong. Khong xac minh duoc -> coi nhu song."""
+    if not isinstance(pid, int) or pid <= 0:
+        return True
+    try:
+        import psutil
+        return psutil.pid_exists(pid)
+    except ImportError:
+        pass
+    try:
+        import os
+        os.kill(pid, 0)
+        return True
+    except (OSError, AttributeError):
+        return False
+    except Exception:
+        return True
+
+
+def sweep_stale_workspaces(max_age_s: float = 3600) -> dict:
+    """Startup sweep: xoa workspace sot cua job da chet/timeout/cancel.
+
+    An toan: chi xoa dir `mi-*` truc tiep duoi workspace_root, bo qua
+    job dang running co chu con song, khong cham Library asset hay job khac.
+    Tra {"swept": [...], "kept": [...]}.
+    """
+    root = workspace_root()
+    swept: list[str] = []
+    kept: list[str] = []
+    now = time.time()
+    for child in sorted(root.iterdir()):
+        if not child.is_dir() or not child.name.startswith("mi-"):
+            continue
+        mf = child / "manifest.json"
+        try:
+            data = json.loads(mf.read_text(encoding="utf-8")) \
+                if mf.is_file() else {}
+        except (ValueError, OSError):
+            data = {}
+        jid = str(data.get("job_id") or child.name[3:])
+        pid = data.get("pid")
+        status = str(data.get("status") or "unknown")
+        created = float(data.get("created_at") or child.stat().st_mtime)
+        alive = _owner_alive(pid) if status == "running" else False
+        stale = (status in ("done", "failed", "timeout", "cancelled")
+                 or (now - created) > max_age_s
+                 or (status == "running" and not alive))
+        if stale and not (status == "running" and alive):
+            import shutil
+            shutil.rmtree(child, ignore_errors=True)
+            if not child.exists():
+                swept.append(jid)
+            else:
+                kept.append(jid)
+        else:
+            kept.append(jid)
+    return {"swept": swept, "kept": kept}
 
 
 def _native_evidence_detail(bd: dict, out: Path) -> dict:

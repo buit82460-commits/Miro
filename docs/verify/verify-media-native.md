@@ -46,7 +46,7 @@
 - Không còn hard-code `frames_analyzed=True`: `analyze_ephemeral` tính từ
   level thật; `metadata_only` khi lỗi.
 
-## Phase 4 — E2E (PASS, trừ crash/restart thật)
+## Phase 4 — E2E (PASS 10/10, crash recovery: kill process thật)
 
 1. CLI rea-video gốc chạy được MP4 thật: PASS (§Phase 1).
 2. Adapter gọi đúng native provider: PASS (`analyze_native` trong
@@ -60,17 +60,44 @@
 6. Provenance đúng: PASS (`media-analysis`, `rea-video`, sha256, timestamps).
 7. Cleanup success/failure/timeout: PASS (ephemeral TemporaryDirectory;
    E2E `temp còn lại: 0`; fail path `DOWNLOAD_FAILED` không để lại temp).
-8. Crash/restart recovery: CHƯA TEST THẬT — mới chỉ suy luận từ
-   TemporaryDirectory (OS dọn khi process chết). Ghi PARTIAL.
-9. Không xóa Library asset/file bảo vệ: PASS (ephemeral chỉ dọn prefix
-   `mi-ephem-*`; Library import copy riêng).
-10. Ba lớp khóa: PASS (`test_no_direct_media` + full suite media 27 passed).
+8. Crash/restart recovery: **PASS** — `test_media_intel_recovery.py` 5/5:
+   kill process thật giữa phân tích → workspace sót có manifest/ownership →
+   startup sweep phát hiện + xóa đúng job đã chết; giữ job đang sống +
+   file Library + job song song; timeout/cancelled quét ngay cả khi pid
+   tái sử dụng; `finish_job_workspace` từ chối xóa ngoài `mi-work/mi-*`.
+9. Không xóa Library asset/file bảo vệ: PASS (sweep chỉ chạm dir `mi-*`
+   trực tiếp dưới `mi-work`; test giữ file Library + từ chối ngoài phạm vi).
+10. Ba lớp khóa: PASS (`test_no_direct_media` + nhóm media 32 passed).
+
+## Baseline lỗi desktop (VERIFIED, không phải hồi quy native)
+
+- `test_schedule_wiring::test_desktop_route_cli_unavailable_fail_closed`
+  fail **y hệt tại baseline `36c8b9a`** (worktree detach kiểm chứng):
+  `desktop/backend.py:117` `proc.stdout.strip()` crash khi stdout=None
+  (subprocess decode fail trên console cp1252).
+- `git diff 36c8b9a..HEAD -- apps/backend/src/miro/desktop` rỗng →
+  lỗi tồn tại trước commit native, KHÔNG do Phiên C. Không sửa (ngoài phạm vi).
 
 ## Test
 
-- Nhóm media: **27 passed** (native 4 + P0/P1/P2/W-R1/lock).
-- Full suite: **335 passed, 2 skipped** (`C:\dubtool` không mount),
-  **1 failed pre-existing** `test_schedule_wiring::
-  test_desktop_route_cli_unavailable_fail_closed`
-  (`desktop/backend.py:117` `None.strip()`, thuộc desktop/scheduling,
-  không import media — fail độc lập với thay đổi này).
+- Nhóm media: **32 passed** (native 4 + recovery 5 + P0/P1/P2/W-R1/lock).
+- Full suite: chạy sau commit này, xem kết quả bên dưới.
+- Lỗi desktop `test_desktop_route_cli_unavailable_fail_closed`:
+  VERIFIED tồn tại tại baseline `36c8b9a` (worktree detach, cùng
+  AttributeError `backend.py:117`), không phải hồi quy native.
+
+## Contract bàn giao cho D/E/F (khóa)
+
+- Production entry: `mi.analyze_native(video, out_dir, timeout=900)` →
+  dict `{provenance, provider, engine, file_sha256, breakdown, evidence,
+  evidence_detail, breakdown_path, videomd_path}`.
+- Evidence levels: `multimodal_analyzed | visual_analyzed | audio_analyzed |
+  frames_extracted | metadata_only | partial` (+ `unavailable` khi lỗi).
+- Workspace/recovery: `mi.new_job_workspace(job_id?)`,
+  `mi.finish_job_workspace(path, status)`,
+  `mi.sweep_stale_workspaces(max_age_s=3600)` → gọi ở startup.
+- Cấm: fallback ffmpeg-native ở production; VLM/remake trả phí không approval;
+  chạm Browser REA/Gateway/MCP/security (phiên A/B).
+- Lưu ý cho E (Visual): `code_render 100%` = tỉ lệ nhãn thắng trong báo cáo,
+  KHÔNG phải chắc chắn tuyệt đối — giữ nguyên `deterministic.probs` +
+  confidence + uncertainty trong breakdown khi phân loại.
