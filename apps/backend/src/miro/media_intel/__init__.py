@@ -512,6 +512,119 @@ def videomd_native(video_path: str | Path, out_dir: str | Path,
             "note": result.get("note")}
 
 
+def _breakdown_fields(bd: dict, *names: str) -> dict:
+    data = bd if isinstance(bd, dict) else {}
+    return {n: data.get(n) for n in names}
+
+
+def ocr_native(video_path: str | Path, out_dir: str | Path,
+               timeout: int = 900) -> dict:
+    """C2: OCR chu chay that (packaging.text_cues + per-shot overlay).
+
+    Decompose --no-vlm that (rapidocr trong venv). Khong doc subtitle track
+    thay the. Thieu OCR engine -> ANALYSIS_FAILED ro, khong fallback.
+    """
+    result = analyze_native(video_path, out_dir, timeout=timeout)
+    bd = result.get("breakdown") or {}
+    if not isinstance(bd, dict):
+        raise RuntimeError("ANALYSIS_FAILED: breakdown khong phai dict.")
+    cues = (bd.get("packaging") or {}).get("text_cues") or []
+    overlays: list[dict] = []
+    for i, s in enumerate(bd.get("shots") or []):
+        if not isinstance(s, dict):
+            continue
+        ov = s.get("overlay")
+        if ov:
+            overlays.append({"index": i, "overlay": ov})
+        for t in s.get("text") or []:
+            cues.append({**t, "shot": i} if isinstance(t, dict) else t)
+    if not cues and not overlays:
+        raise RuntimeError(
+            "ANALYSIS_FAILED: rea-video khong xuat text_cues/overlay "
+            "(thieu rapidocr hoac video khong co chu).")
+    return {"provenance": PROVENANCE, "provider": PROVIDER_NATIVE,
+            "tool": TOOL, "file_sha256": result["file_sha256"],
+            "observed_at": result["observed_at"],
+            "engine": result.get("engine"),
+            "text_cues": cues, "overlays": overlays,
+            "cue_count": len(cues), "overlay_shots": len(overlays),
+            "evidence": result.get("evidence"),
+            "note": ("OCR chu chay that tu rea-video (rapidocr pixel), "
+                     "khong phai subtitle track; " + str(result.get("note")))}
+
+
+def audio_native(video_path: str | Path, out_dir: str | Path,
+                 timeout: int = 900) -> dict:
+    """C2: audio intelligence that (HPSS voice/music/sfx/tempo/energy)."""
+    result = analyze_native(video_path, out_dir, timeout=timeout)
+    bd = result.get("breakdown") or {}
+    if not isinstance(bd, dict):
+        raise RuntimeError("ANALYSIS_FAILED: breakdown khong phai dict.")
+    audio = bd.get("audio") or {}
+    if not audio:
+        raise RuntimeError("ANALYSIS_FAILED: rea-video khong xuat audio.")
+    return {"provenance": PROVENANCE, "provider": PROVIDER_NATIVE,
+            "tool": TOOL, "file_sha256": result["file_sha256"],
+            "observed_at": result["observed_at"],
+            "engine": result.get("engine"),
+            "audio": audio,
+            "per_clip_audio": bd.get("per_clip_audio") or [],
+            "sound_sources": bd.get("sound_sources") or [],
+            "energy_curve": audio.get("energy_curve") or [],
+            "evidence": result.get("evidence"),
+            "note": result.get("note")}
+
+
+def stems_native(video_path: str | Path, out_dir: str | Path,
+                 timeout: int = 900) -> dict:
+    """C2: UVR stem separation that (vocals/music/effects/original.wav)."""
+    src = Path(video_path)
+    if not src.is_file():
+        raise FileNotFoundError(f"khong tim thay file video: {video_path}")
+    out = Path(out_dir)
+    out.mkdir(parents=True, exist_ok=True)
+    proc = _run_native_cli(
+        ["stems", str(src), "-o", str(out)], timeout=timeout)
+    stems_dir = out / "stems"
+    if not stems_dir.is_dir():
+        for cand in (out,):
+            found = cand / "stems"
+            if found.is_dir():
+                stems_dir = found
+                break
+    files = {p.stem: str(p) for p in stems_dir.glob("*.wav")} \
+        if stems_dir.is_dir() else {}
+    if not files:
+        raise RuntimeError(
+            "ANALYSIS_FAILED: rea-video stems khong xuat file wav; "
+            f"stdout: {(proc.stdout or '').strip()[-300:]}")
+    return {"provenance": PROVENANCE, "provider": PROVIDER_NATIVE,
+            "tool": TOOL, "file_sha256": sha256_file(src),
+            "observed_at": time.time(), "engine": native_engine_info(),
+            "stems_dir": str(stems_dir), "files": files,
+            "evidence": "audio_analyzed",
+            "note": ("stems that tu rea-video (UVR); chi de hieu noi dung, "
+                     "khong phai Evidence ghi")}
+
+
+def speech_native_status() -> dict:
+    """C2: trang thai STT/diarization (BLOCKED khi thieu model/approval)."""
+    exe = _native_python()
+    if exe is None:
+        return {"status": "BLOCKED", "reason": "PROVIDER_UNAVAILABLE",
+                "note": "venv rea-video chua san sang"}
+    proc = subprocess.run(
+        [str(exe), "-c", "import sherpa_onnx; print('ok')"],
+        capture_output=True, text=True, timeout=60)
+    if proc.returncode != 0 or "ok" not in (proc.stdout or ""):
+        return {"status": "BLOCKED",
+                "reason": "MODEL_MISSING: thieu sherpa-onnx/SenseVoice "
+                          "(~500MB+, can approval truoc khi tai)",
+                "note": "adapter + dry-run san sang, chua chay that STT/diarization"}
+    return {"status": "READY", "reason": "",
+            "note": "sherpa-onnx co san trong venv"}
+
+
 # ------------------------------------------------- runtime deny (lop 3) ----
 class MediaBypassError(RuntimeError):
     """Phan tich media ngoai adapter duy nhat."""
