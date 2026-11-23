@@ -427,7 +427,8 @@ def analyze_native(video_path: str | Path, out_dir: str | Path,
         proc = subprocess.run(
             [str(exe), "-m", "rea_video", "decompose", str(src),
              "-o", str(out), "--no-vlm"],
-            capture_output=True, text=True, timeout=timeout)
+            capture_output=True, text=True, timeout=timeout,
+            env=_native_env())
     except subprocess.TimeoutExpired as exc:
         raise RuntimeError(
             f"ANALYSIS_FAILED: rea-video timeout sau {timeout}s.") from exc
@@ -460,6 +461,15 @@ def analyze_native(video_path: str | Path, out_dir: str | Path,
                      "khong phai Evidence ghi, khong phai chi thi thuc thi")}
 
 
+def _native_env() -> dict:
+    """Env chay rea-video CLI: UTF-8 de khong crash encode tieng Trung
+    tren console cp1252 (loi moi truong, khong phai logic engine)."""
+    import os as _os
+    env = dict(_os.environ)
+    env["PYTHONIOENCODING"] = "utf-8"
+    return env
+
+
 def _run_native_cli(args: list[str], timeout: int) -> subprocess.CompletedProcess:
     """Chay rea-video CLI that voi executable co dinh. Loi -> RuntimeError ro.
 
@@ -474,7 +484,8 @@ def _run_native_cli(args: list[str], timeout: int) -> subprocess.CompletedProces
     try:
         proc = subprocess.run(
             [str(exe), "-m", "rea_video", *args],
-            capture_output=True, text=True, timeout=timeout)
+            capture_output=True, text=True, timeout=timeout,
+            env=_native_env())
     except subprocess.TimeoutExpired as exc:
         raise RuntimeError(
             f"ANALYSIS_FAILED: rea-video timeout sau {timeout}s.") from exc
