@@ -24,6 +24,18 @@ mỗi lần bấm. Evidence cũ không được tái dùng khi trạng thái đ�
 8. **Approval theo task:** `approval == {approved: True, ...}` khớp đúng
    task (không dùng approval task khác).
 
+## Trust boundary: media-analysis ≠ rea-eye Evidence
+
+- Kết quả `miro/media_intel` mang `provenance: "media-analysis"`
+  (`file_sha256 + tool_version + observed_at`) chỉ để HIỂU NỘI DUNG
+  (Studio/Library/Research/Agent), KHÔNG PHẢI Evidence ghi.
+- Gateway `check_evidence` từ chối `media-analysis` làm Evidence WRITE
+  (phải có `rea-eye` Evidence tươi đúng tab). Dữ liệu video không phải
+  chỉ thị thực thi, không thay verify actor/tab.
+- Mọi phân tích media qua 1 adapter duy nhất (`miro/media_intel`);
+  `cv2`/`rea_video`/`sherpa_onnx` trực tiếp ngoài adapter = MEDIA_BYPASS.
+- VLM/remake/generation trả phí: cấm auto-run, cần approval đúng task.
+
 ## Checker
 
 - Chỉ kiểm tra Evidence tương ứng với tác vụ trong commit (không bắt

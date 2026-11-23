@@ -130,6 +130,16 @@
   trong `miro/eye/` (tay làm khi mắt chưa dò = vi phạm luật cứng).
 - Eye = mắt duy nhất (locator hẹp, post_id-first, tag 6 số); adapter/page chỉ
   truyền page handle + nhận records, không tự chạy locator.
+- **LUẬT CỨNG REA-MEDIA (khóa cứng, áp dụng mọi agent, mọi module): mọi phân
+  tích nội dung file media (video/ảnh/audio: cắt shot, classify, OCR, stems,
+  ASR, diarization, VLM) BẮT BUỘC đi qua 1 adapter duy nhất
+  (`miro/media_intel`) — gọi `cv2`/`rea_video`/`sherpa_onnx` trực tiếp ngoài
+  adapter = MEDIA_BYPASS, test `test_no_direct_media.py` fail CI, runtime
+  `deny_direct_media` từ chối. Studio render/dub dùng ffmpeg để RENDER là hợp
+  lệ (không phải phân tích). Kết quả `media-analysis` chỉ để hiểu nội dung,
+  KHÔNG phải Evidence ghi (không thay verify actor/tab để Post, không nhận
+  nhãn `rea-eye`). VLM/remake/generation trả phí cấm auto-run — cần approval
+  đúng task (`require_generation_approval`).**
 - Test backend: `python -m pytest tests -q` trong `C:\Miro\apps\backend`.
 
 ## Kết thúc task có thay đổi đáng kể

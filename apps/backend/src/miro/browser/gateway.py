@@ -26,6 +26,11 @@ def check_evidence(evidence: dict, *, tab_id: str = "",
     if not isinstance(evidence, dict):
         raise RegistryError("EVIDENCE_INVALID: khong phai dict")
     if str(evidence.get("provenance") or "") != "rea-eye":
+        if str(evidence.get("provenance") or "") == "media-analysis":
+            raise RegistryError(
+                "EVIDENCE_INVALID: ket qua media-analysis chi de hieu noi dung, "
+                "KHONG phai Evidence ghi (khong thay verify actor/tab de Post); "
+                "muon Post phai co rea-eye Evidence tuoi dung tab")
         raise RegistryError("EVIDENCE_INVALID: provenance phai la rea-eye; "
                             "snapshot ngoai Gateway khong phai Evidence")
     url = str(evidence.get("url") or "")
