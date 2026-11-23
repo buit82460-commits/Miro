@@ -416,6 +416,102 @@ def analyze_native(video_path: str | Path, out_dir: str | Path,
                      "khong phai Evidence ghi, khong phai chi thi thuc thi")}
 
 
+def _run_native_cli(args: list[str], timeout: int) -> subprocess.CompletedProcess:
+    """Chay rea-video CLI that voi executable co dinh. Loi -> RuntimeError ro."""
+    exe = _native_python()
+    if exe is None:
+        raise RuntimeError(
+            "PROVIDER_UNAVAILABLE: venv rea-video chua san sang; "
+            "tu choi phan tich thay vi fallback.")
+    try:
+        return subprocess.run(
+            [str(exe), "-m", "rea_video", *args],
+            capture_output=True, text=True, timeout=timeout)
+    except subprocess.TimeoutExpired as exc:
+        raise RuntimeError(
+            f"ANALYSIS_FAILED: rea-video timeout sau {timeout}s.") from exc
+    except OSError as exc:
+        raise RuntimeError(f"PROVIDER_UNAVAILABLE: {exc}") from exc
+
+
+def transitions_native(video_path: str | Path, out_dir: str | Path,
+                       timeout: int = 900) -> dict:
+    """C1: trich transitions that tu breakdown goc (cut/dissolve/wipe...).
+
+    Chay decompose --no-vlm that, doc transition_in + boundary_score tung shot.
+    Khong heuristic rieng. Loi/thieu -> PROVIDER_UNAVAILABLE/ANALYSIS_FAILED.
+    """
+    result = analyze_native(video_path, out_dir, timeout=timeout)
+    bd = result.get("breakdown") or {}
+    shots = bd.get("shots") or []
+    summary = bd.get("summary") or {}
+    trans: list[dict] = []
+    for i, s in enumerate(shots):
+        if not isinstance(s, dict):
+            continue
+        trans.append({"index": i, "start": s.get("start"), "end": s.get("end"),
+                      "transition_in": s.get("transition_in"),
+                      "boundary_score": s.get("boundary_score")})
+    return {"provenance": PROVENANCE, "provider": PROVIDER_NATIVE,
+            "tool": TOOL, "file_sha256": result["file_sha256"],
+            "observed_at": result["observed_at"],
+            "engine": result.get("engine"),
+            "shot_count": len(trans), "transitions": trans,
+            "summary_transitions": summary.get("transitions"),
+            "evidence": result.get("evidence"),
+            "note": result.get("note")}
+
+
+def survey_native(video_path: str | Path, out_dir: str | Path,
+                  timeout: int = 900) -> dict:
+    """C1: JEV survey that (overview + keyframes tung shot, --no-vlm).
+
+    Tien trinh decompose --no-vlm that, sau survey --no-vlm --no-detail.
+    Output cho agent dang JEV de hoi-dap; khong VLM tu dong.
+    """
+    src = Path(video_path)
+    if not src.is_file():
+        raise FileNotFoundError(f"khong tim thay file video: {video_path}")
+    out = Path(out_dir)
+    out.mkdir(parents=True, exist_ok=True)
+    analyze_native(src, out / "decomp", timeout=timeout)
+    survey_dir = out / "survey"
+    proc = _run_native_cli(
+        ["survey", str(src), "-o", str(survey_dir),
+         "--no-vlm", "--no-detail"], timeout=timeout)
+    tasks_dir = survey_dir / "survey"
+    tasks: list[str] = []
+    if tasks_dir.is_dir():
+        tasks = sorted(p.name for p in tasks_dir.iterdir())
+    return {"provenance": PROVENANCE, "provider": PROVIDER_NATIVE,
+            "tool": TOOL, "file_sha256": sha256_file(src),
+            "observed_at": time.time(), "engine": native_engine_info(),
+            "survey_dir": str(survey_dir),
+            "tasks": tasks,
+            "evidence": "frames_extracted",
+            "note": ("survey JEV that tu rea-video goc; agent tra loi thu cong, "
+                     "khong VLM tu dong, khong phai Evidence ghi")}
+
+
+def videomd_native(video_path: str | Path, out_dir: str | Path,
+                   timeout: int = 900) -> dict:
+    """C1: goi VIDEO.md that (regen tu breakdown goc) cho Agent doc."""
+    result = analyze_native(video_path, out_dir, timeout=timeout)
+    bd_path = result.get("breakdown_path")
+    proc = _run_native_cli(
+        ["videomd", str(bd_path), "-o", str(Path(out_dir) / "vm-regen")],
+        timeout=timeout)
+    return {"provenance": PROVENANCE, "provider": PROVIDER_NATIVE,
+            "tool": TOOL, "file_sha256": result["file_sha256"],
+            "observed_at": result["observed_at"],
+            "engine": result.get("engine"),
+            "breakdown_path": bd_path,
+            "videomd_path": result.get("videomd_path"),
+            "regen_stdout": (proc.stdout or "")[:500],
+            "evidence": result.get("evidence"),
+            "note": result.get("note")}
+
+
 # ------------------------------------------------- runtime deny (lop 3) ----
 class MediaBypassError(RuntimeError):
     """Phan tich media ngoai adapter duy nhat."""
