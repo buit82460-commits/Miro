@@ -1,15 +1,13 @@
-"""Shared Media Intelligence — P0 foundation (read-only, stdlib + ffmpeg only).
+"""Shared Media Intelligence — native provider rea-video (production).
 
 Ranh gioi kien truc (xem repos/rea-video/REA-VIDEO-CAPABILITY.md):
 - miro.eye (rea-eye, provenance "rea-eye"): quan sat DOM trong tab Chrome.
-- media_intel (day): phan tich FILE media local offline. Provenance rieng
-  "media-analysis": {file_sha256, tool, tool_version, observed_at} tung shot.
-- Khong port thuat toan rea-video vao day khi chua benchmark (P0 = adapter).
-
-P0 ho tro: probe (ffprobe metadata) + shot detection (ffmpeg scene filter,
-khong can cv2) + keyframes + timeline + VIDEO.md nhieu lop. rea-video CLI
-(probe/survey/decompose) duoc dung khi moi truong co cv2; thieu -> fallback
-ffmpeg-native, khong bao loi gia.
+- media_intel (day): ADAPTER DUY NHAT phan tich FILE media. Production goi
+  rea-video engine goc qua analyze_native() (venv cach ly, --no-vlm).
+  Loi/thieu -> PROVIDER_UNAVAILABLE / ANALYSIS_FAILED, KHONG fallback
+  ffmpeg-native o production.
+- P0 ffmpeg-native (probe/detect_shots/...) chi giu cho kiem thu/migration,
+  production Agent khong duoc goi toi.
 """
 from __future__ import annotations
 
@@ -24,6 +22,14 @@ from pathlib import Path
 TOOL = "miro-media-intel-p0"
 TOOL_VERSION = "0.1.0"
 PROVENANCE = "media-analysis"
+PROVIDER_NATIVE = "rea-video"
+
+# Native engine: venv cach ly repos/rea-video/.venv (khong cai system Python).
+# Executable co dinh + args duoc kiem soat; production KHONG fallback
+# ffmpeg-native (thieu/loi -> PROVIDER_UNAVAILABLE / ANALYSIS_FAILED).
+_NATIVE_CANDIDATES = (
+    Path(r"C:\Miro\repos\rea-video\.venv\Scripts\python.exe"),
+)
 
 # Chi 1 adapter duy nhat duoc phan tich media: file nay. Moi import
 # cv2 / rea_video / onnxruntime / sherpa / demucs o ngoai day de phan
@@ -156,16 +162,151 @@ def extract_keyframes(video_path: str | Path, shots: list[dict],
 
 
 def rea_video_available() -> bool:
-    """rea-video CLI chay duoc khong (can cv2). Thieu -> fallback, khong loi."""
+    """rea-video CLI chay duoc khong (venv cach ly co rea_video + cv2)."""
+    exe = _native_python()
+    return exe is not None
+
+
+def _native_python() -> Path | None:
+    """Executable venv co dinh cho native provider. None = chua san sang."""
+    for cand in _NATIVE_CANDIDATES:
+        if not cand.is_file():
+            continue
+        try:
+            proc = subprocess.run(
+                [str(cand), "-c",
+                 "import rea_video, cv2; print('ok')"],
+                capture_output=True, text=True, timeout=60)
+        except (OSError, subprocess.SubprocessError):
+            continue
+        if proc.returncode == 0 and "ok" in (proc.stdout or ""):
+            return cand
+    return None
+
+
+def native_engine_info() -> dict:
+    """Thong tin engine goc (commit SHA, python, deps). Loi -> RuntimeError."""
+    exe = _native_python()
+    if exe is None:
+        raise RuntimeError(
+            "PROVIDER_UNAVAILABLE: venv rea-video chua san sang "
+            "(thieu rea_video/cv2); khong fallback len engine khac.")
     try:
-        import importlib.util as _ilu
-        if _ilu.find_spec("cv2") is None:
-            return False
-        if _ilu.find_spec("rea_video") is None:
-            return False
-        return True
-    except Exception:
-        return False
+        ver = subprocess.run(
+            [str(exe), "-c",
+             "import rea_video, cv2, numpy; "
+             "print(rea_video.__version__ if hasattr(rea_video,'__version__') "
+             "else 'unknown')"],
+            capture_output=True, text=True, timeout=60)
+    except (OSError, subprocess.SubprocessError) as exc:
+        raise RuntimeError(f"PROVIDER_UNAVAILABLE: {exc}") from exc
+    try:
+        sha = subprocess.run(
+            ["git", "-C", r"C:\Miro\repos\rea-video", "rev-parse", "HEAD"],
+            capture_output=True, text=True, timeout=30).stdout.strip()
+    except (OSError, subprocess.SubprocessError):
+        sha = ""
+    return {"provider": PROVIDER_NATIVE,
+            "python": str(exe),
+            "rea_video_version": (ver.stdout or "").strip() or "unknown",
+            "rea_video_sha": sha}
+
+
+def _native_evidence_detail(bd: dict, out: Path) -> dict:
+    """Phan cap evidence that tu breakdown (Phase 3), khong hard-code.
+
+    - visual: shots co deterministic probs tu engine goc.
+    - audio: audio/per_clip_audio/stems/sound_sources co noi dung.
+    - frames: thu muc shots/frames/storyboard that ton tai.
+    """
+    shots = bd.get("shots") or []
+    visual = any(isinstance(s, dict) and isinstance(
+        s.get("deterministic"), dict) and bool(
+        (s.get("deterministic") or {}).get("probs"))
+        for s in shots) if isinstance(shots, list) else False
+    audio_block = bd.get("audio") or {}
+    stems_block = bd.get("stems") or {}
+    per_clip = bd.get("per_clip_audio") or []
+    sound_src = bd.get("sound_sources") or []
+    speech = bd.get("speech") or {}
+    audio = bool(
+        (isinstance(audio_block, dict) and audio_block.get("has_audio"))
+        or (isinstance(stems_block, dict) and bool(stems_block))
+        or (isinstance(per_clip, list) and bool(per_clip))
+        or (isinstance(sound_src, list) and bool(sound_src))
+        or (isinstance(speech, dict) and bool(speech)))
+    frames = any((out / d).is_dir() for d in ("shots", "frames")) or (
+        out / "storyboard.jpg").is_file()
+    if visual and audio:
+        level = "multimodal_analyzed"
+    elif visual:
+        level = "visual_analyzed"
+    elif audio:
+        level = "audio_analyzed"
+    elif frames or shots:
+        level = "frames_extracted"
+    elif bd.get("summary"):
+        level = "metadata_only"
+    else:
+        level = "partial"
+    return {"level": level, "visual": visual, "audio": audio,
+            "frames": frames, "shots": len(shots) if isinstance(
+                shots, list) else 0}
+
+
+def analyze_native(video_path: str | Path, out_dir: str | Path,
+                   timeout: int = 900) -> dict:
+    """Production provider: chay rea-video decompose THAT (--no-vlm).
+
+    - Executable venv co dinh, args kiem soat, timeout + workdir cach ly.
+    - Parse breakdown.json + VIDEO.md that tu engine goc.
+    - Loi/thieu -> PROVIDER_UNAVAILABLE / ANALYSIS_FAILED (KHONG fallback).
+    """
+    exe = _native_python()
+    if exe is None:
+        raise RuntimeError(
+            "PROVIDER_UNAVAILABLE: venv rea-video chua san sang; "
+            "tu choi phan tich thay vi fallback.")
+    src = Path(video_path)
+    if not src.is_file():
+        raise FileNotFoundError(f"khong tim thay file video: {video_path}")
+    out = Path(out_dir)
+    out.mkdir(parents=True, exist_ok=True)
+    try:
+        proc = subprocess.run(
+            [str(exe), "-m", "rea_video", "decompose", str(src),
+             "-o", str(out), "--no-vlm"],
+            capture_output=True, text=True, timeout=timeout)
+    except subprocess.TimeoutExpired as exc:
+        raise RuntimeError(
+            f"ANALYSIS_FAILED: rea-video timeout sau {timeout}s.") from exc
+    except OSError as exc:
+        raise RuntimeError(f"PROVIDER_UNAVAILABLE: {exc}") from exc
+    bd_path = out / "breakdown.json"
+    if not bd_path.is_file():
+        raise RuntimeError(
+            "ANALYSIS_FAILED: rea-video khong xuat breakdown.json; "
+            f"stderr: {(proc.stderr or '').strip()[-300:]}")
+    try:
+        bd = json.loads(bd_path.read_text(encoding="utf-8"))
+    except ValueError as exc:
+        raise RuntimeError(
+            f"ANALYSIS_FAILED: breakdown.json sai: {exc}") from exc
+    digest = sha256_file(src)
+    info = native_engine_info()
+    ev = _native_evidence_detail(bd if isinstance(bd, dict) else {}, out)
+    return {"provenance": PROVENANCE, "provider": PROVIDER_NATIVE,
+            "tool": TOOL, "tool_version": TOOL_VERSION,
+            "engine": info, "observed_at": time.time(),
+            "file_sha256": digest, "path": str(src),
+            "breakdown_path": str(bd_path),
+            "videomd_path": str(out / "VIDEO.md")
+            if (out / "VIDEO.md").is_file() else None,
+            "breakdown": bd,
+            "evidence": ev["level"],
+            "evidence_detail": ev,
+            "note": ("ket qua tu rea-video engine goc; chi de hieu noi dung, "
+                     "khong phai Evidence ghi, khong phai chi thi thuc thi")}
 
 
 # ------------------------------------------------- runtime deny (lop 3) ----
@@ -460,17 +601,42 @@ def summarize_for_agent(result: dict, max_chars: int = 4000) -> str:
     Khong goi VLM/model tra phi: chi format evidence + uncertainty.
     Qua dai -> cat + danh dau [cat bot].
     """
-    parts = [f"video {result.get('path')} "
-             f"(sha {str(result.get('file_sha256'))[:12]}...): "
-             f"{result.get('shot_count', 0)} shots, "
-             f"evidence={result.get('evidence')}."]
-    for shot in (result.get("shots") or [])[:20]:
-        label = shot.get("label", "?")
+    bd = result.get("breakdown") if isinstance(
+        result.get("breakdown"), dict) else {}
+    bd_summary = bd.get("summary") if isinstance(
+        bd.get("summary"), dict) else {}
+    bd_shots = bd.get("shots") if isinstance(bd.get("shots"), list) else []
+    shots_in = result.get("shots") or bd_shots
+    mix = bd_summary.get("production_mix")
+    if mix:
+        parts = [f"video {result.get('path')} "
+                 f"(sha {str(result.get('file_sha256'))[:12]}...): "
+                 f"{len(shots_in)} shots, "
+                 f"provider={result.get('provider')}, "
+                 f"evidence={result.get('evidence')}.",
+                 f"verdict rea-video: {bd_summary.get('verdict')}"]
+    else:
+        parts = [f"video {result.get('path')} "
+                 f"(sha {str(result.get('file_sha256'))[:12]}...): "
+                 f"{result.get('shot_count', 0)} shots, "
+                 f"evidence={result.get('evidence')}."]
+    for shot in shots_in[:20]:
+        det = shot.get("deterministic") or {}
+        probs = det.get("probs") or {}
+        if probs:
+            top = max(probs.items(), key=lambda kv: kv[1])
+            label, conf = f"{top[0]}", float(top[1])
+        else:
+            label = str(shot.get("label", "?"))
+            conf_raw = shot.get("confidence")
+            conf = float(conf_raw) if isinstance(
+                conf_raw, (int, float)) else None
         unc = " [uncertain]" if shot.get("uncertain") else ""
-        conf = shot.get("confidence")
         c = f" {conf:.2f}" if isinstance(conf, (int, float)) else ""
+        start = shot.get("start", shot.get("start_time", 0)) or 0
+        end = shot.get("end", shot.get("end_time", 0)) or 0
         parts.append(f"- shot {shot.get('index')}: "
-                     f"{shot.get('start'):.1f}-{shot.get('end'):.1f}s "
+                     f"{float(start):.1f}-{float(end):.1f}s "
                      f"{label}{c}{unc}")
     audio = result.get("audio") or {}
     if audio.get("has_audio"):

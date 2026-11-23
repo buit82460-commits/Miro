@@ -100,24 +100,41 @@ def analyze_ephemeral(url: str,
         video = download_to_temp(url, work,
                                  max_filesize_mb=max_filesize_mb,
                                  max_duration_s=max_duration_s)
-        result = mi.analyze(video, work / "out", threshold=threshold)
+        result = mi.analyze_native(video, work / "out")
         mi.check_media_evidence(result)
+        ev_level = str(result.get("evidence") or "")
+        frames_ok = ev_level in ("visual_analyzed", "audio_analyzed",
+                                 "multimodal_analyzed", "frames_extracted")
+        bd = result.get("breakdown") or {}
+        summary = (bd.get("summary") or {}) if isinstance(bd, dict) else {}
+        shots = [
+            {"index": i,
+             "start": float(s.get("start", s.get("start_time", 0)) or 0),
+             "end": float(s.get("end", s.get("end_time", 0)) or 0),
+             "label": ((s.get("label") or s.get("top_label")) if isinstance(
+                 s.get("label") or s.get("top_label"), str) else None),
+             "deterministic": s.get("deterministic"),
+             "evidence": "rea-video-native"}
+            for i, s in enumerate(bd.get("shots") or [])]
         return {
             "url": meta.get("url") or url,
             "metadata": meta,
-            "frames_analyzed": result["evidence"] == "frames_analyzed",
-            "evidence": result["evidence"],
+            "frames_analyzed": frames_ok,
+            "evidence": result.get("evidence", "metadata_only"),
             "analysis": {
                 "provenance": result["provenance"],
-                "tool": result["tool"],
-                "tool_version": result["tool_version"],
-                "observed_at": result["observed_at"],
+                "provider": result.get("provider"),
+                "engine": result.get("engine"),
+                "tool": result.get("tool"),
+                "tool_version": result.get("tool_version"),
+                "observed_at": result.get("observed_at"),
                 "file_sha256": result["file_sha256"],
-                "shot_count": result["shot_count"],
-                "shots": result["shots"],
-                "audio": result.get("audio"),
-                "subtitles": result.get("subtitles"),
-                "videomd": mi.render_videomd(result),
+                "verdict": summary.get("verdict"),
+                "production_mix": summary.get("production_mix"),
+                "shot_count": len(shots),
+                "shots": shots,
+                "breakdown_summary": summary,
+                "videomd_path": result.get("videomd_path"),
                 "note": result.get("note"),
             },
         }

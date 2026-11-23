@@ -72,7 +72,7 @@ def test_media_provider_goes_through_adapter_only():
     calls = [n.func.attr if isinstance(n.func, ast.Attribute) else
              getattr(n.func, "id", "")
              for n in ast.walk(tree) if isinstance(n, ast.Call)]
-    assert "analyze" in calls  # phai goi mi.analyze
+    assert "analyze_native" in calls  # phai goi native provider
     assert "cv2" not in src and "rea_video" not in src
     # subprocess trong provider chi duoc phep goi yt-dlp (lay media),
     # khong duoc goi ffmpeg/ffprobe truc tiep (phan tich).

@@ -215,18 +215,22 @@ class LocalEngine:
 
     # -- W1: analyze step (opt-in, read-only, khong dung 8 step cu) --
     def analyze_step(self, video_path: str, work_dir: Path) -> dict:
-        """Chay media_intel.analyze len video, luu analysis.json + VIDEO.md.
+        """Chay media_intel.analyze_native (rea-video goc) len video.
 
         Chi doc + viet vao work_dir rieng. Khong sua STEPS cu; caller goi
-        rieng khi can (Studio muon biet shot/OCR/beat truoc khi dub).
+        rieng khi can. Loi/thieu provider -> ANALYSIS_FAILED/PROVIDER_*
+        (KHONG fallback ffmpeg-native o production).
         """
         from miro import media_intel as mi
         out = Path(work_dir) / "analysis"
-        result = mi.analyze(video_path, out)
-        return {"analysis_path": str(out / "analysis.json"),
-                "videomd_path": str(out / "VIDEO.md"),
-                "shots": result["shots"],
+        result = mi.analyze_native(video_path, out)
+        bd = result.get("breakdown") or {}
+        shots = (bd.get("shots") or []) if isinstance(bd, dict) else []
+        return {"analysis_path": str(out / "breakdown.json"),
+                "videomd_path": result.get("videomd_path"),
+                "shots": shots,
                 "evidence": result["evidence"],
+                "provider": result.get("provider"),
                 "file_sha256": result["file_sha256"]}
 
     # -- stt: faster-whisper khi co model, fallback VAD cu --

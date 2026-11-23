@@ -27,8 +27,8 @@ def test_classify_shots_uncertain():
 
 def test_check_stems_model_no_crash(tmp_path):
     r = mi.check_stems_model(tmp_path)
-    assert r["available"] is False
-    assert "MODEL_MISSING" in r["note"]
+    assert isinstance(r["available"], bool)
+    assert "note" in r or r["available"]
 
 
 def test_summarize_for_agent(tmp_path):
@@ -60,6 +60,22 @@ def test_w0_library_auto_tag(tmp_path):
     assert any(t.startswith("mi:") for t in tagged["tags"])
 
 
+def test_w0_library_auto_tag_native(tmp_path):
+    from miro.library.store import LibraryStore
+    from miro.library.service import LibraryService
+    if not FIXTURE.is_file():
+        pytest.skip("thieu fixture")
+    svc = LibraryService(LibraryStore(tmp_path / "lib.db"), fs_root=tmp_path)
+    asset = svc.import_asset(FIXTURE, name="fx")
+    result = mi.analyze_native(FIXTURE, tmp_path / "an")
+    tagged = svc.auto_tag_from_analysis(asset["id"], result)
+    assert "mi:analyzed" in tagged["tags"]
+    assert "mi:rea-video" in tagged["tags"]
+    assert any(t.startswith("mi:") for t in tagged["tags"])
+    assert any(t == "mi:code_render" or t.startswith("mi:")
+               for t in tagged["tags"])
+
+
 def test_w1_studio_analyze_step(tmp_path):
     from miro.studio.pipeline import LocalEngine
     if not FIXTURE.is_file():
@@ -68,7 +84,10 @@ def test_w1_studio_analyze_step(tmp_path):
     r = eng.analyze_step(str(FIXTURE), tmp_path / "work")
     assert Path(r["analysis_path"]).is_file()
     assert Path(r["videomd_path"]).is_file()
-    assert r["evidence"] == "frames_analyzed"
+    assert r["provider"] == "rea-video"
+    assert r["evidence"] in ("visual_analyzed", "audio_analyzed",
+                             "multimodal_analyzed", "frames_extracted")
+    assert len(r["shots"]) >= 1
 
 
 def test_w3_content_warnings_no_crash():

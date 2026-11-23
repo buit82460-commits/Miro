@@ -225,18 +225,39 @@ class LibraryService:
         """
         asset = self._require(asset_id)
         tags: set[str] = set()
-        for shot in (analysis or {}).get("shots") or []:
-            label = str(shot.get("label") or "").strip()
+        data = analysis or {}
+        bd = data.get("breakdown") if isinstance(
+            data.get("breakdown"), dict) else {}
+        bd_shots = bd.get("shots") if isinstance(
+            bd.get("shots"), list) else []
+        shots = data.get("shots") or bd_shots or []
+        for shot in shots:
+            det = shot.get("deterministic") or {}
+            probs = det.get("probs") or {}
+            if probs:
+                top_label = max(probs.items(), key=lambda kv: kv[1])[0]
+                label = str(top_label).strip()
+            else:
+                label = str(shot.get("label") or "").strip()
             if label:
                 tags.add(f"mi:{label}")
                 if shot.get("uncertain"):
                     tags.add(f"mi:{label}:uncertain")
-        audio = (analysis or {}).get("audio") or {}
-        if audio.get("has_audio"):
+        summary = bd.get("summary") if isinstance(
+            bd.get("summary"), dict) else {}
+        for mix in summary.get("production_mix") or []:
+            mix_label = str(mix.get("label") or "").strip()
+            if mix_label:
+                tags.add(f"mi:{mix_label}")
+        audio = data.get("audio") or {}
+        if audio.get("has_audio") or data.get("evidence") in (
+                "audio_analyzed", "multimodal_analyzed"):
             tags.add("mi:has-audio")
             if audio.get("tempo_bpm"):
                 tags.add(f"mi:tempo-{int(round(float(audio['tempo_bpm'])))}")
-        if (analysis or {}).get("subtitles"):
+        if data.get("subtitles"):
             tags.add("mi:has-subtitles")
+        if data.get("provider") == "rea-video":
+            tags.add("mi:rea-video")
         tags.add("mi:analyzed")
         return self.tag(asset_id, sorted(tags))
