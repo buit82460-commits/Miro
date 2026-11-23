@@ -221,4 +221,112 @@ def deny_direct_browser(tool_name: str) -> None:
     """Runtime từ chối đường trực tiếp ngoài Gateway."""
     raise RegistryError(
         f"BYPASS_DENIED: '{tool_name}' truc tiep bi cam; di qua Browser "
-        "Gateway (read_via_eye/write_via_adapter) + eye collector.")
+        "Gateway (read_via_eye/read_actor_via_bridge/read_video_via_bridge"
+        "/write_via_adapter) + eye collector.")
+
+
+async def read_actor_via_bridge(session_id: str, token: str, *,
+                                instance_id: str, tab_id: int,
+                                live_origin: str, url: str | None = None,
+                                grant_epoch=None, base: str = "",
+                                timeout: int = 30) -> dict:
+    """Production READ actor qua Bridge (không CDP/không Page).
+
+    Bridge observation (actor-login) -> evaluate_actor_signals -> Evidence
+    rea-eye toi da ACTOR_CLAIMED. Fail-closed moi diem binding.
+    """
+    from miro.browser.bridge_transport import (
+        BRIDGE_BASE, read_via_bridge as _read_bridge)
+    from miro.eye import evaluate_actor_signals
+
+    r = await _read_bridge(
+        session_id, token, instance_id=instance_id, tab_id=tab_id,
+        live_origin=live_origin, spec="actor-login",
+        base=base or BRIDGE_BASE, timeout=timeout,
+        grant_epoch=grant_epoch, url=url)
+    if not isinstance(r, dict) or not r.get("ok"):
+        return r if isinstance(r, dict) else {
+            "ok": False, "error": "BRIDGE_READ_FAILED"}
+    obs = r.get("observation") or {}
+    data = obs.get("data") if isinstance(obs.get("data"), dict) else {}
+    sig = evaluate_actor_signals(data)
+    if not sig.get("ok"):
+        return {"ok": False, "error": str(sig.get("error") or "ACTOR_UNVERIFIED"),
+                "missing": sig.get("missing", []),
+                "status": sig.get("status", "ACTOR_CLAIMED_FAILED")}
+    return {"ok": True,
+            "evidence": {"url": str((data or {}).get("url") or url or ""),
+                         "tab_id": str(tab_id),
+                         "instance_id": str(instance_id),
+                         "actor": str(sig.get("actor") or ""),
+                         "actor_status": "ACTOR_CLAIMED",
+                         "observed_at": obs.get("observed_at") or _now(),
+                         "record": {"observation": data},
+                         "provenance": "rea-eye",
+                         "platform": "tiktok",
+                         "lease": {"instance_id": str(instance_id),
+                                   "tab_id": int(tab_id),
+                                   "url": url,
+                                   "grant_epoch": obs.get("grant_epoch", 0)}},
+            "observation": obs}
+
+
+async def read_video_via_bridge(session_id: str, token: str, *,
+                                instance_id: str, tab_id: int,
+                                live_origin: str, url: str | None = None,
+                                grant_epoch=None, base: str = "",
+                                timeout: int = 30,
+                                expected_aweme: str = "") -> dict:
+    """Production READ video-identity qua Bridge (không CDP/không Page).
+
+    Validate: aweme_id tu URL that khop expected (neu task yeu cau);
+    has_video phai co; caption chi preview. Tra Evidence rea-eye
+    (video identity, khong phai actor verify).
+    """
+    import re
+    from miro.browser.bridge_transport import (
+        BRIDGE_BASE, read_via_bridge as _read_bridge)
+
+    r = await _read_bridge(
+        session_id, token, instance_id=instance_id, tab_id=tab_id,
+        live_origin=live_origin, spec="video-identity",
+        base=base or BRIDGE_BASE, timeout=timeout,
+        grant_epoch=grant_epoch, url=url)
+    if not isinstance(r, dict) or not r.get("ok"):
+        return r if isinstance(r, dict) else {
+            "ok": False, "error": "BRIDGE_READ_FAILED"}
+    obs = r.get("observation") or {}
+    data = obs.get("data") if isinstance(obs.get("data"), dict) else {}
+    page_url = str(data.get("url") or "")
+    aweme = str(data.get("aweme_id") or "")
+    if not aweme:
+        hit = re.search(r"/video/(\d+)", page_url or "")
+        if hit:
+            aweme = hit.group(1)
+    if not aweme or not re.match(r"^\d{5,30}$", aweme):
+        return {"ok": False, "error": "VIDEO_IDENTITY_MISSING"}
+    if not str(data.get("has_video") or ""):
+        return {"ok": False, "error": "VIDEO_ELEMENT_MISSING"}
+    if expected_aweme and aweme != str(expected_aweme):
+        return {"ok": False, "error": "VIDEO_IDENTITY_MISMATCH"}
+    if url:
+        from miro.browser.runtime import _urls_same_destination
+        if not _urls_same_destination(page_url, str(url)):
+            return {"ok": False, "error": "OBSERVED_URL_MISMATCH"}
+    return {"ok": True,
+            "evidence": {"url": page_url,
+                         "tab_id": str(tab_id),
+                         "instance_id": str(instance_id),
+                         "aweme_id": aweme,
+                         "caption_preview": str(
+                             data.get("caption_preview") or "")[:300],
+                         "has_video": True,
+                         "observed_at": obs.get("observed_at") or _now(),
+                         "record": {"observation": data},
+                         "provenance": "rea-eye",
+                         "platform": "tiktok",
+                         "lease": {"instance_id": str(instance_id),
+                                   "tab_id": int(tab_id),
+                                   "url": url or page_url,
+                                   "grant_epoch": obs.get("grant_epoch", 0)}},
+            "observation": obs}

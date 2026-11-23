@@ -91,6 +91,19 @@ class Handler(BaseHTTPRequestHandler):
                      "av": v.availability}
                     for k, v in sorted(REGISTRY.tabs.items())]
             return self._send(200, {"ok": True, "tabs": tabs})
+        if self.path == "/observations":
+            # Production transport poll: observation untrusted moi nhat.
+            items = []
+            for (inst, tab, seq), ob in sorted(OBSERVATIONS.items()):
+                items.append({"instance_id": inst, "tab_id": tab,
+                              "seq": seq, "spec": ob.get("spec"),
+                              "live_origin": ob.get("live_origin"),
+                              "grant_epoch": ob.get("grant_seq", 0),
+                              "data": ob.get("data"),
+                              "untrusted": True,
+                              "observed_at": ob.get("observed_at")})
+            return self._send(200, {"ok": True,
+                                    "observations": items[-50:]})
         return self._send(404, {"ok": False, "error": "NOT_FOUND"})
 
     def do_POST(self):
@@ -246,6 +259,7 @@ class Handler(BaseHTTPRequestHandler):
             fields = _SPEC_FIELDS.get(spec["spec"], ("title", "url"))
             OBSERVATIONS[(s["instance"], tab_id, rseq)] = {
                 "spec": spec["spec"], "live_origin": live_origin,
+                "grant_seq": GRANTS.epoch(s["instance"], tab_id),
                 "data": {k: str(payload.get(k) or "")[:2000]
                          for k in fields},
                 "untrusted": True,

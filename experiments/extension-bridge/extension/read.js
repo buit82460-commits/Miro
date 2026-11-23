@@ -46,6 +46,25 @@ const READ_FUNCS = {
       has_upload_link: upload ? "1" : "",
     };
   },
+  // Video identity TikTok: aweme_id tu URL that + caption preview hep.
+  // KHONG caption day du/comment — chi du de REA/Eye xac dinh dung video.
+  "video-identity": () => {
+    const url = location.href || "";
+    let aweme = "";
+    const m = url.match(/\/video\/(\d+)/);
+    if (m) aweme = m[1];
+    const cap = document.querySelector(
+      '[data-e2e="browse-video-desc"], h1[data-e2e="video-desc"], '
+      + '[data-e2e="video-desc"]');
+    const hasVideo = !!document.querySelector("video");
+    return {
+      title: document.title,
+      url: url,
+      aweme_id: aweme,
+      caption_preview: ((cap || {}).innerText || "").slice(0, 300),
+      has_video: hasVideo ? "1" : "",
+    };
+  },
 };
 
 async function readFixed(tabId, spec) {

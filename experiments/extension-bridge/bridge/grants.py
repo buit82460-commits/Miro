@@ -20,7 +20,8 @@ import time
 
 GRANT_TTL_S = 120
 READ_CAPABILITY = "read"
-READ_SPECS = ("title", "meta", "text-limited", "actor-login")
+READ_SPECS = ("title", "meta", "text-limited", "actor-login",
+              "video-identity")
 ALLOWED_ORIGINS = ("https://www.tiktok.com",)
 
 # Field cho phep theo spec (schema co dinh, cat 2000). actor-login chi doc
@@ -31,6 +32,8 @@ SPEC_FIELDS = {
     "text-limited": ("title", "url", "text"),
     "actor-login": ("title", "url", "has_login_button", "profile_href",
                     "has_upload_link"),
+    "video-identity": ("title", "url", "aweme_id", "caption_preview",
+                       "has_video"),
 }
 
 
