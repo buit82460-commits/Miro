@@ -135,6 +135,68 @@ async def tiktok_profile_record(page) -> dict:
     return {"handle": handle, "name": name, "url": url, "counts": counts}
 
 
+def evaluate_actor_signals(data):
+    """Pure evaluator actor TikTok (dung chung native Page + Bridge).
+
+    Tra {"ok": True, "actor", "status": "ACTOR_CLAIMED"} neu DU 3 tin hieu
+    tren CUNG 1 DOM observation; nguoc lai ACTOR_UNVERIFIED + missing.
+    KHONG tin title/profile_href don le. CLAIMED != VERIFIED (VERIFIED chi
+    Gateway gan sau kenh doc lap).
+    """
+    import re
+    data = data or {}
+    missing = []
+    if str(data.get("has_login_button") or "") != "":
+        missing.append("has_login_button")
+    href = str(data.get("profile_href") or "")
+    tail = href[2:].split("/")[0].split("?")[0] \
+        if href.startswith("/@") else ""
+    if not href.startswith("/@") or len(href) < 3 or not re.match(
+            r"^[\w.\-]{2,24}$", tail or ""):
+        missing.append("profile_href")
+    if str(data.get("has_upload_link") or "") != "1":
+        missing.append("has_upload_link")
+    if missing:
+        return {"ok": False, "error": "ACTOR_UNVERIFIED",
+                "missing": missing, "status": "ACTOR_CLAIMED_FAILED"}
+    return {"ok": True, "actor": "@" + tail, "status": "ACTOR_CLAIMED"}
+
+
+async def tiktok_actor_record(page) -> dict:
+    """Eye actor TikTok (native Page): thu thap TikTokActorObservation
+    roi goi evaluate_actor_signals. KHONG tin title/profile_href don le."""
+    obs = {"title": "", "url": "", "has_login_button": "1",
+           "profile_href": "", "has_upload_link": ""}
+    with suppress(Exception):
+        obs["url"] = str(page.url or "")
+    with suppress(Exception):
+        obs["title"] = str(await page.title() or "")
+    with suppress(Exception):
+        loc = page.locator(
+            '[data-e2e="top-login-button"], [data-e2e="nav-login-button"]')
+        first = getattr(loc, "first", loc)
+        obs["has_login_button"] = "" if await first.count() == 0 else "1"
+    with suppress(Exception):
+        import re
+        links = await page.locator('a[href^="/@"]').all()
+        for a in links or []:
+            with suppress(Exception):
+                href = await a.get_attribute("href") or ""
+                tail = href[2:].split("/")[0].split("?")[0]
+                if href.startswith("/@") and re.match(
+                        r"^[\w.\-]{2,24}$", tail):
+                    obs["profile_href"] = href
+                    break
+    with suppress(Exception):
+        loc = page.locator(
+            '[data-e2e="upload-icon"], a[href^="/upload"]')
+        first = getattr(loc, "first", loc)
+        obs["has_upload_link"] = "1" if await first.count() > 0 else ""
+    res = evaluate_actor_signals(obs)
+    res["observation"] = obs
+    return res
+
+
 # ---- Threads ----
 
 async def threads_profile_record(page, owner: str = "") -> dict:
@@ -290,7 +352,7 @@ EYE_COVERAGE = {
                  "ack_state (toast/network/composer-closed)",
                  "tab_state (profile/verify/navigate/read)"],
     "tiktok": ["tiktok_comment_records", "tiktok_video_record",
-               "tiktok_profile_record",
+               "tiktok_profile_record", "tiktok_actor_record (actor-login)",
                "engage_records (like/repost/follow/view + receipt)",
                "composer_state (composer/post_btn/upload)",
                "ack_state (toast/network/composer-closed)",
