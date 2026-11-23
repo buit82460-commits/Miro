@@ -130,3 +130,25 @@
   `/research/read` chỉ là page text extraction — ghi nhận, không chạm.
 - LOW-4 guard CI dynamic-import/MCP: thuộc harness allowlist ngoài repo.
 - LOW-1 tên branch: đang `main`, không tự đổi branch khi chưa duyệt.
+
+## Multimodal Agent E2E (commit `72c1537`, HEAD sau A `6067264`)
+
+- Orchestration: `miro/research/multimodal.py` —
+  `run_multimodal_task` (1 video) + `run_multimodal_batch` (tuan tu,
+  loi 1 video khong dung loat) + `verify_media_url_against_eye`
+  (chong spoofing cross-boundary) + `build_agent_text` (Agent tieu thu
+  that qua `summarize_for_agent` khi co breakdown day du).
+- Call path E2E: Agent → `gateway.read_via_eye` (eye collector) →
+  doi chieu URL eye vs media → `media_provider.analyze_ephemeral`
+  (tai temp → `mi.analyze_native --no-vlm` → `check_media_evidence` →
+  temp tu xoa) → `summarize_for_agent` → Agent Answer.
+- Tái dùng `analyze_ephemeral` + native rea-video, không engine mới,
+  không browser tool mới, không bypass; không Browser WRITE; không sửa
+  Gateway/Eye/Bridge (Phiên A).
+- Tests `test_multimodal_agent.py` M1–M12 PASS (12/12): E2E native that
+  (evidence `multimodal_analyzed`, sha `1a5ed6d1…`, 1 shot code_render
+  0.61, 27.6s) + batch partial + stale/revoke/wrong-tab/media
+  failure/timeout/spoofing/media-not-evidence + ephemeral cleanup
+  (temp xoa sach) + batch partial temp sach.
+- Guards PASS: `test_no_direct_browser` + `test_no_direct_media`
+  + remediation 7/7. Không tuyên bố FULL PASS ghép log riêng lẻ.
