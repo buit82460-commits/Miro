@@ -625,6 +625,47 @@ def speech_native_status() -> dict:
             "note": "sherpa-onnx co san trong venv"}
 
 
+def remake_plan_native(video_path: str | Path, out_dir: str | Path,
+                       timeout: int = 900) -> dict:
+    """C5: remake planning that (intent.yaml + code spec, KHONG generation).
+
+    Decompose --no-vlm + plan + code-remake --no-render --no-compare.
+    Generation/render tra phi: BLOCKED khi chua co approval (cost gate).
+    """
+    result = analyze_native(video_path, out_dir, timeout=timeout)
+    out = Path(out_dir)
+    _run_native_cli(["plan", str(out)], timeout=timeout)
+    _run_native_cli(
+        ["code-remake", str(out), "--no-render", "--no-compare"],
+        timeout=timeout)
+    intent = out / "remake" / "intent.yaml"
+    spec = out / "code" / "spec.json"
+    return {"provenance": PROVENANCE, "provider": PROVIDER_NATIVE,
+            "tool": TOOL, "file_sha256": result["file_sha256"],
+            "observed_at": result["observed_at"],
+            "engine": result.get("engine"),
+            "intent_path": str(intent) if intent.is_file() else None,
+            "spec_path": str(spec) if spec.is_file() else None,
+            "generated": False,
+            "evidence": result.get("evidence"),
+            "note": ("remake planning that (intent + code spec); generation "
+                     "chi khi co approval rieng, mac dinh BLOCKED; " +
+                     str(result.get("note")))}
+
+
+def generation_gate_status(approval: dict | None = None) -> dict:
+    """C5: cost gate cho generation/render tra phi (DENY mac dinh)."""
+    from miro.media_intel import require_generation_approval as gate
+    try:
+        gate(approval)
+        return {"status": "APPROVED",
+                "note": "co approval hop le cua dung task"}
+    except Exception as exc:
+        return {"status": "DENIED",
+                "reason": f"{type(exc).__name__}: {exc}"[:200],
+                "note": "mac dinh DENY; can approval dung task"}
+
+
 def moments_native(video_path: str | Path, out_dir: str | Path,
                    timeout: int = 900) -> dict:
     """C4: moments/reveal/twist/climax/highlights that (JEV, khong auto-VLM).
