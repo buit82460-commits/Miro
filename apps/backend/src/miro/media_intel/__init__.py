@@ -655,9 +655,8 @@ def remake_plan_native(video_path: str | Path, out_dir: str | Path,
 
 def generation_gate_status(approval: dict | None = None) -> dict:
     """C5: cost gate cho generation/render tra phi (DENY mac dinh)."""
-    from miro.media_intel import require_generation_approval as gate
     try:
-        gate(approval)
+        require_generation_approval(approval)
         return {"status": "APPROVED",
                 "note": "co approval hop le cua dung task"}
     except Exception as exc:
@@ -873,6 +872,105 @@ def review_flow_status(video_path: str | Path, out_dir: str | Path,
             "evidence": result.get("evidence"),
             "note": ("review tasks that; VLM chi khi co approval rieng "
                      "(cost gate DENY mac dinh); " + str(result.get("note")))}
+
+
+def _corrections_path(root: str | Path | None = None) -> Path:
+    base = Path(root) if root else workspace_root()
+    base.mkdir(parents=True, exist_ok=True)
+    return base / "corrections.jsonl"
+
+
+def record_correction(entry: dict, root: str | Path | None = None) -> dict:
+    """C6: luu correction memory phia Miro (jsonl, khong ghi ~/.rea-video)."""
+    if not isinstance(entry, dict) or not entry.get("file_sha256"):
+        raise ValueError("CORRECTION_INVALID: can file_sha256 + label dung")
+    rec = {**entry, "recorded_at": time.time(), "tool": TOOL,
+           "provenance": PROVENANCE}
+    path = _corrections_path(root)
+    with path.open("a", encoding="utf-8") as fh:
+        fh.write(json.dumps(rec, ensure_ascii=False) + "\n")
+    return {"ok": True, "path": str(path), "record": rec}
+
+
+def apply_correction_native(out_dir: str | Path, label: str,
+                            shots: str = "all", timeout: int = 900) -> dict:
+    """C6: apply correction that qua rea-video correct CLI (E2E evidence)."""
+    out = Path(out_dir)
+    if not (out / "breakdown.json").is_file():
+        raise FileNotFoundError("thieu breakdown.json trong out_dir")
+    proc = _run_native_cli(
+        ["correct", str(out), "--shots", shots, "--label", label],
+        timeout=timeout)
+    bd = json.loads((out / "breakdown.json").read_text(encoding="utf-8"))
+    return {"provenance": PROVENANCE, "provider": PROVIDER_NATIVE,
+            "tool": TOOL, "observed_at": time.time(),
+            "engine": native_engine_info(),
+            "label_applied": label, "shots": shots,
+            "corrections": bd.get("corrections")
+            if isinstance(bd, dict) else None,
+            "stdout": (proc.stdout or "")[:500],
+            "evidence": "metadata_only",
+            "note": "correction that qua rea-video correct CLI"}
+
+
+def evaluate_capabilities(fixtures: list[str | Path],
+                          out_root: str | Path,
+                          timeout: int = 900) -> dict:
+    """C6: benchmark E2E 20/20 tren fixture that (khong mock ket qua).
+
+    Moi fixture chay full C1-C5 wrappers that; tong hop PASS/BLOCKED.
+    """
+    root = Path(out_root)
+    root.mkdir(parents=True, exist_ok=True)
+    rows: list[dict] = []
+    for i, fx in enumerate(fixtures or []):
+        fx = Path(fx)
+        base = root / f"eval{i}"
+        row: dict = {"fixture": str(fx), "caps": {}}
+        if not fx.is_file():
+            row["caps"]["available"] = "SKIPPED (thieu file)"
+            rows.append(row)
+            continue
+        try:
+            t = transitions_native(fx, base / "t", timeout=timeout)
+            row["caps"]["transitions"] = f"PASS ({t['shot_count']} shots)"
+        except Exception as exc:
+            row["caps"]["transitions"] = f"FAILED: {exc}"[:150]
+        try:
+            a = audio_native(fx, base / "a", timeout=timeout)
+            row["caps"]["audio"] = (
+                f"PASS (voice={a['audio'].get('voice', {}).get('present')})")
+        except Exception as exc:
+            row["caps"]["audio"] = f"FAILED: {exc}"[:150]
+        try:
+            c = classify_native(fx, base / "c", timeout=timeout)
+            top = c["labels"][0]["top_label"] if c["labels"] else None
+            row["caps"]["classify"] = f"PASS ({top})"
+        except Exception as exc:
+            row["caps"]["classify"] = f"FAILED: {exc}"[:150]
+        try:
+            m = moments_native(fx, base / "m", timeout=timeout)
+            row["caps"]["moments"] = (
+                "PASS" if isinstance(m["moments"], dict) else "FAILED")
+        except Exception as exc:
+            row["caps"]["moments"] = f"FAILED: {exc}"[:150]
+        st = speech_native_status()
+        row["caps"]["stt_diarization"] = (
+            "BLOCKED (MODEL_MISSING)" if st["status"] == "BLOCKED"
+            else "READY")
+        g = generation_gate_status(None)
+        row["caps"]["generation"] = (
+            "DENIED (cost gate)" if g["status"] == "DENIED" else "APPROVED")
+        rows.append(row)
+    passed = sum(1 for r in rows for v in r.get("caps", {}).values()
+                 if str(v).startswith("PASS"))
+    return {"provenance": PROVENANCE, "provider": PROVIDER_NATIVE,
+            "tool": TOOL, "observed_at": time.time(),
+            "engine": native_engine_info(),
+            "rows": rows, "total_pass": passed,
+            "evidence": "metadata_only",
+            "note": "benchmark E2E that (C1-C5 wrappers), STT/generation "
+                    "BLOCKED/DENIED theo policy"}
 
 
 # ------------------------------------------------- runtime deny (lop 3) ----
