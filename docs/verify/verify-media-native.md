@@ -80,11 +80,25 @@
 
 ## Test
 
-- Nhóm media: **32 passed** (native 4 + recovery 5 + P0/P1/P2/W-R1/lock).
+- Nhóm media: **55 passed** (native 4 + recovery 5 + C1 4 + C2 5 + C3 5 +
+  C4 3 + C5 3 + C6 3 + P0/P1/P2/W-R1/lock).
 - Full suite: chạy sau commit này, xem kết quả bên dưới.
 - Lỗi desktop `test_desktop_route_cli_unavailable_fail_closed`:
   VERIFIED tồn tại tại baseline `36c8b9a` (worktree detach, cùng
-  AttributeError `backend.py:117`), không phải hồi quy native.
+  AttributeError `backend.py:117`), không phải hồi quy.
+
+## Milestone C1–C6 (hoàn thành, commit riêng từng mốc)
+
+- C1 (`e8728c0`): transitions/survey/videomd native thật (cut 1.0).
+- C2 (`53208db`): OCR chữ cháy + HPSS audio + UVR stems thật;
+  STT/diarization BLOCKED MODEL_MISSING (sherpa-onnx ~500MB+ cần approval).
+- C3 (`6ef4520`): 11-label probs đầy đủ + aspects + summary + review JEV
+  (không auto-VLM).
+- C4 (`18b06a3`): moments JEV + multi-video compare code-computed.
+- C5 (`9333920`): remake planning thật (intent + code spec,
+  generated=False) + generation gate DENY mặc định.
+- C6 (`f9c761a`): correction memory Miro-side + correct CLI thật +
+  evaluate E2E (C1-C5 PASS, STT BLOCKED, generation DENIED).
 
 ## Contract bàn giao cho D/E/F (khóa)
 
