@@ -4,8 +4,8 @@
   "version": "0.1.0",
   "description": "Read-only tab discovery for Miro experiments. No DOM read, no write.",
   "permissions": ["tabs", "storage", "scripting", "activeTab"],
-  "optional_host_permissions": ["https://www.tiktok.com/*"],
-  "host_permissions": ["http://127.0.0.1:18767/*"],
+  "host_permissions": ["http://127.0.0.1:18767/*",
+                       "https://www.tiktok.com/*"],
   "background": {
     "service_worker": "background.js"
   },

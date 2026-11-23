@@ -73,6 +73,11 @@ async function readFixed(tabId, spec) {
   const results = await chrome.scripting.executeScript({
     target: { tabId },
     func: fn,
+  }).catch((e) => {
+    const msg = (chrome.runtime && chrome.runtime.lastError
+      && chrome.runtime.lastError.message) || (e && e.message) || e;
+    console.log("[miro-bridge] executeScript denied:", String(msg));
+    throw new Error("SCRIPTING_DENIED: " + String(msg));
   });
   return (results && results[0] && results[0].result) || {};
 }
