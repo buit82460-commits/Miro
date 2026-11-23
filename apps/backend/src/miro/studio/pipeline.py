@@ -213,6 +213,22 @@ class LocalEngine:
                 raise PipelineError(f"AUDIO_FAILED: {result.stderr[-300:]}")
         return {"stt_wav": str(stt_wav), "orig_wav": str(orig_wav)}
 
+    # -- W1: analyze step (opt-in, read-only, khong dung 8 step cu) --
+    def analyze_step(self, video_path: str, work_dir: Path) -> dict:
+        """Chay media_intel.analyze len video, luu analysis.json + VIDEO.md.
+
+        Chi doc + viet vao work_dir rieng. Khong sua STEPS cu; caller goi
+        rieng khi can (Studio muon biet shot/OCR/beat truoc khi dub).
+        """
+        from miro import media_intel as mi
+        out = Path(work_dir) / "analysis"
+        result = mi.analyze(video_path, out)
+        return {"analysis_path": str(out / "analysis.json"),
+                "videomd_path": str(out / "VIDEO.md"),
+                "shots": result["shots"],
+                "evidence": result["evidence"],
+                "file_sha256": result["file_sha256"]}
+
     # -- stt: faster-whisper khi co model, fallback VAD cu --
     def transcribe(self, video_id: str, stt_wav: str, work_dir: Path,
                    language: str = "auto", progress_cb=None,

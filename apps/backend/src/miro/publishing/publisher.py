@@ -245,6 +245,30 @@ def check_video(path: Path) -> list:
     return problems
 
 
+def content_warnings(path: Path) -> list[str]:
+    """W3: canh bao noi dung (KHONG chan Post). Doc nhe metadata qua
+    media_intel.probe; loi -> [] (gate cu van quyet dinh)."""
+    try:
+        from miro import media_intel as mi
+        meta = mi.probe(path)
+    except Exception:
+        return []
+    warns: list[str] = []
+    for st in meta.get("streams") or []:
+        tags = st.get("tags") or {}
+        blob = " ".join(str(v) for v in tags.values()).lower()
+        if "aigc" in blob or "ai generat" in blob:
+            warns.append("AIGC_HINT: metadata co dau hieu AI-generated")
+            break
+    fmt = meta.get("format") or {}
+    try:
+        if float(fmt.get("duration") or 0) == 0:
+            warns.append("NO_DURATION: khong doc duoc duration")
+    except (TypeError, ValueError):
+        pass
+    return warns
+
+
 def media_for(item: dict) -> Path | None:
     """Optional single media attach (image/video). Port tu legacy :171-185."""
     path = item.get("media_path") or item.get("local_path")

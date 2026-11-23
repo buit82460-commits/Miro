@@ -228,3 +228,27 @@
 ### Kết luận
 
 **W-R1 DAT** (Agent/Research dung duoc rea-video, temp + don sach, qua du 3 lop khoa). **Chua push.**
+
+## Verify P2 + W0/W1/P3/W3 — full tich hop (2026-11-23)
+
+- P2 `classify_shots()` heuristic (khong model): static_hold/still_motion/
+  live_action mac dinh + `uncertain: True` + confidence; 3 label mu pixel
+  (anim_2d/stop_motion/film_footage) KHONG BAO GIO doan.
+- P2 `check_stems_model()`: onnxruntime CPU da co san; thieu model ->
+  MODEL_MISSING + huong dan cache $REA_VIDEO_MODELS (khong auto-download,
+  khong nhet repo). torch vang mat -> Demucs khong chay -> dung ly do
+  can UVR fallback.
+- W0 `LibraryService.auto_tag_from_analysis()`: tag `mi:*` (label,
+  `:uncertain`, has-audio, tempo, has-subtitles, analyzed); khong xoa
+  tag tay.
+- W1 `LocalEngine.analyze_step()`: opt-in, read-only, luu analysis.json +
+  VIDEO.md; khong dung 8 STEPS cu.
+- P3 `summarize_for_agent()`: text gon cho Agent (<=4000 chars), chi format
+  evidence co san, KHONG goi VLM tra phi.
+- W3 `content_warnings()`: canh bao AIGC_HINT tu metadata (warn, KHONG chan
+  Post — gate cu van quyet dinh).
+- Test `test_media_intel_p2.py` (7) + full suite — **332 passed, 2 skipped**.
+
+### Kết luận
+
+**P2+W0/W1/P3/W3 DAT** (full tich hop, uncertainty + temp sach + warn khong chan). **Chua push.**

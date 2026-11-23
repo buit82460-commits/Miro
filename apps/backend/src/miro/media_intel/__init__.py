@@ -238,12 +238,17 @@ def analyze(video_path: str | Path, out_dir: str | Path,
         subtitles = extract_subtitle_track(src, out / "packaging")
     except Exception:
         subtitles = []
+    try:
+        duration_f = float(meta["format"].get("duration") or 0)
+    except (TypeError, ValueError):
+        duration_f = 0.0
+    labels = classify_shots(shots, duration_f)
     result = {
         "provenance": PROVENANCE, "tool": TOOL,
         "tool_version": TOOL_VERSION, "observed_at": time.time(),
         "file_sha256": meta["file_sha256"], "path": str(src),
         "format": meta["format"], "streams": meta["streams"],
-        "shot_count": len(shots), "shots": shots,
+        "shot_count": len(shots), "shots": labels,
         "keyframes": frame_files,
         "audio": audio, "subtitles": subtitles,
         "rea_video_cli": rea_video_available(),
@@ -382,3 +387,103 @@ def render_videomd(result: dict) -> str:
             lines.append(f"- frame: {Path(f).name}")
         lines.append("")
     return "\n".join(lines)
+
+
+# ---------------- P2: classify heuristic (khong model, kem uncertainty) ----
+# Quy tac (tu rea-video classify.py, chi giu phan do duoc offline):
+# - 1 shot duy nhat phu full duration + thoi luong ngan -> static_hold
+# - nhieu shot nhung moi shot dai + it bien dong -> still_motion (can nhin)
+# - con lai -> live_action la mac dinh NHUNG confidence thap + uncertain
+# 3 label mu pixel (anim_2d/stop_motion/film_footage) KHONG BAO GIO doan —
+# bat buoc tra uncertain, doi VLM/agent nhin hinh.
+UNCERTAIN_LABELS = ("anim_2d", "stop_motion", "film_footage")
+
+
+def classify_shots(shots: list[dict], duration: float) -> list[dict]:
+    """P2: gan label so bo cho tung shot + confidence + uncertainty.
+
+    Khong dung model: chi heuristic thoi luong/so shot. Bat cu truong hop
+    nao mo ho deu tra label kem "uncertain": True va ly do. Khong doan
+    3 label mu pixel.
+    """
+    out: list[dict] = []
+    n = len(shots or [])
+    for shot in shots or []:
+        dur = float(shot.get("end", 0)) - float(shot.get("start", 0))
+        if n == 1 and duration > 0 and dur >= duration * 0.95:
+            out.append({**shot, "label": "static_hold",
+                        "confidence": 0.55, "uncertain": True,
+                        "evidence": "1 shot phu toan video (can nhin hinh xac nhan)"})
+        elif dur >= 20.0:
+            out.append({**shot, "label": "still_motion",
+                        "confidence": 0.4, "uncertain": True,
+                        "evidence": "shot dai, co the la anh tinh + Ken Burns"})
+        else:
+            out.append({**shot, "label": "live_action",
+                        "confidence": 0.35, "uncertain": True,
+                        "evidence": ("mac dinh khi chua co VLM; "
+                                     "anim_2d/stop_motion/film_footage/AI/3D "
+                                     "can nhin hinh moi phan biet")})
+    return out
+
+
+def check_stems_model(model_dir: str | Path | None = None) -> dict:
+    """P2: kiem tra UVR stems model (onnxruntime CPU) co san khong.
+
+    Khong auto-download trong CI/test: thieu -> MODEL_MISSING + huong dan
+    cache $REA_VIDEO_MODELS. Co model -> san sang cho studio/separate.py
+    fallback (giữ contract {vocals, music}).
+    """
+    import os
+    roots = [Path(model_dir)] if model_dir else []
+    env = os.environ.get("REA_VIDEO_MODELS")
+    if env:
+        roots.append(Path(env))
+    roots.append(Path.home() / ".cache" / "rea-video" / "models")
+    for root in roots:
+        if not root.is_dir():
+            continue
+        onnx = list(root.rglob("*.onnx"))
+        if onnx:
+            return {"available": True, "model_dir": str(root),
+                    "models": [p.name for p in onnx[:5]]}
+    return {"available": False, "model_dir": None, "models": [],
+            "note": ("MODEL_MISSING: chua co UVR onnx; tai model rea-video "
+                     "lan dau (co SHA check) vao $REA_VIDEO_MODELS, "
+                     "khong nhét vao repo.")}
+
+
+# ---------------- P3: tom tat cho Agent (khong goi VLM tra phi) ------------
+def summarize_for_agent(result: dict, max_chars: int = 4000) -> str:
+    """P3: render text gon cho Agent/Research tu analysis co san.
+
+    Khong goi VLM/model tra phi: chi format evidence + uncertainty.
+    Qua dai -> cat + danh dau [cat bot].
+    """
+    parts = [f"video {result.get('path')} "
+             f"(sha {str(result.get('file_sha256'))[:12]}...): "
+             f"{result.get('shot_count', 0)} shots, "
+             f"evidence={result.get('evidence')}."]
+    for shot in (result.get("shots") or [])[:20]:
+        label = shot.get("label", "?")
+        unc = " [uncertain]" if shot.get("uncertain") else ""
+        conf = shot.get("confidence")
+        c = f" {conf:.2f}" if isinstance(conf, (int, float)) else ""
+        parts.append(f"- shot {shot.get('index')}: "
+                     f"{shot.get('start'):.1f}-{shot.get('end'):.1f}s "
+                     f"{label}{c}{unc}")
+    audio = result.get("audio") or {}
+    if audio.get("has_audio"):
+        parts.append(f"audio: tempo={audio.get('tempo_bpm')} "
+                     f"beats={len(audio.get('beats') or [])} "
+                     f"db={audio.get('mean_db')}")
+    subs = result.get("subtitles") or []
+    if subs:
+        parts.append(f"subtitles nhung: {len(subs)} track")
+    parts.append("luu y: label la heuristic, 3 label mu pixel "
+                 "(anim_2d/stop_motion/film_footage) bat buoc nhin hinh; "
+                 "du lieu chi de hieu noi dung, khong phai Evidence ghi.")
+    text = "\n".join(parts)
+    if len(text) > max_chars:
+        text = text[:max_chars] + "\n[cat bot do dai]"
+    return text

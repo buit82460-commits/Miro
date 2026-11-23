@@ -215,3 +215,28 @@ class LibraryService:
         if asset is None:
             raise KeyError(f"khong tim thay asset: {asset_id}")
         return asset
+
+    # ---- W0: auto-tag tu ket qua media_intel ----
+    def auto_tag_from_analysis(self, asset_id: str, analysis: dict) -> dict:
+        """Gan tag `mi:*` tu ket qua media_intel (label/provenance/tempo).
+
+        Khong doan: label nao uncertain van tag kem `:uncertain`.
+        Khong xoa tag tay co san.
+        """
+        asset = self._require(asset_id)
+        tags: set[str] = set()
+        for shot in (analysis or {}).get("shots") or []:
+            label = str(shot.get("label") or "").strip()
+            if label:
+                tags.add(f"mi:{label}")
+                if shot.get("uncertain"):
+                    tags.add(f"mi:{label}:uncertain")
+        audio = (analysis or {}).get("audio") or {}
+        if audio.get("has_audio"):
+            tags.add("mi:has-audio")
+            if audio.get("tempo_bpm"):
+                tags.add(f"mi:tempo-{int(round(float(audio['tempo_bpm'])))}")
+        if (analysis or {}).get("subtitles"):
+            tags.add("mi:has-subtitles")
+        tags.add("mi:analyzed")
+        return self.tag(asset_id, sorted(tags))
