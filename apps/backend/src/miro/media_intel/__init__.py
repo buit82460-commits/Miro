@@ -625,6 +625,78 @@ def speech_native_status() -> dict:
             "note": "sherpa-onnx co san trong venv"}
 
 
+def moments_native(video_path: str | Path, out_dir: str | Path,
+                   timeout: int = 900) -> dict:
+    """C4: moments/reveal/twist/climax/highlights that (JEV, khong auto-VLM).
+
+    Decompose --no-vlm that + moments --no-vlm that. measured (cuts/sudden)
+    tu pixel; reveal/twist can agent nhin hinh hoac VLM co approval.
+    """
+    result = analyze_native(video_path, out_dir, timeout=timeout)
+    out = Path(out_dir)
+    proc = _run_native_cli(
+        ["moments", str(out), "--no-vlm"], timeout=timeout)
+    bd = result.get("breakdown") or {}
+    moments_dir = out / "moments"
+    clips: list[str] = []
+    if moments_dir.is_dir():
+        clips = sorted(str(p) for p in moments_dir.rglob("*.mp4"))
+    return {"provenance": PROVENANCE, "provider": PROVIDER_NATIVE,
+            "tool": TOOL, "file_sha256": result["file_sha256"],
+            "observed_at": result["observed_at"],
+            "engine": result.get("engine"),
+            "moments": bd.get("moments") or {},
+            "narrative": bd.get("narrative") or [],
+            "moments_dir": str(moments_dir) if moments_dir.is_dir() else None,
+            "clips": clips,
+            "vlm_called": False,
+            "evidence": result.get("evidence"),
+            "note": ("moments measured that tu pixel; reveal/twist/climax "
+                     "can agent nhin hinh hoac VLM co approval; " +
+                     str(result.get("note")))}
+
+
+def compare_videos_native(specs: list[dict], out_root: str | Path,
+                          timeout: int = 900) -> dict:
+    """C4: tong hop multi-video cho Research (code-computed, 0 LLM).
+
+    Moi video decompose that rieng (khong song song de tranh OOM);
+    so sanh verdict/labels/audio tu breakdown. Khong VLM.
+    """
+    root = Path(out_root)
+    root.mkdir(parents=True, exist_ok=True)
+    items: list[dict] = []
+    for i, spec in enumerate(specs or []):
+        vp = spec.get("path") if isinstance(spec, dict) else spec
+        try:
+            r = analyze_native(vp, root / f"v{i}", timeout=timeout)
+            bd = r.get("breakdown") or {}
+            summary = bd.get("summary") or {}
+            items.append({"path": str(vp), "ok": True,
+                          "file_sha256": r["file_sha256"],
+                          "verdict": summary.get("verdict"),
+                          "confidence": summary.get("confidence"),
+                          "production_mix": summary.get("production_mix"),
+                          "shot_count": len(bd.get("shots") or []),
+                          "evidence": r.get("evidence")})
+        except Exception as exc:
+            items.append({"path": str(vp), "ok": False,
+                          "error": f"{type(exc).__name__}: {exc}"[:200]})
+    ok_items = [x for x in items if x.get("ok")]
+    verdicts = {x.get("verdict") for x in ok_items}
+    return {"provenance": PROVENANCE, "provider": PROVIDER_NATIVE,
+            "tool": TOOL, "observed_at": time.time(),
+            "engine": native_engine_info(),
+            "items": items,
+            "comparison": {"count": len(items), "ok": len(ok_items),
+                           "same_verdict": len(verdicts) == 1,
+                           "verdicts": sorted(v for v in verdicts if v)},
+            "evidence": ("multimodal_analyzed" if ok_items
+                         else "metadata_only"),
+            "note": ("multi-video code-computed tu breakdown goc, 0 LLM, "
+                     "khong VLM; chi de hieu noi dung")}
+
+
 def classify_native(video_path: str | Path, out_dir: str | Path,
                     timeout: int = 900) -> dict:
     """C3: 11-label classification that (RULES + deterministic probs + uncertainty).
