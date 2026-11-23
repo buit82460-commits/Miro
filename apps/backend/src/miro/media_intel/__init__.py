@@ -417,14 +417,18 @@ def analyze_native(video_path: str | Path, out_dir: str | Path,
 
 
 def _run_native_cli(args: list[str], timeout: int) -> subprocess.CompletedProcess:
-    """Chay rea-video CLI that voi executable co dinh. Loi -> RuntimeError ro."""
+    """Chay rea-video CLI that voi executable co dinh. Loi -> RuntimeError ro.
+
+    Thắt MEDIUM-2: exit code != 0 -> ANALYSIS_FAILED ngay, khong le thuoc
+    hoan toan vao validate output phia caller.
+    """
     exe = _native_python()
     if exe is None:
         raise RuntimeError(
             "PROVIDER_UNAVAILABLE: venv rea-video chua san sang; "
             "tu choi phan tich thay vi fallback.")
     try:
-        return subprocess.run(
+        proc = subprocess.run(
             [str(exe), "-m", "rea_video", *args],
             capture_output=True, text=True, timeout=timeout)
     except subprocess.TimeoutExpired as exc:
@@ -432,6 +436,12 @@ def _run_native_cli(args: list[str], timeout: int) -> subprocess.CompletedProces
             f"ANALYSIS_FAILED: rea-video timeout sau {timeout}s.") from exc
     except OSError as exc:
         raise RuntimeError(f"PROVIDER_UNAVAILABLE: {exc}") from exc
+    if proc.returncode != 0:
+        raise RuntimeError(
+            "ANALYSIS_FAILED: rea-video exit "
+            f"{proc.returncode} (cmd={' '.join(args[:3])}); "
+            f"stderr: {(proc.stderr or '').strip()[-300:]}")
+    return proc
 
 
 def transitions_native(video_path: str | Path, out_dir: str | Path,

@@ -1,6 +1,7 @@
 """FastAPI application entrypoint (canonical — launcher chay miro.main:app)."""
 
 import asyncio
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -18,7 +19,25 @@ from miro.research import service as research_service
 from miro.research.router import router as research_router
 from miro.connections import router as connections_router
 
-app = FastAPI(title="Miro API", version="0.1.0")
+
+@asynccontextmanager
+async def _lifespan(app: FastAPI):
+    """Startup sweep best-effort: don workspace job chet sau restart.
+
+    Khong chan boot: moi loi deu swallow. Chi goi 1 lan/khoi dong.
+    """
+    try:
+        from miro import media_intel as _mi
+        res = _mi.sweep_stale_workspaces()
+        app.state.media_sweep = res
+    except Exception:
+        app.state.media_sweep = {"swept": [], "kept": [],
+                                 "note": "sweep skipped (best-effort)"}
+    yield
+
+
+app = FastAPI(title="Miro API", version="0.1.0",
+                lifespan=_lifespan)
 
 _task_store = TaskStore(Path(r"C:\Miro\var\tasks.db"))
 _task_service = TaskService(_task_store, PermissionStore(), FakeRemote())
