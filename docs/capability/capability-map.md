@@ -178,9 +178,109 @@ listener và event bridge qua Extension hoặc Browser Runtime.
 | 9 | Docling | Document AI — đọc hiểu và cấu trúc hóa tài liệu |
 | 10 | LLM Guard | Security — bổ sung lớp phát hiện dữ liệu đầu vào nguy hiểm |
 
-## 14. Bước tiếp theo
+## 14. Tầm nhìn: Miro là AI Agent đa năng (không chỉ video)
+
+`rea-video` chỉ là **1 năng lực trong hệ thống lớn**. Ý tưởng thực sự: Miro tự
+tìm hiểu, suy luận, học thêm kỹ năng, sử dụng công cụ và hoàn thành nhiều loại
+nhiệm vụ — không chỉ làm video, điều khiển browser hay desktop.
+
+| Nhóm | Phạm vi năng lực | Số mục |
+| --- | --- | --- |
+| 1. Nhận thức & Trí tuệ AI | Vision, Video, Audio, Multimodal, Spatial | 5 |
+| 2. Tư duy & Điều phối | Planning, Multi-Agent, Reflection, Skill Discovery, Constraints | 5 |
+| 3. Điều khiển & Automation | Desktop, Browser, Mobile, Terminal, Remote | 5 |
+| 4. Giao tiếp & Con người | Conversation, Voice, Human-in-the-loop, Meeting, Language | 5 |
+| 5. Sáng tạo & Media | Image, Video, Dubbing, Motion/3D, Character | 5 |
+| 6. Lập trình & Phần mềm | Coding, Codebase, Testing, DevOps, Database | 5 |
+| 7. Dữ liệu & Nghiên cứu | Research, Documents, Web Extraction, Analytics | 4 |
+| 8. Memory & Cá nhân hóa | Long-term Memory, Knowledge Base, Preference, Learning | 4 |
+| 9. Tự động hóa công việc | Email, Office, Business Process, Social Media | 4 |
+| 10. Security & Reliability | Sandbox, Secrets, Injection Defense, Privacy | 4 |
+| 11. Hạ tầng & Vận hành | Durable Workflow, Model Routing, Scheduling | 3 |
+| 12. Event-driven & Chủ động | Watchers, Proactive Automation, Observability | 3 |
+
+Ba lớp ý nghĩa:
+
+- **AI Core (bộ não):** hiểu vấn đề · lập kế hoạch · ghi nhớ · điều phối Agent · tự kiểm chứng.
+- **Capabilities:** Perception (ảnh, video, audio) · Actions (Browser, PC, Mobile) · Skills (Code, Office, Research).
+- **Runtime & Safety:** Authorization · Workflow Recovery · Event System · Resource Control · Audit.
+
+Ví dụ nhiệm vụ "Tìm 10 video thú vị trên TikTok, phân tích cách dựng, đề xuất ý
+tưởng mới, tạo video rồi đăng Facebook + YouTube" cần phối hợp: Browser
+Automation → Video Understanding → Audio Intelligence → Deep Research →
+Autonomous Planning → AI Video Production → Social Media Management → Durable
+Workflow → Security & Permission. Giá trị của map là **phối hợp các năng lực
+thành một mục tiêu**, thay vì hàng chục công cụ rời rạc.
+
+Phân mức phát triển (giữ 12 nhóm làm bản đồ dài hạn, không làm cùng lúc):
+
+| Mức | Ý nghĩa | Cách xử lý |
+| --- | --- | --- |
+| **Đang cần** | Thiếu năng lực để hoàn thành nhiệm vụ hiện tại | Ưu tiên triển khai |
+| **Có ích tiếp theo** | Cải thiện workflow đang hoạt động | Nghiên cứu và thử nghiệm |
+| **Tầm nhìn dài hạn** | Tiềm năng tốt nhưng chưa có nhu cầu cụ thể | Backlog, chưa tích hợp |
+
+Gợi ý hiện tại (chưa phải kết quả audit): Đang cần — Browser/REA Integration,
+Video Understanding, Security & Reliability. Có ích tiếp theo — Autonomous
+Planning, Durable Workflow, Multi-Agent Collaboration, Event Watchers. Dài hạn —
+Mobile Automation, 3D Generation, IoT, ứng dụng chuyên biệt.
+
+Bốn câu hỏi trước khi đưa bất kỳ repo nào vào Miro:
+
+1. Nó giải quyết việc gì mà Miro hiện chưa làm được hoặc làm chưa tốt?
+2. Có thể tái sử dụng năng lực hiện có không?
+3. Sau tích hợp, nó phối hợp với capability nào thành workflow thực tế?
+4. Có bài kiểm thử nào chứng minh nó thực sự mang lại giá trị?
+
+## 15. Phiên C — Capability Research & Architecture (định hướng đã sửa)
+
+Phiên C **không** chỉ phụ trách `rea-video`, **không** triển khai cả 52 năng lực
+cùng lúc. Nhiệm vụ: khảo sát toàn bộ 52 lĩnh vực, đối chiếu code Miro, tìm repo
+phù hợp, thiết kế lộ trình mở rộng. `rea-video` là PoC đầu tiên.
+
+**Giai đoạn 1 — Capability Audit:** đọc repo Miro, xác định Đã có / Đang phát
+triển / Chưa có / Cần nâng cấp / Chưa xác minh cho từng capability, kèm code
+hoặc bằng chứng, dependency, rủi ro, ưu tiên. Không tuyên bố đã có chỉ vì thấy
+README/thư mục/tên package.
+
+**Giai đoạn 2 — Repository Discovery:** tìm và so sánh giải pháp mã nguồn mở
+từng năng lực (không bắt buộc capability nào cũng có repo riêng). Đánh giá chức
+năng thực tế, maintenance, license, Windows compatibility, API/CLI/MCP/SDK,
+CPU/RAM/GPU, chi phí model/API, khả năng tích hợp, bảo mật/supply chain, trùng
+lặp công nghệ. Phân biệt verified / inferred / unverified.
+
+**Giai đoạn 3 — Capability Architecture:** đề xuất kiến trúc chung (AI Core →
+Capabilities → Runtime & Safety): Capability Registry, Skill/Tool Discovery,
+Capability Routing, Task Planning, Multi-Agent Coordination, Shared
+Evidence/Provenance, Permission Contracts, Durable Workflow, Observability.
+Không xây lại module đã có nếu tái sử dụng được.
+
+**Giai đoạn 4 — PoC rea-video:** audit repo/dependency/license; thử phân tích 1
+video local (timeline, shot breakdown, báo cáo có nguồn đối chiếu); thiết kế
+VideoAnalysis contract độc lập với rea-video. Không sửa module Browser, Gateway,
+Security, production mà Phiên A/B đang phụ trách.
+
+**Giai đoạn 5 — Roadmap:** đề xuất nhóm ưu tiên ngay / phụ thuộc hệ thống hiện
+có / chỉ nghiên cứu / không đáng tích hợp — kèm lý do, dependency, chi phí,
+test nghiệm thu.
+
+**Điều chỉnh theo hướng workflow-first:** Phiên C tập trung Capability Gap
+Analysis + một workflow hoàn chỉnh đầu tiên (tìm video → phân tích
+hình/âm/cách dựng → lập kế hoạch nội dung → xuất kế hoạch dựng để user duyệt).
+Chỉ tìm thêm repo khi có capability gap cụ thể. Một workflow hoạt động thực tế
+có giá trị hơn nhiều repo nằm trong thư mục.
+
+**Bàn giao Phiên C:** `MIRO_CAPABILITY_MAP.md`, `REPOSITORY_RESEARCH.md`,
+`CAPABILITY_ARCHITECTURE.md`, `CAPABILITY_ROADMAP.md`,
+`REA_VIDEO_SPIKE_REPORT.md`. Không push, không sửa production, không can thiệp
+Profile 20 hay file A/B đang làm. Không tải/chạy code không đáng tin cậy khi
+chưa kiểm tra nguồn và phạm vi an toàn.
+
+## 16. Bước tiếp theo
 
 Đối chiếu từng repo với các phần Miro đã có (`agent-desktop`, REA, `rea-video`,
 browser controller, media pipeline), đánh dấu vào cột **Trạng thái Miro**:
-`Đã có / Đang phát triển / Cần nâng cấp / Chưa có` — rồi chỉ thử nghiệm những
-repo đem lại năng lực mới thực sự.
+`Đã có / Đang phát triển / Cần nâng cấp / Chưa có / Chưa xác minh` — rồi chỉ thử
+nghiệm những repo đem lại năng lực mới thực sự, theo thứ tự phụ thuộc
+(Registry trước Skill Discovery; Event Watchers + Durable Workflow trước
+Proactive Automation).
