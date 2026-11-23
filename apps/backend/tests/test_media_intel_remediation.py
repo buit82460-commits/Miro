@@ -71,6 +71,15 @@ def test_native_candidates_env_override(monkeypatch):
     assert "rea-video" in str(cands2[0])
 
 
+def test_quota_blocks_decompose_before_disk_use(monkeypatch, tmp_path):
+    monkeypatch.setattr(mi, "workspace_usage",
+                        lambda: {"count": 99, "bytes": 99,
+                                 "max_dirs": 20, "max_bytes": 1,
+                                 "over": True})
+    with pytest.raises(RuntimeError, match="QUOTA_EXCEEDED"):
+        mi.analyze_native(tmp_path / "nofile.mp4", tmp_path / "out")
+
+
 def test_app_boot_runs_sweep_lifespan():
     """Boot that: workspace chet bi sweep khi app lifespan chay."""
     import json

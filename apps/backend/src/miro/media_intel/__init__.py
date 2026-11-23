@@ -260,8 +260,10 @@ def new_job_workspace(job_id: str | None = None) -> dict:
     Tra {"job_id", "path"}. Manifest ghi chu, chi workspace nay duoc xoa
     boi chinh job do hoac startup sweep khi chu da chet.
 
-    LOW-3 disk quota: vuot MI_WORK_MAX_DIRS/MI_WORK_MAX_BYTES -> tu choi
-    job moi (QUOTA_EXCEEDED), khong de dia day am tham.
+    LOW-3 disk quota (admission check, trung thuc): vuot
+    MI_WORK_MAX_DIRS/MI_WORK_MAX_BYTES -> tu choi job moi va decompose
+    (QUOTA_EXCEEDED) truoc khi ton them dia. Khong phai hard quota chan
+    ghi giua chung job (engine goc tu ghi file, khong pre-allocate).
     """
     import os
     import uuid
@@ -419,6 +421,13 @@ def analyze_native(video_path: str | Path, out_dir: str | Path,
             "PROVIDER_UNAVAILABLE: venv rea-video chua san sang; "
             "tu choi phan tich thay vi fallback.")
     src = Path(video_path)
+    use = workspace_usage()
+    if use["over"]:
+        raise RuntimeError(
+            "QUOTA_EXCEEDED: mi-work vuot gioi han truoc decompose "
+            f"({use['count']}/{use['max_dirs']} dirs, "
+            f"{use['bytes'] // 1048576}MB/{use['max_bytes'] // 1048576}MB); "
+            "sweep hoac don thu cong truoc khi phan tich.")
     if not src.is_file():
         raise FileNotFoundError(f"khong tim thay file video: {video_path}")
     out = Path(out_dir)
