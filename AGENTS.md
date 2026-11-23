@@ -63,19 +63,20 @@
 
 ## Bootstrap đầu phiên và đọc theo nhu cầu
 
-1. Xác nhận đang ở `C:\Miro`. Đọc `docs/verify-threads-loop.md` và
-   `docs/verify-foundation.md` TRƯỚC TIÊN để biết việc nào ĐẠT/CHƯA (mục mới nhất
-   trước), rồi mới đọc `docs/reread-foundation.md` và `docs/crosscheck-foundation.md`;
+1. Xác nhận đang ở `C:\Miro`. **BẮT BUỘC đọc `docs/README.md` TRƯỚC TIÊN
+   (bản đồ tài liệu, không được bỏ qua)**, sau đó đọc `docs/verify/verify-threads-loop.md` và
+   `docs/verify/verify-foundation.md` để biết việc nào ĐẠT/CHƯA (mục mới nhất
+   trước), rồi mới đọc `docs/reread/reread-foundation.md` và `docs/reread/crosscheck-foundation.md`;
    không đọc lại nếu đã đọc trong phiên và nội dung không đổi.
 2. Kiểm tra `git status --short` nếu được; nếu không phải Git repository, ghi rõ,
    không tự git init/clone/reset. Dùng tìm kiếm có phạm vi, đọc đoạn liên quan và
    đối chiếu thay đổi trực tiếp. Không tự quét toàn bộ source hoặc mọi Markdown.
 3. Chỉ khi cần tổng quan đọc `README.md`; kiến trúc đọc source trực tiếp theo task;
-   quyết định đọc `docs/crosscheck-foundation.md`. Tra cứu quy trình 3-agent
+   quyết định đọc `docs/reread/crosscheck-foundation.md`. Tra cứu quy trình 3-agent
    (2 reader → code → Checker ĐẠT mới commit → push): `docs/ba-ben/`.
 3a. Khi vào task đăng bài: đọc `docs/PLATFORM_RUNBOOK.md` TRƯỚC (bảng adapter +
    flow chuẩn + checklist trinh sát REA), mở tiếp báo cáo verify mới nhất trong
-   `docs/verify-threads-loop.md` cho đúng platform/account để biết hôm nay lấy gì,
+   `docs/verify/verify-threads-loop.md` cho đúng platform/account để biết hôm nay lấy gì,
    đăng lúc nào, suất nào bị hoãn — trước khi đọc bất kỳ module nào khác.
 4. Theo task, chọn module từ source, tìm symbol bằng grep và đọc source/test
    liên quan. Tài liệu là chỉ dẫn; code và bằng chứng hiện tại quyết định kết luận.
@@ -133,8 +134,8 @@
 
 ## Kết thúc task có thay đổi đáng kể
 
-- Ghi kết quả verify vào `docs/verify-threads-loop.md` hoặc
-  `docs/verify-foundation.md` (chọn file phù hợp, bổ sung gọn): ĐẠT/CHƯA ĐẠT +
+- Ghi kết quả verify vào `docs/verify/verify-threads-loop.md` hoặc
+  `docs/verify/verify-foundation.md` (chọn file phù hợp, bổ sung gọn): ĐẠT/CHƯA ĐẠT +
   lệnh + kết quả. Commit, KHÔNG push (push sau khi user hoặc Checker xác nhận).
 - Giữ verify ngắn; dẫn tới chi tiết, không chép lại lịch sử.
 - Phân biệt kiểm chứng fixture/local/production; không ghi thành công thiếu bằng chứng.

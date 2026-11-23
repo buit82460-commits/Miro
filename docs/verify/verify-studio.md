@@ -216,7 +216,7 @@ Checker: full suite BE + tsc FE, đối chiếu 6 mục Checker cũ + smoke rend
 | 5 | bg-remove / 4K-ladder / realtime preview thiếu | bg-remove = `chroma_key` effect thật (`chromakey=` ffmpeg) + FE nút "Xóa nền xanh". Ladder 480p/720p/1080p/4K = `canvas.export_ladder` scale lanczos thật (ghi rõ không AI-upscale) + route `POST /studio/export/ladder` + FE. Realtime preview = `POST /studio/preview/live` render 20s ultrafast thật (không fake). `upscale_filter` lanczos 1–4x ghi rõ không AI. | **ĐẠT** |
 | 6 | FE StudioService thiếu ~8 API | Thêm đủ 13 API: overlay, revoice, timelineOp/Undo/Redo, audioFx, beat, separate, track, canvasSet, exportPlan, exportLadder, livePreview + panel Edit mới (hiệu ứng/overlay/chuyển cảnh + timeline/audio/nhịp/tách/tracking/canvas/export). | **ĐẠT** |
 
-Đường studio → platform giữ nguyên thiết kế đã duyệt: `submit_studio`/`handoff` chỉ queue `awaiting_review` (CẤM đăng tự động); publish thật qua adapter 8 platform + approval bound fingerprint + journal trước click (xem `docs/verify-publisher.md`). **Đã commit, chưa push.**
+Đường studio → platform giữ nguyên thiết kế đã duyệt: `submit_studio`/`handoff` chỉ queue `awaiting_review` (CẤM đăng tự động); publish thật qua adapter 8 platform + approval bound fingerprint + journal trước click (xem `docs/verify/verify-publisher.md`). **Đã commit, chưa push.**
 
 ## Bổ sung test Edit full (commit sau d84c24c) — **ĐẠT, 281 passed**
 

@@ -1,7 +1,7 @@
 # Verify Foundation — M3-phần-1 (commit 07ed929)
 
 - Commit kiểm tra: `07ed929` — "M3-phan-1: workerOwner liveness + retry TRANSIENT co ngan sach + stop watchdog; connections verify kep truoc/sau qua Browser M1 + revoke invalidate lease"
-- Docs đối chiếu: `docs/reader-jarvis.md` §9 (commit `29f082d`) + `docs/reader-dubtool.md` §9 (commit `e108fa9`)
+- Docs đối chiếu: `docs/readers/reader-jarvis.md` §9 (commit `29f082d`) + `docs/readers/reader-dubtool.md` §9 (commit `e108fa9`)
 - Code gốc đối chiếu: `D:\JARVIS-Assistant\backend\app\jobs\manager.py`, `runner.py`, `agents/base.py`, `core/execution_policy.py`; `C:\dubtool\core\studio_service.py`
 - Test: `apps/backend/tests/test_tasks_m3.py` (8 test) + `apps/backend/tests/test_connections_m3.py` (5 test) + `test_tasks.py` (bổ sung) — **17 passed**
 - Ngày kiểm tra: 2026-11-21. **File verify này chưa commit, chưa push** (theo yêu cầu).
@@ -45,7 +45,7 @@
 ## Verify Desktop M3 (commit 49bea2e) — 2026-11-21
 
 - Commit kiem tra: `49bea2e` — "an toan: cap nhat 2 test realdata theo hanh vi media gate moi + desktop act boundary + alias write + 3 test M3 - 119 passed"
-- Docs doi chieu: `docs/reader-dubtool.md` §9 (9.1 backend Windows, 9.5 invariant 3) + `docs/reader-jarvis.md` §9 (9.5 route desktop-task, allowlist/headless), §4 (agent_desktop allowlist, secret-scrub, envelope)
+- Docs doi chieu: `docs/readers/reader-dubtool.md` §9 (9.1 backend Windows, 9.5 invariant 3) + `docs/readers/reader-jarvis.md` §9 (9.5 route desktop-task, allowlist/headless), §4 (agent_desktop allowlist, secret-scrub, envelope)
 - Code goc doi chieu: `C:\dubtool\scripts\desktop_act.py` + `shared\desktop_gate.py` + `shared\desktop_dispatch.py` + `shared\desktop_backend.py`
 - Code Miro: `apps/backend/src/miro/desktop/act.py` (moi) + `backend.py` (+session/list/find/get/set/click, alias `write`) + `tests/test_desktop_m3.py` (3 test)
 - Test: `test_desktop_m3.py` — **3 passed**
@@ -107,7 +107,7 @@
 ## Verify P0 tasks T1-T4 (commit da43241) — 2026-11-21
 
 - Commit kiem tra: `da43241` — "P0 tasks T1-T4: resume CHECKPOINT_STALE, dedupe revision-level, retry PipelineError TRANSIENT, stale-guard save_project"
-- Docs doi chieu: `docs/reread-foundation.md` (T1 thieu chinh, T2 mat dedupe revision, T3 nhom TRANSIENT cua `_guarded`, T4 stale-check `_run_render`), `docs/reader-dubtool.md` §9, `docs/crosscheck-studio.md`, `docs/reread-studio.md`
+- Docs doi chieu: `docs/reread/reread-foundation.md` (T1 thieu chinh, T2 mat dedupe revision, T3 nhom TRANSIENT cua `_guarded`, T4 stale-check `_run_render`), `docs/readers/reader-dubtool.md` §9, `docs/reread/crosscheck-studio.md`, `docs/reread/reread-studio.md`
 - Code goc A doi chieu: `C:\dubtool\core\studio_service.py` (`_start_render:259-281` dedupe project+revision+preview; `_run_render:289-350` — CHECKPOINT_STALE `:293-294`, timeline doi giua chung -> `stale` `:327-330`, retry `failure(..., transient=isinstance(exc,(OSError,TimeoutError)))` `:345-349`; `control_job:362-396` — OWNERSHIP_UNKNOWN `:375-379`, CHECKPOINT_STALE `:381`, retryCount=0 `:382`), `shared/execution_policy.py` (`TRANSIENT:20`, `failure:45-52`)
 - Lenh: `python -m pytest tests/test_tasks_p0_t1t2.py tests/test_studio_p0_t3t4.py tests/test_tasks.py tests/test_tasks_m3.py -q` (trong `C:\Miro\apps\backend`) — **21 passed**
 - Ngay kiem tra: 2026-11-21. **Chi ghi file verify, KHONG push** (theo yeu cau).
@@ -148,7 +148,7 @@
 ## Verify Connections P4/P5 (commit 91aac73) — 2026-11-21
 
 - Commit kiem tra: `91aac73` — "Connections P4+P5: profile_path that trong verify_via_browser + bind_revoke_to_leases (LeaseStore that)"
-- Docs doi chieu: `docs/verify-foundation.md` P4 (verify_via_browser chua truyen profile_path/profile_path_after, nhanh realpath chua chay trong duong verify that) + P5 (revoke hook mac dinh None, chua noi LeaseStore) + `C:\dubtool` §9.6 (chrome://version + realpath user_data_dir/profile_directory)
+- Docs doi chieu: muc P4/P5 duoi day (verify_via_browser chua truyen profile_path/profile_path_after, nhanh realpath chua chay trong duong verify that; revoke hook mac dinh None, chua noi LeaseStore) + `C:\dubtool` §9.6 (chrome://version + realpath user_data_dir/profile_directory)
 - Lenh: `python -m pytest tests/test_connections_p4p5.py tests/test_connections_m3.py tests/test_browser_single_owner.py -q` (trong `C:\Miro\apps\backend`) — **20 passed**
 - Ngay kiem tra: 2026-11-21. **Chi ghi file verify, KHONG push** (theo yeu cau).
 
@@ -170,7 +170,7 @@
 ## Verify Desktop D1+D2 + Launcher L1 + Tasks T5 (commit 841e5ab) — 2026-11-21
 
 - Commit kiem tra: `841e5ab` — "Desktop D1+D2 + Launcher L1 + Tasks T5: window-lock chung + select-tab + stop-cat-backoff + RECOVER-auto"
-- Docs doi chieu: `docs/reread-foundation.md` §2 D1 (:55, sai chinh), D2 (:61, thieu chinh), §3 L1 (:82), T5 (:47, nhe) + `docs/crosscheck-foundation.md` §2-3 (xac nhan D1/D2/L1/T5 dung)
+- Docs doi chieu: `docs/reread/reread-foundation.md` §2 D1 (:55, sai chinh), D2 (:61, thieu chinh), §3 L1 (:82), T5 (:47, nhe) + `docs/reread/crosscheck-foundation.md` §2-3 (xac nhan D1/D2/L1/T5 dung)
 - Code goc doi chieu: `C:\dubtool\shared\desktop_dispatch.py:130` (default `ensure_state_dir()/"window-locks"`), `scripts\desktop_act.py:140-162` (`ensure_selected_by_ref`: get_states + click ≤4 + probe + sleep 0.5), `core\studio_service.py:67-70` (snapshot + retryCount < maxAttempts-1 -> queued/RECOVER), `shared\execution_policy.py:52-55` (TRANSIENT + budget `maxAttempts-1` -> RECOVER)
 - Lenh: `python -m pytest tests -q` (trong `C:\Miro\apps\backend`) — **214 passed**
 - Ngay kiem tra: 2026-11-21. **Chi ghi file verify + commit, KHONG push** (theo yeu cau).

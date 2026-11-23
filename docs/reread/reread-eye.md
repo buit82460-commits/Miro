@@ -56,7 +56,7 @@ Port nằm ở `publisher.py:443-486` (`match_eye_records`) + `:489-524`
   trong `match_eye_records` — đúng A.
 - `reconcile()` dùng `known_ids` từ `journal.ack_post_codes` (`:626`) và
   truyền vào cả hai nhánh list/dict — **đã sửa** finding cũ trong
-  `docs/verify-publisher.md` (khác với `publish()` path vẫn gọi
+  `docs/verify/verify-publisher.md` (khác với `publish()` path vẫn gọi
   `verify_receipt(receipt, intent)` không `known_ids` ở `:602` — xem S2).
 
 ### Mất

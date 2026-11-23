@@ -98,7 +98,7 @@ trong `C:\Miro\apps\backend` → **6 passed**. Files không đổi sau 33e3877
 Nhỏ (không chặn): `from miro.browser.errors import RegistryError` ở `routers/threads.py:28`
 hiện chưa dùng trong file — dọn ở commit sau.
 
-## § Live-read Profile 20 read-only (`browser/live_chrome.py` + `docs/live-read-profile20.md`)
+## § Live-read Profile 20 read-only (`browser/live_chrome.py` + `docs/verify/live-read-profile20.md`)
 
 | Mục | Bằng chứng | Kết quả |
 |---|---|---|
@@ -106,7 +106,7 @@ hiện chưa dùng trong file — dọn ở commit sau.
 | Module không có post/navigate path | `test_module_has_no_post_path` (không `def post`/`post_once`/`def navigate`/`def submit`) + grep tay: chỉ còn chữ "navigate" trong comment/docstring cấm | **ĐẠT** |
 | Read 1 URL: open → bind profile → acquire → read → release → disconnect | `test_read_url_once_fake_cdp_no_post`: text chứa `dub417888`, `browser.disconnected is True` | **ĐẠT** |
 | Không Chrome → deny, không tự mở thay thế | `test_no_chrome_running_denied_without_opening`: `CDP_UNAVAILABLE`/`WAITING_CONFIRMATION` (test dùng `connect=dead` raise `ConnectionError`; đường `connect_over_cdp` thật map mọi exception → `CDP_UNAVAILABLE`) | **ĐẠT** |
-| Runbook `docs/live-read-profile20.md` | Chuẩn bị Chrome thủ công + CLI + bảng lỗi + test fake + §4 phần mở | **ĐẠT** |
+| Runbook `docs/verify/live-read-profile20.md` | Chuẩn bị Chrome thủ công + CLI + bảng lỗi + test fake + §4 phần mở | **ĐẠT** |
 
 ## Phần mở (chưa làm, không chặn vòng này)
 
@@ -285,7 +285,7 @@ Lệnh: `cd C:\Miro\apps\backend && python -m pytest tests/test_eye_wiring.py te
 
 ## § Mắt S1/S4/S5 (commit 3f617c9, ngày 2026-11-21) — **ĐẠT**
 
-Checker thường trực đọc diff 3f617c9 + đối chiếu `docs/reread-eye.md` S1 (`:87-104`),
+Checker thường trực đọc diff 3f617c9 + đối chiếu `docs/reread/reread-eye.md` S1 (`:87-104`),
 S4 (`:120-124`), S5 (`:125-129`) + A (`C:\dubtool\core\rea_eye.py` `match_eye_records :31-53`,
 `extract_tag :26-28`, `TAG_RE :18`) + phần mở P0 (S1/S4/S5 dọn sau) + tự chạy
 `python -m pytest tests/test_eye_wiring.py tests/test_eye_collect_p0.py tests/test_publisher_threads.py tests/test_threads_flow.py tests/test_schedule_caller.py -q`
@@ -309,7 +309,7 @@ Lệnh: `cd C:\Miro\apps\backend && python -m pytest tests/test_eye_wiring.py te
 Checker thường trực đọc diff d146963 vs 6888fd8 (8 files, +467/-13) + đối chiếu
 `docs/ba-ben/chu-de/TD-publisher.md` (suất UNKNOWN tính cap, reconcile append-only,
 boot-vs-pause ở caller, paused outrank) + `TD-nen.md` (bounded restart) +
-`docs/reread-foundation.md` § launcher + `docs/crosscheck-foundation.md` L2 (history mất
+`docs/reread/reread-foundation.md` § launcher + `docs/reread/crosscheck-foundation.md` L2 (history mất
 khi launcher restart) + gốc `C:\dubtool\core\posting_schedule.py` (6 hàm nguyên) + tự chạy
 `python -m pytest tests -q` trong `C:\Miro\apps\backend` → **219 passed** (EXIT=0).
 
@@ -411,9 +411,9 @@ Theo chi thi 3 diem: khong hardcode 9222, Evidence khong phai giay phep vinh vie
 | Muc | Bang chung | Ket qua |
 |---|---|---|
 | Session Manager dynamic port | `session_manager.py` viet lai: cong doc tu `DevToolsActivePort` (dong) + `verify_cdp_instance` (`/json/version` that) + `check_process` (tasklist/wmic cmdline Profile 20) + `check_profile_dir`; `inspect_session` them `BLOCKED_WRONG_INSTANCE/BLOCKED_NO_PROFILE`; `ensure_session` chi connect khi CONNECTED | **DAT** |
-| Eye Gate 8 diem | `docs/eye-gate.md` + `gateway.check_write_gate` (provenance/tab/instance/tuoi/actor/url/lease/approval) fail-closed; `write_via_adapter` wire gate (release truoc khi raise); `read_via_eye` gan `instance_id` vao evidence | **DAT** |
+| Eye Gate 8 diem | `docs/security/eye-gate.md` + `gateway.check_write_gate` (provenance/tab/instance/tuoi/actor/url/lease/approval) fail-closed; `write_via_adapter` wire gate (release truoc khi raise); `read_via_eye` gan `instance_id` vao evidence | **DAT** |
 | Test gate | `test_browser_gateway.py` T13–T17 (sai instance/doi actor/navigate/thieu approval/happy path) → **17 passed**; full suite **302 passed, 2 skipped** (`python -m pytest tests -q` trong `C:\Miro\apps\backend`) | **DAT** |
-| Audit bypass + bao cao harness | `docs/harness-allowlist-report.md`: liet ke 27 tool bypass/profile (snapshot/click/type/evaluate/run_code_unsafe/navigate/tabs/console/...); production chi giu REA read-only + Gateway code; `test_no_direct_browser.py` chi khoa duong code, KHONG khoa duoc MCP runtime | **DAT (bao cao)** — cho harness ap dung |
+| Audit bypass + bao cao harness | `docs/security/harness-allowlist-report.md`: liet ke 27 tool bypass/profile (snapshot/click/type/evaluate/run_code_unsafe/navigate/tabs/console/...); production chi giu REA read-only + Gateway code; `test_no_direct_browser.py` chi khoa duong code, KHONG khoa duoc MCP runtime | **DAT (bao cao)** — cho harness ap dung |
 | Extension Bridge | Giu `experiments/extension-bridge/` read-only (Tab Discovery, chua cai extension that); khong sua `.bat`, khong kill Chrome, khong doi MCP config | **DAT (giữ phạm vi)** |
 
 Phan mo: live Profile 20 read-only Q1/Q3/Q5/Q6/Q7 (can restart 1 lan user-data-dir rieng de REA noi CDP) → dien not Q1–Q10 → post that van UNSUPPORTED.
@@ -431,7 +431,7 @@ Tai commit d49cf01, khong dung Extension Bridge, khong push.
 | Tab lease | `gateway.write_via_adapter`: validate lai lease sau adapter_fn (het quyen giua luc bam → receipt vo hieu → `UNCONFIRMED_NO_REPLAY` giu UNKNOWN) | **DAT** |
 | Allowlist test | `test_no_direct_browser.py`: pattern mo rong full 27 tool bypass (them run_code_unsafe/navigate_back/console/network/screenshot/resize/emulate/drop) | **DAT** |
 | Test | `test_browser_gateway.py` T18–T21 (profile sai instance / navigate giua doc / lease mat giua write / actor khong verify) → **22 passed** (gateway+allowlist); full suite **306 passed, 2 skipped** (`python -m pytest tests -q` trong `C:\Miro\apps\backend`) | **DAT** |
-| Chua khoa tai harness | MCP tool truc tiep (`playwright-profile*`, `capture_browser_scenario` recon) van goi duoc neu harness cap; `run_code_unsafe/evaluate` co side-effect du ten doc — xem `docs/harness-allowlist-report.md` de loai khoi allowlist production | **CHUA (ngoai repo)** |
+| Chua khoa tai harness | MCP tool truc tiep (`playwright-profile*`, `capture_browser_scenario` recon) van goi duoc neu harness cap; `run_code_unsafe/evaluate` co side-effect du ten doc — xem `docs/security/harness-allowlist-report.md` de loai khoi allowlist production | **CHUA (ngoai repo)** |
 
 Phan mo (hardening): live Profile 20 read-only Q1/Q3/Q5/Q6/Q7 (can restart 1 lan user-data-dir rieng de REA noi CDP) → dien not Q1–Q10 → post that van UNSUPPORTED.
 
@@ -445,7 +445,7 @@ Tu `2d7047d`, khong dung `experiments/extension-bridge/`, khong push.
 |---|---|---|
 | Bo auto-trust legacy | `runtime.acquire_tab`: profile thieu `browserInstanceId` → `PROFILE_UNVERIFIED` (khong tu gan instance); seed test legacy sua theo gate (khong noi gate) | **DAT** |
 | Test P0 | T22 (legacy khong auto-trust), T23 (cross-instance), T24 (2 agent tranh 1 tab → TAB_BUSY), T25 (lease het han giua write → UNKNOWN) → gateway **25 passed** | **DAT** |
-| Contract Phien A | `docs/security-contract-extension.md` (identity/capability/8+3 dieu kien WRITE/transport interface/E2E matrix) + `docs/SECURITY_INTEGRATION_REPORT.md` | **DAT** |
+| Contract Phien A | `docs/security/security-contract-extension.md` (identity/capability/8+3 dieu kien WRITE/transport interface/E2E matrix) + `docs/security/SECURITY_INTEGRATION_REPORT.md` | **DAT** |
 | Harness | Khong co config MCP/harness trong repo → khong sua duoc tu day; bao cao giu nguyen de quan tri ap dung; shell/code la duong vong tiem nang, production han che | **CHUA (ngoai repo)** |
 | Test | full suite **310 passed, 2 skipped** (`python -m pytest tests -q` trong `C:\Miro\apps\backend`); commit `c744453` chi 7 file Phien B | **DAT** |
 

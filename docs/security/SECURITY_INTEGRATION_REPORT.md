@@ -19,7 +19,7 @@ repository, chỉ báo cáo để quản trị áp dụng**.
   press_key/drag/drop/hover/wait_for/dialog/close` write). CI fail nếu
   production code gọi trực tiếp.
 - `gateway.deny_direct_browser()`: runtime từ chối khi code đi đường tắt.
-- `docs/harness-allowlist-report.md` (từ phiên trước, vẫn hiệu lực):
+- `docs/security/harness-allowlist-report.md` (từ phiên trước, vẫn hiệu lực):
   production chỉ giữ `tools.rea.*` read-only + WRITE qua code Gateway;
   loại 81 entries (27 tool × 3 profile); subagent cùng allowlist.
 
@@ -63,7 +63,7 @@ harness phải giới hạn shell của production agent (read-only hoặc cấm
 
 ## 4. Task 4 — Security Contract với Phiên A (P1)
 
-`docs/security-contract-extension.md`: extension identity, 8+3 điều kiện
+`docs/security/security-contract-extension.md`: extension identity, 8+3 điều kiện
 WRITE (capability + lease trước/sau + idempotency), event = dữ liệu chưa tin
 cậy (chỉ thành Evidence sau `read_via_eye`), transport interface Phiên A
 phải cung cấp (`discover_tabs/read_tab/close_transport`), ma trận E2E fake

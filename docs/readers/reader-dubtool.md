@@ -105,7 +105,7 @@ Mẫu chung (instagram/shopee/chatgpt/flow + youtube guarded-mutation): `_enforc
 - Live submit `_upload_live_chrome_on_page` (`:286-428`): verify actor (`@username`+`ds_user_id`, `:198-230`) + `_ensure_clean_instagram_page` (`:245-252`); **journal BEFORE single click** (`:362-373`); nghe response `/api/v1/media/configure` (`on_response` `:377-402`): verified → journal `verified + media_pk/caption` → caller merge publication; không receipt → `unknown_needs_reconcile` + `UNCONFIRMED_NO_REPLAY, never replay` (`:408-428`).
 - `_submit_once` (`:463-487`, injected `upload_fn`/cookie-mode): cùng pattern journal-trước-submit; disconnect (`_is_disconnect` `:61-67`) → `UNKNOWN` + hint disconnect.
 - Caption (`:119-138`): gộp title/description không trùng, cắt `MAX_CAPTION=2200`; `delete_post` (`:658-691`) journaled riêng `instagram-delete-<key>.json`, không replay.
-- Reconcile: đọc receipt configure (owner+caption) — xem `docs/platform-matrix.md` dòng IG.
+- Reconcile: đọc receipt configure (owner+caption) — xem `docs/foundation/platform-matrix.md` dòng IG.
 
 ### 4.2 Facebook — `scripts/facebook_post_one.py`
 - Guard inline (`run_batch :126-140`, `run_shortcode :196-205`): publication `publication-facebook.json` có `shortcode+url` → skip; journal `reports/social-attempts/<job>.json` (`job_id_for :68-70`) tồn tại → `UNRECONCILED_ATTEMPT, never replay`. Account default `61595997638624` nếu publication chưa có (`:128, :198`).

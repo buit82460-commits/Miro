@@ -20,7 +20,7 @@ def check_evidence(evidence: dict, *, tab_id: str = "",
                    instance_id: str = "") -> dict:
     """Evidence hop le: url + tab identity + timestamp tuoi (<300s).
 
-    Khong phai giay phep vinh vien — xem docs/eye-gate.md: truoc moi
+    Khong phai giay phep vinh vien — xem docs/security/eye-gate.md: truoc moi
     WRITE con phai check instance/actor/url/lease/approval (check_write_gate).
     """
     if not isinstance(evidence, dict):
@@ -51,7 +51,7 @@ def check_evidence(evidence: dict, *, tab_id: str = "",
 
 async def check_write_gate(session, acquired, evidence: dict,
                            approval: dict | None) -> dict:
-    """Gate 8 diem truoc moi WRITE (docs/eye-gate.md). Fail-closed.
+    """Gate 8 diem truoc moi WRITE (docs/security/eye-gate.md). Fail-closed.
 
     Tra ve record sau khi pass. Bat ky diem nao rot -> raise, khong bam.
     """
@@ -177,7 +177,7 @@ async def write_via_adapter(session, *, platform_id: str, url: str,
                             caller: str, evidence: dict,
                             approval: dict | None,
                             adapter_fn) -> dict:
-    """WRITE duy nhất: gate 8 diem (docs/eye-gate.md) roi moi goi adapter.
+    """WRITE duy nhất: gate 8 diem (docs/security/eye-gate.md) roi moi goi adapter.
 
     - evidence qua check_evidence + check_write_gate (instance/tab tuoi,
       actor, url destination, lease, approval dung task) — rot la DENY.

@@ -31,7 +31,7 @@ Không sửa `experiments/extension-bridge/` (của Phiên A).
 
 ## 4. Điều kiện WRITE (chặt hơn READ)
 
-Đủ 8 điểm `docs/eye-gate.md` (provenance/instance/tab/tươi/actor/URL/lease/
+Đủ 8 điểm `docs/security/eye-gate.md` (provenance/instance/tab/tươi/actor/URL/lease/
 approval) + 3 điểm bổ sung:
 
 9. `capability` chứa đúng `write:<adapter>` cho task này.

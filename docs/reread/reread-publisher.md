@@ -14,7 +14,7 @@ Nguồn C:
 - `apps/backend/src/miro/threads/worker.py` (287 dòng: `ThreadsWorker`, `ThreadsPage`, dry-run mặc định)
 - `apps/backend/src/miro/threads/flow.py` (218 dòng: approval fingerprint+revision, secret gate, audit)
 - `apps/backend/src/miro/routers/threads.py` (203 dòng: prepare/approve/publish/reconcile/history)
-- Đối chiếu vòng 1–4: `docs/verify-publisher.md` (vòng 4 ĐẠT, 19 passed trên dữ liệu thật A)
+- Đối chiếu vòng 1–4: `docs/verify/verify-publisher.md` (vòng 4 ĐẠT, 19 passed trên dữ liệu thật A)
 
 ## 1. Hành vi A → C: port ĐƯỢC (giữ đủ khả năng)
 

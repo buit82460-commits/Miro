@@ -30,11 +30,11 @@ Ngày: 2026-11-22. Base: `6ef6c80` (310 passed, 2 skipped). Phiên B KHÔNG sử
 
 - MỐC 1+2 + kênh xác thực: PASS theo test của Phiên A (`test_live_moc2`, `test_channel`, `test_e2e`). REA Integration và đọc DOM: CHƯA.
 - Extension chỉ xin quyền `tabs` (không debugger/executeScript) — đúng phạm vi read-only.
-- Bàn giao: contract `docs/security-contract-extension.md` đã sẵn; Phiên A tích hợp khi xong Live Test Backend.
+- Bàn giao: contract `docs/security/security-contract-extension.md` đã sẵn; Phiên A tích hợp khi xong Live Test Backend.
 
 ## 4. Harness (nhắc lại, chưa áp dụng)
 
-Không có config trong repo; `docs/harness-allowlist-report.md` vẫn là tài liệu chờ quản trị áp dụng. Không tuyên bố đã khóa runtime.
+Không có config trong repo; `docs/security/harness-allowlist-report.md` vẫn là tài liệu chờ quản trị áp dụng. Không tuyên bố đã khóa runtime.
 
 ## 5. Kết quả review
 

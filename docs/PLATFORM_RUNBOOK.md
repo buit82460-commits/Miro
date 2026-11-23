@@ -74,7 +74,7 @@ hoặc `{"skipped": ...}` / `{"error": ...}`.
 
 ### Bước 5 — Report & handoff
 
-Cập nhật `publication`, `docs/verify-threads-loop.md` (mục platform/account),
+Cập nhật `publication`, `docs/verify/verify-threads-loop.md` (mục platform/account),
 daily-fixes nếu có lỗi. Ghi rõ VERIFIED / UNKNOWN, không tự khẳng định hoàn thành
 khi thiếu bằng chứng.
 
