@@ -188,7 +188,8 @@ def _native_python() -> Path | None:
             proc = subprocess.run(
                 [str(cand), "-c",
                  "import rea_video, cv2; print('ok')"],
-                capture_output=True, text=True, timeout=60)
+                capture_output=True, text=True, timeout=60,
+                encoding="utf-8", errors="replace", env=_native_env())
         except (OSError, subprocess.SubprocessError):
             continue
         if proc.returncode == 0 and "ok" in (proc.stdout or ""):
@@ -437,6 +438,7 @@ def analyze_native(video_path: str | Path, out_dir: str | Path,
             [str(exe), "-m", "rea_video", "decompose", str(src),
              "-o", str(out), "--no-vlm"],
             capture_output=True, text=True, timeout=timeout,
+            encoding="utf-8", errors="replace",
             env=_native_env())
     except subprocess.TimeoutExpired as exc:
         raise RuntimeError(
@@ -494,6 +496,7 @@ def _run_native_cli(args: list[str], timeout: int) -> subprocess.CompletedProces
         proc = subprocess.run(
             [str(exe), "-m", "rea_video", *args],
             capture_output=True, text=True, timeout=timeout,
+            encoding="utf-8", errors="replace",
             env=_native_env())
     except subprocess.TimeoutExpired as exc:
         raise RuntimeError(
