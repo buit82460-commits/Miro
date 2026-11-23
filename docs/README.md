@@ -27,6 +27,7 @@ Không đọc lại file đã đọc trong phiên nếu nội dung không đổi
 | `docs/readers/` | Đọc sâu nguồn legacy: `reader-dubtool.md`, `reader-jarvis.md`, `browser-read-notes.md`, `desktop-read-notes.md`, `fe-read-notes.md`, `editor-handlers.md` |
 | `docs/reread/` | Đối chiếu code C vs A: `reread-{foundation,eye,publisher,studio,tab}.md` + `crosscheck-*.md` (kiểm độc lập, kết luận: reread ĐÚNG) |
 | `docs/verify/` | Biên bản Checker: `verify-{foundation,threads-loop,publisher,studio,studio-audio,browser,security-fix}.md` + `live-read-profile20.md` (runbook live-read) |
+| `docs/capability/` | Bản đồ năng lực 52 lĩnh vực / 12 nhóm: `capability-map.md` (quy hoạch tham khảo, chưa phải code) |
 | `docs/security/` | Hardening: `eye-gate.md` (gate 8 điểm WRITE), `security-contract-extension.md`, `SECURITY_INTEGRATION_REPORT.md`, `INTEGRATION_SECURITY_REVIEW.md`, `REA_READ_SECURITY_REVIEW.md`, `REA_REMEDIATION_REVIEW_B.md`, `harness-allowlist-report.md` |
 | `docs/ba-ben/` | **Ngoài luồng**: trao đổi 3 bên A/B/C. Đọc/ghi tự do, KHÔNG BAO GIỜ `git add/commit/push` thư mục này |
 
