@@ -28,6 +28,17 @@ PROVIDER_NATIVE = "rea-video"
 # Native engine: venv cach ly repos/rea-video/.venv (khong cai system Python).
 # Executable co dinh + args duoc kiem soat; production KHONG fallback
 # ffmpeg-native (thieu/loi -> PROVIDER_UNAVAILABLE / ANALYSIS_FAILED).
+# LOW-2 portable: uu tien MIRO_REA_VIDEO_PYTHON (env) truoc default cung.
+def _native_candidates() -> tuple[Path, ...]:
+    import os as _os
+    env = (_os.environ.get("MIRO_REA_VIDEO_PYTHON") or "").strip()
+    if env:
+        return (Path(env),)
+    return (
+        Path(r"C:\Miro\repos\rea-video\.venv\Scripts\python.exe"),
+    )
+
+
 _NATIVE_CANDIDATES = (
     Path(r"C:\Miro\repos\rea-video\.venv\Scripts\python.exe"),
 )
@@ -170,7 +181,7 @@ def rea_video_available() -> bool:
 
 def _native_python() -> Path | None:
     """Executable venv co dinh cho native provider. None = chua san sang."""
-    for cand in _NATIVE_CANDIDATES:
+    for cand in _native_candidates():
         if not cand.is_file():
             continue
         try:
@@ -220,14 +231,47 @@ def workspace_root() -> Path:
     return root
 
 
+MI_WORK_MAX_DIRS = 20
+MI_WORK_MAX_BYTES = 2 * 1024 * 1024 * 1024
+
+
+def workspace_usage() -> dict:
+    """Dung luong + so workspace hien co (LOW-3 disk quota)."""
+    root = workspace_root()
+    total = 0
+    count = 0
+    for child in sorted(root.iterdir()):
+        if not child.is_dir() or not child.name.startswith("mi-"):
+            continue
+        count += 1
+        try:
+            total += sum(p.stat().st_size for p in child.rglob("*")
+                         if p.is_file())
+        except OSError:
+            pass
+    return {"count": count, "bytes": total,
+            "max_dirs": MI_WORK_MAX_DIRS, "max_bytes": MI_WORK_MAX_BYTES,
+            "over": count >= MI_WORK_MAX_DIRS or total >= MI_WORK_MAX_BYTES}
+
+
 def new_job_workspace(job_id: str | None = None) -> dict:
     """Tao workspace rieng cho 1 job: manifest + ownership (pid).
 
     Tra {"job_id", "path"}. Manifest ghi chu, chi workspace nay duoc xoa
     boi chinh job do hoac startup sweep khi chu da chet.
+
+    LOW-3 disk quota: vuot MI_WORK_MAX_DIRS/MI_WORK_MAX_BYTES -> tu choi
+    job moi (QUOTA_EXCEEDED), khong de dia day am tham.
     """
     import os
     import uuid
+    use = workspace_usage()
+    if use["over"]:
+        raise RuntimeError(
+            "QUOTA_EXCEEDED: mi-work vuot gioi han "
+            f"({use['count']}/{use['max_dirs']} dirs, "
+            f"{use['bytes'] // 1048576}MB/{use['max_bytes'] // 1048576}MB); "
+            "sweep hoac don thu cong truoc khi chay job moi.")
     jid = job_id or uuid.uuid4().hex[:12]
     path = workspace_root() / f"mi-{jid}"
     path.mkdir(parents=True, exist_ok=True)

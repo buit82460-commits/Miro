@@ -88,7 +88,6 @@
   AttributeError `backend.py:117`), không phải hồi quy.
 
 ## Milestone C1–C6 (hoàn thành, commit riêng từng mốc)
-
 - C1 (`e8728c0`): transitions/survey/videomd native thật (cut 1.0).
 - C2 (`53208db`): OCR chữ cháy + HPSS audio + UVR stems thật;
   STT/diarization BLOCKED MODEL_MISSING (sherpa-onnx ~500MB+ cần approval).
@@ -115,3 +114,19 @@
 - Lưu ý cho E (Visual): `code_render 100%` = tỉ lệ nhãn thắng trong báo cáo,
   KHÔNG phải chắc chắn tuyệt đối — giữ nguyên `deterministic.probs` +
   confidence + uncertainty trong breakdown khi phân loại.
+
+## Remediation audit B (commit sau `56e1083`)
+
+- HIGH-1 đóng: `_lifespan` trong `miro/main.py` gọi
+  `sweep_stale_workspaces()` best-effort (không chặn boot) +
+  `app.state.media_sweep`; test wiring PASS.
+- MEDIUM-2 đóng: `_run_native_cli` raise `ANALYSIS_FAILED` khi exit != 0
+  (không lệ thuộc hoàn toàn validate output caller); test fake exit 1 PASS.
+- LOW-3 đóng: `workspace_usage()` + `QUOTA_EXCEEDED` trong
+  `new_job_workspace` (20 dirs / 2GB); test quota PASS.
+- LOW-2 đóng: `MIRO_REA_VIDEO_PYTHON` env override trước default cứng;
+  test env PASS.
+- MEDIUM-1 (`/read` stale-URL): thuộc Browser REA (Phiên A scope),
+  `/research/read` chỉ là page text extraction — ghi nhận, không chạm.
+- LOW-4 guard CI dynamic-import/MCP: thuộc harness allowlist ngoài repo.
+- LOW-1 tên branch: đang `main`, không tự đổi branch khi chưa duyệt.

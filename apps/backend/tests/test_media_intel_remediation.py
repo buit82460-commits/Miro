@@ -47,3 +47,25 @@ def test_run_native_cli_rejects_nonzero_exit(monkeypatch, tmp_path):
     monkeypatch.setattr(subprocess, "run", fake_run)
     with pytest.raises(RuntimeError, match="ANALYSIS_FAILED"):
         mi._run_native_cli(["decompose", "x"], timeout=60)
+
+
+def test_workspace_quota_reports_and_blocks(monkeypatch):
+    use = mi.workspace_usage()
+    assert set(use) >= {"count", "bytes", "max_dirs", "max_bytes", "over"}
+    monkeypatch.setattr(mi, "workspace_usage",
+                        lambda: {"count": 99, "bytes": 0,
+                                 "max_dirs": 20, "max_bytes": 1,
+                                 "over": True})
+    with pytest.raises(RuntimeError, match="QUOTA_EXCEEDED"):
+        mi.new_job_workspace("quotablocked")
+    assert not (mi.workspace_root() / "mi-quotablocked").exists()
+
+
+def test_native_candidates_env_override(monkeypatch):
+    monkeypatch.setenv("MIRO_REA_VIDEO_PYTHON",
+                       r"C:\custom\python.exe")
+    cands = mi._native_candidates()
+    assert len(cands) == 1 and str(cands[0]).endswith("python.exe")
+    monkeypatch.delenv("MIRO_REA_VIDEO_PYTHON")
+    cands2 = mi._native_candidates()
+    assert "rea-video" in str(cands2[0])
