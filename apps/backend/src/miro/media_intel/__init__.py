@@ -625,6 +625,143 @@ def speech_native_status() -> dict:
             "note": "sherpa-onnx co san trong venv"}
 
 
+def classify_native(video_path: str | Path, out_dir: str | Path,
+                    timeout: int = 900) -> dict:
+    """C3: 11-label classification that (RULES + deterministic probs + uncertainty).
+
+    Doc thang deterministic tu breakdown goc, GIU NGUYEN probs/confidence/
+    uncertainty — khong rut gon thanh 1 label cung nhu prompt user nhan manh.
+    """
+    result = analyze_native(video_path, out_dir, timeout=timeout)
+    bd = result.get("breakdown") or {}
+    if not isinstance(bd, dict):
+        raise RuntimeError("ANALYSIS_FAILED: breakdown khong phai dict.")
+    shots = bd.get("shots") or []
+    labels: list[dict] = []
+    for i, (s, lab) in enumerate(zip(shots, classify_labels(bd))):
+        if not isinstance(s, dict):
+            continue
+        labels.append({"index": i, "start": s.get("start"),
+                       "end": s.get("end"),
+                       "top_label": lab["top_label"],
+                       "top_conf": lab["top_conf"],
+                       "runner_up": lab["runner_up"],
+                       "probs": lab["probs"],
+                       "evidence": (s.get("deterministic") or {}).get(
+                           "evidence") or [],
+                       "uncertain": bool(
+                           (lab["top_conf"] or 0) < 0.5) or
+                           (lab["runner_up"] is not None and
+                            ((lab["top_conf"] or 0) - lab["runner_up"][1]
+                             ) < 0.15)})
+    summary = bd.get("summary") or {}
+    return {"provenance": PROVENANCE, "provider": PROVIDER_NATIVE,
+            "tool": TOOL, "file_sha256": result["file_sha256"],
+            "observed_at": result["observed_at"],
+            "engine": result.get("engine"),
+            "verdict": summary.get("verdict"),
+            "confidence": summary.get("confidence"),
+            "production_mix": summary.get("production_mix"),
+            "labels": labels,
+            "evidence": result.get("evidence"),
+            "note": ("11-label that tu rea-video RULES; giu probs day du, "
+                     "label yeu (<0.5) hoac cach biet hep (<0.15) danh "
+                     "uncertain; " + str(result.get("note")))}
+
+
+def visual_aspects_native(video_path: str | Path, out_dir: str | Path,
+                          timeout: int = 900) -> dict:
+    """C3: camera/lighting/grade/features that tu breakdown goc."""
+    result = analyze_native(video_path, out_dir, timeout=timeout)
+    bd = result.get("breakdown") or {}
+    if not isinstance(bd, dict):
+        raise RuntimeError("ANALYSIS_FAILED: breakdown khong phai dict.")
+    aspects: list[dict] = []
+    for i, s in enumerate(bd.get("shots") or []):
+        if not isinstance(s, dict):
+            continue
+        aspects.append({"index": i,
+                        "aspects": s.get("aspects") or {},
+                        "features": s.get("features") or {},
+                        "motion": s.get("motion") or {},
+                        "faces": s.get("faces"),
+                        "material": s.get("material"),
+                        "replication": s.get("replication")})
+    return {"provenance": PROVENANCE, "provider": PROVIDER_NATIVE,
+            "tool": TOOL, "file_sha256": result["file_sha256"],
+            "observed_at": result["observed_at"],
+            "engine": result.get("engine"),
+            "aspects": aspects,
+            "global_aspects": bd.get("aspects") or {},
+            "evidence": result.get("evidence"),
+            "note": result.get("note")}
+
+
+def summary_native_text(video_path: str | Path, out_dir: str | Path,
+                        timeout: int = 900) -> dict:
+    """C3: summary compact that cho Agent (tu breakdown goc, low-conf flagged).
+
+    Lay thang summary/verdict tu breakdown (native data); CLI summary in
+    truc tiep stdout tieng Trung nen khong parse duoc tren console cp1252.
+    """
+    result = analyze_native(video_path, out_dir, timeout=timeout)
+    bd = result.get("breakdown") or {}
+    summary = bd.get("summary") or {}
+    lines = [f"verdict: {summary.get('verdict')} "
+             f"({summary.get('confidence')})"]
+    for i, (s, lab) in enumerate(zip(bd.get("shots") or [],
+                                      classify_labels(bd))):
+        lines.append(f"shot {i}: {lab['top_label']} {lab['top_conf']:.2f} "
+                     f"(runner-up {lab['runner_up']})")
+    return {"provenance": PROVENANCE, "provider": PROVIDER_NATIVE,
+            "tool": TOOL, "file_sha256": result["file_sha256"],
+            "observed_at": result["observed_at"],
+            "engine": result.get("engine"),
+            "summary_text": "\n".join(lines),
+            "summary": summary,
+            "evidence": result.get("evidence"),
+            "note": result.get("note")}
+
+
+def classify_labels(bd: dict) -> list[dict]:
+    """Tach probs ranking tu breakdown (dung chung cho summary/classify)."""
+    out: list[dict] = []
+    for s in (bd or {}).get("shots") or []:
+        if not isinstance(s, dict):
+            continue
+        det = s.get("deterministic") or {}
+        probs = det.get("probs") or {}
+        ranked = sorted(probs.items(), key=lambda kv: kv[1], reverse=True)
+        out.append({"top_label": ranked[0][0] if ranked else None,
+                    "top_conf": ranked[0][1] if ranked else None,
+                    "runner_up": (ranked[1] if len(ranked) > 1 else None),
+                    "probs": dict(probs)})
+    return out
+
+
+def review_flow_status(video_path: str | Path, out_dir: str | Path,
+                       timeout: int = 900) -> dict:
+    """C3: review/apply-review JEV flow (agent nhin hinh tra loi, KHONG auto-VLM).
+
+    Tao review tasks that; cost gate: chi chay khi co approval VLM rieng.
+    Mac dinh DRY-RUN (tasks only), khong goi VLM tra phi.
+    """
+    result = analyze_native(video_path, out_dir, timeout=timeout)
+    bd_path = Path(result.get("breakdown_path") or "")
+    proc = _run_native_cli(
+        ["review", str(bd_path.parent)], timeout=timeout)
+    return {"provenance": PROVENANCE, "provider": PROVIDER_NATIVE,
+            "tool": TOOL, "file_sha256": result["file_sha256"],
+            "observed_at": result["observed_at"],
+            "engine": result.get("engine"),
+            "review_dir": str(bd_path.parent),
+            "review_stdout": (proc.stdout or "")[:800],
+            "vlm_called": False,
+            "evidence": result.get("evidence"),
+            "note": ("review tasks that; VLM chi khi co approval rieng "
+                     "(cost gate DENY mac dinh); " + str(result.get("note")))}
+
+
 # ------------------------------------------------- runtime deny (lop 3) ----
 class MediaBypassError(RuntimeError):
     """Phan tich media ngoai adapter duy nhat."""
