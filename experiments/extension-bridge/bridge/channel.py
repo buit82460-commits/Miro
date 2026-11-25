@@ -57,7 +57,12 @@ class BridgeChannel:
         # state: pending|consumed. Server mo trang verify tren Profile chi
         # dinh; extension trong Profile do thay URL -> nop challenge qua
         # kenh link-request cua minh -> server bind installation<->profile.
+        # Challenge chi hieu luc sau launcher xac nhan (/challenge-opened).
         self._challenges = {}
+        # Mapping da xac minh: installation_id -> {profile_directory,
+        # verified_at, instance_id}. Tai dung khi reconnect (khong
+        # challenge lai). Mat khi forget device.
+        self._verified_installations = {}
 
     # -- pairing ---------------------------------------------------------
     def issue_pairing_code(self):
@@ -187,8 +192,15 @@ class BridgeChannel:
             return {"ok": False, "error": "LINK_FORBIDDEN"}
         # Tieu thu 1 lan: xoa truoc khi cap credential (chong replay).
         name = str(v.get("display_name") or "")[:40]
+        installation = str(v.get("installation_id") or "")
         self._link_requests.pop(str(request_id or ""), None)
-        return self._issue_credentials(name)
+        out = self._issue_credentials(name)
+        # Gan instance moi vao mapping da verify de tai dung khi reconnect.
+        if out.get("ok") and installation:
+            m = self._verified_installations.get(installation)
+            if isinstance(m, dict):
+                m["instance_id"] = str(out.get("instance_id") or "")
+        return out
 
     # -- Profile Binding Challenge --------------------------------------
     # Miro mo trang verify tren Profile chi dinh (qua launcher san co);
@@ -197,7 +209,10 @@ class BridgeChannel:
     # Khong doan tu URL, khong doc chrome://, khong sua du lieu Chrome.
     def issue_challenge(self, request_id, profile_directory):
         """Tao challenge dung 1 lan cho link-request dang pending.
-        Can Backend role (nguoi duyet chi dinh Profile muc tieu)."""
+        Can Backend role (nguoi duyet chi dinh Profile muc tieu).
+        Challenge chi co hieu luc SAU KHI launcher xac nhan da mo dung
+        Profile muc tieu (/challenge-opened) — user tu mo tay truoc do
+        khong bind duoc (CHALLENGE_NOT_LAUNCHED)."""
         import re as _re
         now = self._clock()
         if not isinstance(profile_directory, str) or not _re.fullmatch(
@@ -213,18 +228,37 @@ class BridgeChannel:
             "request_id": str(request_id),
             "profile_directory": profile_directory,
             "created_at": now,
-            "expires_at": now + 300,
+            "expires_at": now + 120,
             "state": "pending",
+            "launched": False,
         }
         return {"ok": True, "challenge_id": challenge_id,
                 "verify_path": "/verify/" + challenge_id,
-                "expires_in": 300}
+                "expires_in": 120}
+
+    def mark_challenge_launched(self, challenge_id, profile_directory=""):
+        """Launcher xac nhan: da mo verify URL tren dung Profile muc tieu
+        (mo bang --profile-directory). Chi Backend role goi duoc."""
+        now = self._clock()
+        c = self._challenges.get(str(challenge_id or ""))
+        if c is None or c.get("expires_at", 0) <= now:
+            return {"ok": False, "error": "CHALLENGE_UNKNOWN_OR_EXPIRED"}
+        if c.get("state") != "pending":
+            return {"ok": False, "error": "CHALLENGE_ALREADY_USED"}
+        if profile_directory and str(
+                c.get("profile_directory") or "") != str(profile_directory):
+            return {"ok": False, "error": "CHALLENGE_TARGET_MISMATCH"}
+        c["launched"] = True
+        return {"ok": True, "launched": True}
 
     def answer_challenge(self, request_id, challenge_id, secret,
                          installation_id):
         """Extension nop challenge thay duoc trong tab cua Profile minh.
         Rang buoc: link-request con pending + secret/installation khop +
-        challenge pending + cung request_id + con han. Dung 1 lan."""
+        challenge pending + cung request_id + con han + LAUNCHER DA XAC
+        NHAN mo dung Profile (launched). Mo nham Profile (launcher chua
+        xac nhan / nhan khac) -> CHALLENGE_NOT_LAUNCHED, khong bind sai.
+        Dung 1 lan."""
         import re as _re
         now = self._clock()
         v = self._link_requests.get(str(request_id or ""))
@@ -245,13 +279,58 @@ class BridgeChannel:
             return {"ok": False, "error": "CHALLENGE_ALREADY_USED"}
         if str(c.get("request_id") or "") != str(request_id or ""):
             return {"ok": False, "error": "CHALLENGE_MISMATCH"}
+        # CUNG: launcher chua xac nhan mo dung Profile -> khong bind.
+        if not c.get("launched"):
+            return {"ok": False, "error": "CHALLENGE_NOT_LAUNCHED"}
         prof = str(c.get("profile_directory") or "")
         if not _re.fullmatch(r"Default|Profile \d{1,5}", prof):
             return {"ok": False, "error": "INVALID_PROFILE_DIRECTORY"}
         c["state"] = "consumed"
         v["verified_profile"] = prof
         v["verified_at"] = now
+        v["verified_via"] = "challenge"
+        # Luu mapping installation<->profile de tai dung lan sau
+        # (reconnect khong challenge lai; chi mat khi forget/revoke).
+        self._verified_installations[str(
+            v.get("installation_id") or "")] = {
+            "profile_directory": prof,
+            "verified_at": now,
+            "instance_id": "",
+        }
         return {"ok": True, "verified_profile": prof}
+
+    def confirm_profile_once(self, request_id, profile_directory,
+                             display_name=""):
+        """Fallback: nguoi dung xac nhan 1 lan Profile dang dung (khong
+        du chung cu tu dong). Chi Backend role goi. Ghi ro nguon
+        verified_via=manual-confirm de khong nham voi challenge."""
+        import re as _re
+        now = self._clock()
+        if not isinstance(profile_directory, str) or not _re.fullmatch(
+                r"Default|Profile \d{1,5}", profile_directory):
+            return {"ok": False, "error": "INVALID_PROFILE_DIRECTORY"}
+        v = self._link_requests.get(str(request_id or ""))
+        if v is None or v.get("expires_at", 0) <= now:
+            return {"ok": False, "error": "LINK_UNKNOWN_OR_EXPIRED"}
+        if v.get("state") != "pending":
+            return {"ok": False, "error": "LINK_ALREADY_USED"}
+        v["verified_profile"] = profile_directory
+        v["verified_at"] = now
+        v["verified_via"] = "manual-confirm"
+        self._verified_installations[str(
+            v.get("installation_id") or "")] = {
+            "profile_directory": profile_directory,
+            "verified_at": now,
+            "instance_id": "",
+        }
+        if display_name:
+            v["display_name"] = str(display_name or "")[:40]
+        return {"ok": True, "verified_profile": profile_directory,
+                "verified_via": "manual-confirm"}
+
+    def verified_installation(self, installation_id):
+        """Mapping da xac minh truoc do (de tai dung, khong challenge lai)."""
+        return self._verified_installations.get(str(installation_id or ""))
 
     def _issue_credentials(self, name=""):
         """Cap instance/device/session/policy moi (dung chung cho redeem
@@ -391,7 +470,8 @@ class BridgeChannel:
 
     def forget_device(self, device_id):
         """Forget device: xoa link + policy + moi session cua device.
-        Pair lai tu dau moi ket noi duoc."""
+        Pair lai tu dau moi ket noi duoc. Xoa ca mapping installation da
+        verify lien quan (khong tai dung sau forget)."""
         d = self._devices.pop(str(device_id or ""), None)
         gone = 0
         for sid in [k for k, v in self._sessions.items()
@@ -400,6 +480,10 @@ class BridgeChannel:
             gone += 1
         if d is not None:
             self._policies.pop(str(d.get("instance") or ""), None)
+            gone_inst = str(d.get("instance") or "")
+            for iid in [k for k, v in self._verified_installations.items()
+                        if str(v.get("instance_id") or "") == gone_inst]:
+                self._verified_installations.pop(iid, None)
         return {"ok": True, "forgotten": d is not None, "sessions": gone}
 
     # -- events ----------------------------------------------------------

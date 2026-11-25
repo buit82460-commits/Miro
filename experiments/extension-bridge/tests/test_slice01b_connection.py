@@ -58,6 +58,7 @@ def _reset():
     _srv.CHANNEL._redeem_fails.clear()
     _srv.CHANNEL._link_requests.clear()
     _srv.CHANNEL._challenges.clear()
+    _srv.CHANNEL._verified_installations.clear()
     _srv.GRANTS._grants.clear()
     _srv.GRANTS._used_grant_seq.clear()
     _srv.REGISTRY.tabs.clear()
@@ -374,12 +375,18 @@ def test_policy_errors_are_not_revoked():
         srv.shutdown()
 
 
-def _link_verified(rid, prof="Profile 20", bkey="test-backend-key-01"):
-    """Helper: tao challenge + extension nop -> verified_profile."""
+def _link_verified(rid, prof="Profile 20", bkey="test-backend-key-01",
+                   launched=True):
+    """Helper: tao challenge + (launcher xac nhan) + tra challenge_id."""
     from bridge.server import CHANNEL
     c = _post("/challenge", {"request_id": rid,
                              "profile_directory": prof}, bkey=bkey)
     assert c.get("ok") and c.get("challenge_id"), c
+    if launched:
+        o = _post("/challenge-opened",
+                  {"challenge_id": c["challenge_id"],
+                   "profile_directory": prof}, bkey=bkey)
+        assert o.get("launched"), o
     return c["challenge_id"]
 
 
@@ -519,5 +526,82 @@ def test_challenge_binding_requires_matching_profile():
                                   "installation_id": "install-B"})
         assert code == 400, (code, out)
         print("challenge binding requires matching profile: PASS")
+    finally:
+        srv.shutdown()
+
+
+def test_challenge_opened_in_wrong_profile_does_not_bind():
+    """Negative quan trong: challenge nhan Profile 20 nhung MỞ NHAM tren
+    Profile 21 (launcher chua xac nhan / nhan khac) — du installation va
+    secret cua Profile 21 deu hop le, server KHONG bind sai."""
+    srv = _boot()
+    try:
+        q = _post("/link-request", {"installation_id": "install-21"})
+        rid, sec = q["request_id"], q["secret"]
+        c = _post("/challenge", {"request_id": rid,
+                                 "profile_directory": "Profile 20"},
+                  bkey="test-backend-key-01")
+        cid = c["challenge_id"]
+        # Extension Profile 21 thay URL mo nham -> nop (secret dung).
+        code, out = _post_expect("/link-answer",
+                                 {"request_id": rid, "challenge_id": cid,
+                                  "secret": sec,
+                                  "installation_id": "install-21"})
+        assert code == 400 and out.get("error") == "CHALLENGE_NOT_LAUNCHED", \
+            (code, out)
+        # Approve van bi chan (chua verify that).
+        code, out = _post_expect("/link-approve", {"request_id": rid},
+                                 bkey="test-backend-key-01")
+        assert code == 400 and out.get("error") == "PROFILE_UNVERIFIED", \
+            (code, out)
+        # Launcher nhan sai Profile cung bi tu choi.
+        code, out = _post_expect("/challenge-opened",
+                                 {"challenge_id": cid,
+                                  "profile_directory": "Profile 21"},
+                                 bkey="test-backend-key-01")
+        assert code == 400, (code, out)
+        # Launcher xac nhan dung Profile 20 -> moi nop duoc.
+        o = _post("/challenge-opened",
+                  {"challenge_id": cid, "profile_directory": "Profile 20"},
+                  bkey="test-backend-key-01")
+        assert o.get("launched"), o
+        ok = _post("/link-answer",
+                   {"request_id": rid, "challenge_id": cid, "secret": sec,
+                    "installation_id": "install-21"})
+        assert ok.get("verified_profile") == "Profile 20", ok
+        print("challenge opened in wrong profile does not bind: PASS")
+    finally:
+        srv.shutdown()
+
+
+def test_manual_confirm_fallback_and_mapping_reuse():
+    """Fallback: xac nhan 1 lan (ghi verified_via=manual-confirm), luu
+    mapping installation<->profile de tai dung khi reconnect."""
+    srv = _boot()
+    try:
+        from bridge.server import CHANNEL
+        q = _post("/link-request", {"installation_id": "install-C"})
+        rid = q["request_id"]
+        # Fallback can Backend role.
+        code, out = _post_expect("/link-confirm",
+                                 {"request_id": rid,
+                                  "profile_directory": "Profile 21"})
+        assert code == 403, (code, out)
+        # User xac nhan 1 lan Profile dang dung.
+        c = _post("/link-confirm",
+                  {"request_id": rid, "profile_directory": "Profile 21"},
+                  bkey="test-backend-key-01")
+        assert c.get("verified_profile") == "Profile 21", c
+        assert c.get("verified_via") == "manual-confirm", c
+        # Status cho Miro UI thay duoc.
+        st = _post("/link-status", {"request_id": rid},
+                   bkey="test-backend-key-01")
+        assert st.get("verified_profile") == "Profile 21", st
+        a = _post("/link-approve", {"request_id": rid},
+                  bkey="test-backend-key-01")
+        assert a.get("approved"), a
+        m = CHANNEL.verified_installation("install-C")
+        assert m and m.get("profile_directory") == "Profile 21", m
+        print("manual confirm fallback and mapping reuse: PASS")
     finally:
         srv.shutdown()

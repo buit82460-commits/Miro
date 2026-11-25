@@ -284,6 +284,40 @@ class Handler(BaseHTTPRequestHandler):
                 403 if r.get("error") in ("LINK_FORBIDDEN",
                                           "INSTALLATION_MISMATCH") else 400)
             return self._send(code, r)
+        if path == "/challenge-opened":
+            # Launcher xac nhan: da mo verify URL tren dung Profile muc
+            # tieu (mo bang --profile-directory). Can Backend role.
+            if not _backend_ok(self.headers.get("X-Backend-Key", "")):
+                return self._send(403, {"ok": False,
+                                        "error": "BACKEND_AUTH_REQUIRED"})
+            r = CHANNEL.mark_challenge_launched(
+                str(data.get("challenge_id") or ""),
+                str(data.get("profile_directory") or ""))
+            return self._send(200 if r.get("ok") else 400, r)
+        if path == "/link-confirm":
+            # Fallback: nguoi dung xac nhan 1 lan Profile dang dung.
+            # Can Backend role. Ghi verified_via=manual-confirm.
+            if not _backend_ok(self.headers.get("X-Backend-Key", "")):
+                return self._send(403, {"ok": False,
+                                        "error": "BACKEND_AUTH_REQUIRED"})
+            r = CHANNEL.confirm_profile_once(
+                str(data.get("request_id") or ""),
+                str(data.get("profile_directory") or ""),
+                str(data.get("display_name") or ""))
+            return self._send(200 if r.get("ok") else 400, r)
+        if path == "/link-status":
+            # Miro UI poll: request da verify chua (khong lo secret).
+            if not _backend_ok(self.headers.get("X-Backend-Key", "")):
+                return self._send(403, {"ok": False,
+                                        "error": "BACKEND_AUTH_REQUIRED"})
+            v = CHANNEL._link_requests.get(str(data.get("request_id") or ""))
+            if v is None:
+                return self._send(404, {"ok": False,
+                                        "error": "LINK_UNKNOWN"})
+            return self._send(200, {
+                "ok": True, "state": v.get("state"),
+                "verified_profile": v.get("verified_profile") or "",
+                "verified_via": v.get("verified_via") or ""})
         if path == "/link-redeem":
             # Extension doi secret lay credential sau approve.
             # Rang buoc: secret + installation khop + da approve + 1 lan.
