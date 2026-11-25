@@ -26,12 +26,47 @@ const READ_FUNCS = {
       || [...document.querySelectorAll("a,button")].find(
         (el) => /^\s*log\s*in\s*$/i.test(el.innerText || ""));
     let profileHref = "";
-    const links = [...document.querySelectorAll('a[href^="/@"]')];
-    const good = links.find((a) => {
+    const nav = document.querySelector("nav")
+      || document.querySelector("aside")
+      || document.querySelector('[data-e2e="side-nav"]');
+    const scopeLinks = (nav ? [...nav.querySelectorAll('a[href^="/@"]')] : [])
+      .concat([...document.querySelectorAll('a[href^="/@"]')]
+        .filter((a) => /profile/i.test(
+          (a.innerText || "") + " " + (a.getAttribute("aria-label") || ""))));
+    const pool = scopeLinks.length ? scopeLinks : links;
+    const isHandle = (h) => /^[\w.\-]{2,24}$/.test(h || "");
+    const tailOf = (href) => (href || "").slice(2).split("/")[0].split("?")[0];
+    // Loai "Following accounts" trong sidebar: cung la /@handle don nhung
+    // KHONG phai user dang nhap (anh + bai cua ban da chi ro).
+    const inFollowing = (a) => {
+      let el = a;
+      for (let i = 0; i < 6 && el; i++) {
+        el = el.parentElement;
+        const t = ((el && el.innerText) || "").slice(0, 60);
+        if (/following accounts/i.test(t)) return true;
+      }
+      return false;
+    };
+    const poolClean = pool.filter((a) => !inFollowing(a));
+    // Uu tien link Profile cua user dang nhap: anchor /@handle DON (khong
+    // chua /video/), thuong nam o sidebar/nav. Link feed /@author/video/...
+    // la tac gia video (vd @nghia68683), KHONG phai actor dang nhap.
+    // Tieu chi manh nhat: anchor co text/aria "Profile" (nut Profile o
+    // sidebar luon tro ve trang ca nhan cua user dang nhap).
+    const textOf = (a) => ((a.innerText || "") + " "
+      + (a.getAttribute("aria-label") || "")).trim();
+    const ownProfile = poolClean.find((a) => {
       const href = a.getAttribute("href") || "";
-      const tail = href.slice(2).split("/")[0].split("?")[0];
-      return /^[\w.\-]{2,24}$/.test(tail);
+      if (href.includes("/video/")) return false;
+      if (!isHandle(tailOf(href))) return false;
+      return /profile/i.test(textOf(a));
     });
+    const own = ownProfile || poolClean.find((a) => {
+      const href = a.getAttribute("href") || "";
+      if (href.includes("/video/")) return false;
+      return isHandle(tailOf(href));
+    });
+    const good = own || poolClean.find((a) => isHandle(tailOf(a.getAttribute("href"))));
     if (good) profileHref = good.getAttribute("href") || "";
     const upload = q('[data-e2e="upload-icon"]')
       || q('a[href^="/upload"]')
