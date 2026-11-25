@@ -45,6 +45,37 @@ class GrantStore:
         self._grants = {}  # (instance, tab) -> grant dict
         self._used_grant_seq = set()  # (instance, tab, seq) chong replay
 
+    def auto_grant(self, browser_instance_id, tab_id, origin,
+                   capability=READ_CAPABILITY, ttl=GRANT_TTL_S):
+        """Slice 01B: server tu cap runtime grant ngan han trong pham vi
+        policy da xac nhan. Khong nhan seq tu caller (khong replay);
+        grant_seq = epoch cu + 1, don dieu noi bo."""
+        if capability != READ_CAPABILITY:
+            return {"ok": False, "error": "CAPABILITY_DENIED"}
+        try:
+            tab_id = int(tab_id)
+        except (TypeError, ValueError):
+            return {"ok": False, "error": "TAB_INVALID"}
+        origin = str(origin or "")
+        if not origin.startswith(ALLOWED_ORIGINS):
+            return {"ok": False, "error": "ORIGIN_NOT_GRANTED"}
+        prev = self._grants.get((str(browser_instance_id), tab_id))
+        try:
+            prev_seq = int((prev or {}).get("grant_seq") or 0)
+        except (TypeError, ValueError):
+            prev_seq = 0
+        seq = prev_seq + 1
+        now = self._clock()
+        self._grants[(str(browser_instance_id), tab_id)] = {
+            "origin": origin,
+            "capability": READ_CAPABILITY,
+            "expires_at": now + ttl,
+            "grant_seq": seq,
+            "auto": True,
+        }
+        return {"ok": True, "expires_in": ttl, "grant_seq": seq,
+                "auto": True}
+
     def grant(self, browser_instance_id, tab_id, origin, seq,
               capability=READ_CAPABILITY, ttl=GRANT_TTL_S):
         """Cap grant doc cho 1 tab. `gesture` cu bi loai: khong nhan.

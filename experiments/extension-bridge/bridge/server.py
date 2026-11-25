@@ -213,6 +213,9 @@ class Handler(BaseHTTPRequestHandler):
             if r["ok"]:
                 safe["session_id"] = r["session_id"]
                 safe["token"] = r["token"]
+                # Slice 01B: tra device_id de extension luu + reconnect.
+                if r.get("device_id"):
+                    safe["device_id"] = r["device_id"]
             return self._send(200, safe)
         if path == "/push":
             r = CHANNEL.push_events(sid, tok, data.get("seq"),
@@ -300,7 +303,24 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(404, {"ok": False, "error": "TAB_UNKNOWN"})
             g = GRANTS.check(inst, tab_id, rec.url)
             if not g["ok"]:
-                return self._send(403, g)
+                # Slice 01B: auto runtime grant ngan han trong pham vi policy.
+                # Dieu kien: policy read_allowed + origin thuoc policy +
+                # tab da observed trong registry. Grant thu cong van uu tien
+                # (epoch cao hon); auto-grant ghi flag de truy vet.
+                err = str(g.get("error") or "")
+                auto = None
+                if err in ("GRANT_REQUIRED", "GRANT_EXPIRED"):
+                    pol = CHANNEL.policy(inst)
+                    allowed = [str(o or "") for o in
+                               (pol.get("origins") or [])]
+                    if pol.get("read_allowed") and \
+                            str(rec.url or "").startswith(tuple(allowed or ())):
+                        auto = GRANTS.auto_grant(inst, tab_id, rec.url)
+                if auto is None or not auto.get("ok"):
+                    return self._send(403, g)
+                auto_granted = True
+            else:
+                auto_granted = False
             # Backend KHONG doc DOM truc tiep; chi cho phep lenh doc co dinh.
             # Du lieu tra ve = chua tin cay, cho REA/Eye xac minh.
             try:
@@ -334,7 +354,37 @@ class Handler(BaseHTTPRequestHandler):
                                     "tabId": tab_id,
                                     "status": "AUTHORIZED",
                                     "request_id": request_id,
-                                    "deadline_in": timeout_s})
+                                    "deadline_in": timeout_s,
+                                    "auto_grant": bool(auto_granted)})
+        # ---- Slice 01B: one-click connection & persistent auth ----
+        if path == "/reconnect":
+            # Trusted reconnect: device da link xin session moi, khong code.
+            r = CHANNEL.reconnect(str(data.get("device_id") or ""),
+                                  INSTANCE)
+            safe = {"ok": r["ok"], "error": r.get("error", "")}
+            if r["ok"]:
+                safe["session_id"] = r["session_id"]
+                safe["token"] = r["token"]
+            return self._send(200 if r["ok"] else 403, safe)
+        if path == "/policy":
+            # Xem policy hien tai (extension role hoac backend role).
+            return self._send(200, CHANNEL.policy(INSTANCE))
+        if path == "/revoke-policy":
+            # Revoke permission: tat auto-grant, giu device link.
+            s, err = CHANNEL._auth(sid, tok)
+            if s is None and not _backend_ok(
+                    self.headers.get("X-Backend-Key", "")):
+                return self._send(403, {"ok": False, "error": "AUTH_REQUIRED"})
+            return self._send(200, CHANNEL.revoke_policy(INSTANCE))
+        if path == "/forget":
+            # Forget device: xoa link + policy + session. Pair lai tu dau.
+            s, err = CHANNEL._auth(sid, tok)
+            if s is None and not _backend_ok(
+                    self.headers.get("X-Backend-Key", "")):
+                return self._send(403, {"ok": False, "error": "AUTH_REQUIRED"})
+            dev = str(data.get("device_id") or (s or {}).get("device_id")
+                      or "")
+            return self._send(200, CHANNEL.forget_device(dev))
         if path == "/cancel":
             # BACKEND ROLE: huy request dang cho (task cancel/stop).
             if not _backend_ok(self.headers.get("X-Backend-Key", "")):

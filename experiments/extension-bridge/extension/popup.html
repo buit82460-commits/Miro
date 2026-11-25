@@ -1,12 +1,39 @@
 <!doctype html>
 <meta charset="utf-8">
-<title>Miro Pairing</title>
-<style>body{font:13px sans-serif;padding:12px;width:240px}
-input{width:100%;margin:4px 0}button{width:100%}#st{color:#555}</style>
-<p>Miro Tab Bridge — pairing (read-only)</p>
-<input id="code" placeholder="Pairing code 6 số" maxlength="6">
-<button id="go">Pair</button>
-<button id="grant">Grant DOM (tab hiện tại)</button>
-<button id="feed">Doc video feed dau tien</button>
+<title>Miro Bridge</title>
+<style>
+body{font:13px sans-serif;padding:12px;width:260px;margin:0}
+h1{font-size:15px;margin:0 0 2px}
+.sub{color:#555;margin:0 0 8px}
+.row{display:flex;justify-content:space-between;padding:3px 0;border-top:1px solid #eee}
+.row b{font-weight:600}
+.dot{color:#1a7f37;font-weight:700}
+.dot.off{color:#999}
+#power{width:100%;margin:8px 0;padding:8px;font-size:14px}
+#st{color:#555;min-height:18px}
+input{width:100%;margin:4px 0;box-sizing:border-box}
+button{width:100%;margin:2px 0}
+.small{font-size:12px;color:#555}
+details{margin-top:6px}
+</style>
+<h1>Miro</h1>
+<p class="sub">Chrome Bridge</p>
+<div class="row"><span>Bridge</span><b id="v-bridge" class="dot">...</b></div>
+<div class="row"><span>Browser</span><b>Chrome Profile 20</b></div>
+<div class="row"><span>Website</span><b>TikTok</b></div>
+<div class="row"><span>Permission</span><b>Read-only</b></div>
+<div class="row"><span>Policy</span><b id="v-policy">...</b></div>
+<button id="power">...</button>
 <p id="st"></p>
+<details id="pairbox">
+<summary class="small">Thiet lap lan dau / pair lai</summary>
+<input id="code" placeholder="Pairing code 6 so" maxlength="6">
+<button id="go">Pair</button>
+</details>
+<details>
+<summary class="small">Tuy chon nang cao</summary>
+<button id="grant">Grant DOM thu cong (tab hien tai)</button>
+<button id="revoke">Revoke permission</button>
+<button id="forget">Forget device (pair lai tu dau)</button>
+</details>
 <script src="popup.js"></script>

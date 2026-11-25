@@ -1,24 +1,56 @@
 // Miro Tab Bridge — background service worker (read-only probe).
-// Buoc 3: gui event tu dong ve backend qua kenh xac thuc (pairing + seq).
-// Chi event read-only. Khong DOM, khong debugger, khong click/type/evaluate.
+// Slice 01B: one-click connection — device_id + session persist local,
+// reconnect tu dong sau restart (khong nhap code lai). Tat (disconnect)
+// thi dung poll; revoke/forget do user chu dong.
 importScripts("read.js");
 const seen = new Map();
-let cfg = { baseUrl: "", sessionId: "", token: "", seq: 0 };
+let cfg = { baseUrl: "", sessionId: "", token: "", deviceId: "",
+            seq: 0, enabled: true };
 
 async function loadCfg() {
   try {
     const cur = await chrome.storage.local.get(
-      { bridge: { baseUrl: "", sessionId: "", token: "", seq: 0 } });
+      { bridge: { baseUrl: "", sessionId: "", token: "", deviceId: "",
+                  seq: 0, enabled: true } });
     cfg = { ...cfg, ...(cur.bridge || {}) };
   } catch (e) { /* chua pairing: chi log local */ }
 }
 async function saveCfg() {
+  // Slice 01B: persist session+device de auto-reconnect. Token nam trong
+  // chrome.storage.local cua profile (khong log, khong gui di noi khac).
   try {
     await chrome.storage.local.set(
       { bridge: { baseUrl: cfg.baseUrl, sessionId: cfg.sessionId,
-                  token: "", seq: cfg.seq } });
-    // NOTE: khong luu token dai han o spike nay; pairing lai sau restart.
+                  token: cfg.token || "", deviceId: cfg.deviceId || "",
+                  seq: cfg.seq, enabled: cfg.enabled !== false } });
   } catch (e) { /* ignore */ }
+}
+
+// Slice 01B: tu ket noi lai sau restart. Thu tu: session cu con han ->
+// dung tiep; het han -> reconnect bang device_id; device mat -> doi pair.
+async function ensureConnected() {
+  if (cfg.enabled === false) return false;
+  if (!cfg.baseUrl) return false;
+  if (cfg.sessionId && cfg.token) return true;
+  if (!cfg.deviceId) return false;
+  try {
+    const res = await fetch(cfg.baseUrl + "/reconnect", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ device_id: cfg.deviceId }),
+    });
+    if (!res.ok) return false;
+    const out = await res.json().catch(() => ({}));
+    if (!out.ok || !out.session_id || !out.token) return false;
+    cfg.sessionId = out.session_id;
+    cfg.token = out.token;
+    cfg.seq = 0;
+    await saveCfg();
+    console.log("[miro-bridge] reconnected via device (one-click)");
+    return true;
+  } catch (e) {
+    return false;
+  }
 }
 
 function describe(tab) {
@@ -92,12 +124,41 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     cfg.baseUrl = String(msg.baseUrl || "");
     cfg.sessionId = String(msg.sessionId);
     cfg.token = String(msg.token);
+    // Slice 01B: luu device_id de reconnect khong can code.
+    if (msg.deviceId) cfg.deviceId = String(msg.deviceId);
+    cfg.enabled = true;
+    (async () => {
+      try { await saveCfg(); } catch (e) { /* ignore */ }
+    })();
     console.log("[miro-bridge] paired, session set (token hidden)");
     return;
   }
+  // Slice 01B: one-click connect/disconnect (nut nguon trong popup).
+  // Disconnect = tat thuc thi (dung poll/inbox), giu link + policy.
+  // Connect = bat lai, tu reconnect neu session het han.
+  if (msg && msg.type === "miro-connect") {
+    cfg.enabled = true;
+    (async () => {
+      try { await saveCfg(); } catch (e) { /* ignore */ }
+      const ok = await ensureConnected();
+      try { sendResponse({ ok }); } catch (e) { /* popup dong */ }
+    })();
+    return true; // giu kenh mo cho sendResponse bat dong bo
+  }
+  if (msg && msg.type === "miro-disconnect") {
+    cfg.enabled = false;
+    (async () => {
+      try { await saveCfg(); } catch (e) { /* ignore */ }
+      try { sendResponse({ ok: true, enabled: false }); }
+      catch (e) { /* popup dong */ }
+    })();
+    return true;
+  }
   // Popup hoi trang thai (mo lai sau khi chuyen tab): da pair hay chua.
   if (msg && msg.type === "miro-status") {
-    sendResponse({ paired: !!(cfg.sessionId && cfg.token) });
+    sendResponse({ paired: !!(cfg.sessionId && cfg.token),
+                   enabled: cfg.enabled !== false,
+                   deviceId: cfg.deviceId || "" });
     return;
   }
   if (msg && msg.type === "miro-grant" && msg.tabId) {
@@ -186,7 +247,13 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 // tu choi (REQUEST_EXPIRED/CANCELLED). Execution loi (NAVIGATION_RACE,
 // NOT_ACTIVE_TAB) -> gui exec_error de backend nhan terminal thay vi data gia.
 async function pollInbox() {
-  if (!cfg.baseUrl || !cfg.sessionId || !cfg.token) return;
+  if (cfg.enabled === false) return;
+  if (!cfg.baseUrl) return;
+  // Slice 01B: session het han sau restart -> tu reconnect truoc khi poll.
+  if (!cfg.sessionId || !cfg.token) {
+    await ensureConnected();
+    if (!cfg.sessionId || !cfg.token) return;
+  }
   let res;
   try {
     res = await fetch(cfg.baseUrl + "/inbox", {
@@ -282,6 +349,7 @@ chrome.tabs.onUpdated.addListener((tabId, change, tab) => {
 
 chrome.runtime.onStartup.addListener(async () => {
   await loadCfg();
+  await ensureConnected();
   const tabs = await chrome.tabs.query({});
   tabs.forEach((t) => seen.set(t.id, { ...describe(t), event: "startup" }));
   console.log("[miro-bridge] startup tabs:", tabs.length);

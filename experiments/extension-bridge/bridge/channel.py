@@ -44,6 +44,9 @@ class BridgeChannel:
         self._sessions = {}  # session_id -> {instance, expires_at, last_seq}
         self._pair_secret = secrets.token_hex(16)
         self._redeem_fails = []  # [ts...] cua lan redeem sai gan day
+        # Slice 01B: trusted connection + persistent authorization.
+        self._devices = {}   # device_id -> {instance, created_at, revoked}
+        self._policies = {}  # instance -> {read_allowed, origins, ...}
 
     # -- pairing ---------------------------------------------------------
     def issue_pairing_code(self):
@@ -76,14 +79,32 @@ class BridgeChannel:
         session_id = secrets.token_hex(16)
         token = secrets.token_hex(32)
         digest = hashlib.sha256(token.encode()).hexdigest()
+        # Slice 01B: device link ben vung (one-click reconnect). device_id
+        # on dinh theo trinh duyet (extension sinh + luu local); session van
+        # ngan han, nhung device duoc tin de cap lai session khong can code.
+        device_id = "dev-" + secrets.token_hex(8)
+        self._devices[device_id] = {
+            "instance": str(browser_instance_id),
+            "created_at": now,
+            "revoked": False,
+        }
         self._sessions[session_id] = {
             "instance": str(browser_instance_id),
             "expires_at": now + SESSION_TTL_S,
             "last_seq": 0,
             "token_digest": digest,
+            "device_id": device_id,
+        }
+        # Slice 01B: policy mac dinh sau pair thanh cong: read-only TikTok,
+        # cho phep auto-grant. User thu hoi qua /policy (revoke).
+        self._policies[str(browser_instance_id)] = {
+            "read_allowed": True,
+            "origins": ["https://www.tiktok.com"],
+            "granted_at": now,
+            "device_id": device_id,
         }
         return {"ok": True, "session_id": session_id, "token": token,
-                "expires_in": SESSION_TTL_S}
+                "expires_in": SESSION_TTL_S, "device_id": device_id}
 
     # -- auth ------------------------------------------------------------
     def _auth(self, session_id, token):
@@ -98,6 +119,61 @@ class BridgeChannel:
         if not hmac.compare_digest(expect, got):
             return None, "AUTH_DENIED"
         return s, ""
+
+    # -- Slice 01B: trusted reconnect + policy ---------------------------
+    def reconnect(self, device_id, browser_instance_id):
+        """Cap lai session cho device da link, khong can pairing code.
+        Device bi revoke/forget -> tu choi, phai pair lai tu dau."""
+        now = self._clock()
+        d = self._devices.get(str(device_id or ""))
+        if d is None or d.get("revoked"):
+            return {"ok": False, "error": "DEVICE_UNKNOWN"}
+        if str(d.get("instance") or "") != str(browser_instance_id or ""):
+            return {"ok": False, "error": "INSTANCE_DENIED"}
+        pol = self._policies.get(str(browser_instance_id or ""))
+        if not isinstance(pol, dict) or not pol.get("read_allowed"):
+            return {"ok": False, "error": "POLICY_REVOKED"}
+        session_id = secrets.token_hex(16)
+        token = secrets.token_hex(32)
+        digest = hashlib.sha256(token.encode()).hexdigest()
+        self._sessions[session_id] = {
+            "instance": str(browser_instance_id),
+            "expires_at": now + SESSION_TTL_S,
+            "last_seq": 0,
+            "token_digest": digest,
+            "device_id": str(device_id),
+        }
+        return {"ok": True, "session_id": session_id, "token": token,
+                "expires_in": SESSION_TTL_S}
+
+    def policy(self, browser_instance_id):
+        pol = self._policies.get(str(browser_instance_id or ""))
+        if not isinstance(pol, dict):
+            return {"ok": True, "read_allowed": False}
+        return {"ok": True, "read_allowed": bool(pol.get("read_allowed")),
+                "origins": list(pol.get("origins") or []),
+                "granted_at": pol.get("granted_at")}
+
+    def revoke_policy(self, browser_instance_id):
+        """Revoke permission: giu device link, tat policy. Re-grant manual
+        van duoc; auto-grant bi chan cho toi khi policy bat lai."""
+        pol = self._policies.get(str(browser_instance_id or ""))
+        if isinstance(pol, dict):
+            pol["read_allowed"] = False
+        return {"ok": True, "revoked": True}
+
+    def forget_device(self, device_id):
+        """Forget device: xoa link + policy + moi session cua device.
+        Pair lai tu dau moi ket noi duoc."""
+        d = self._devices.pop(str(device_id or ""), None)
+        gone = 0
+        for sid in [k for k, v in self._sessions.items()
+                    if v.get("device_id") == str(device_id or "")]:
+            self._sessions.pop(sid, None)
+            gone += 1
+        if d is not None:
+            self._policies.pop(str(d.get("instance") or ""), None)
+        return {"ok": True, "forgotten": d is not None, "sessions": gone}
 
     # -- events ----------------------------------------------------------
     def push_events(self, session_id, token, seq, events):
