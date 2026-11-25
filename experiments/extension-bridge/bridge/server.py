@@ -315,7 +315,19 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(404, {"ok": False,
                                         "error": "LINK_UNKNOWN"})
             return self._send(200, {
-                "ok": True, "state": v.get("state"),
+                "ok": True, "state": str(v.get("state") or ""),
+                # Phan biet (khong dung tham so launcher lam bang chung):
+                # requested: moi gui, chua verify gi.
+                # challenge_answered: installation da tra loi challenge
+                #   (chua phai verified identity doc lap).
+                # verified: chi khi co co che xac minh doc lap (tam thoi
+                #   chi manual-confirm).
+                "link_stage": ("verified"
+                               if (str(v.get("verified_profile") or "")
+                                   and str(v.get("verified_via") or ""))
+                               else ("challenge_answered"
+                                     if str(v.get("verified_profile") or "")
+                                     else "requested")),
                 "verified_profile": v.get("verified_profile") or "",
                 "verified_via": v.get("verified_via") or ""})
         if path == "/link-redeem":

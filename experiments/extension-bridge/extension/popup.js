@@ -38,6 +38,7 @@ function render(state, detail) {
     NOT_PAIRED: ["Disconnected", "Bam de ket noi Miro"],
     DISCONNECTED: ["Disconnected", "Bam de ket noi Miro"],
     LINK_WAITING: ["Cho duyet", "Mo Miro de Cho phep ket noi 1 lan"],
+    LINK_VERIFIED: ["Cho duyet", "Da nhan Profile, cho ban xac nhan"],
     BRIDGE_OFFLINE: ["Bridge offline", "Miro tren may chua chay"],
     CONNECTING: ["Dang ket noi", "..."],
     RECONNECTING: ["Dang ket noi lai", "..."],
@@ -76,7 +77,11 @@ async function refresh() {
   if (!paired) {
     if (!up) return render("BRIDGE_OFFLINE", detail);
     // One-click: da gui yeu cau, dang doi user duyet tren Miro.
-    if (s.linkPending) return render("LINK_WAITING", detail);
+    // Phan biet requested (moi gui) / verified (challenge xong).
+    if (s.linkPending) {
+      return render(s.linkState === "verified" ? "LINK_VERIFIED"
+                                              : "LINK_WAITING", detail);
+    }
     return render("NOT_PAIRED", detail);
   }
   if (s.enabled === false) return render("DISCONNECTED", detail);

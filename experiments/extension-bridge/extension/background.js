@@ -8,7 +8,8 @@ const seen = new Map();
 const BASE_DEFAULT = "http://127.0.0.1:18767";
 let cfg = { baseUrl: "", sessionId: "", token: "", deviceId: "",
             instanceId: "", displayName: "", installationId: "",
-            linkRequestId: "", linkSecret: "", seq: 0, enabled: true,
+            linkRequestId: "", linkSecret: "", linkVerifiedProfile: "",
+            seq: 0, enabled: true,
             connecting: false, reconnecting: false };
 
 function ensureInstallationId() {
@@ -30,6 +31,7 @@ async function loadCfg() {
       { bridge: { baseUrl: "", sessionId: "", token: "", deviceId: "",
                   instanceId: "", displayName: "", installationId: "",
                   linkRequestId: "", linkSecret: "",
+                  linkVerifiedProfile: "",
                   seq: 0, enabled: true } });
     cfg = { ...cfg, ...(cur.bridge || {}) };
     const had = !!cfg.installationId;
@@ -51,6 +53,7 @@ async function saveCfg() {
                   installationId: cfg.installationId || "",
                   linkRequestId: cfg.linkRequestId || "",
                   linkSecret: cfg.linkSecret || "",
+                  linkVerifiedProfile: cfg.linkVerifiedProfile || "",
                   seq: cfg.seq, enabled: cfg.enabled !== false } });
   } catch (e) { /* ignore */ }
 }
@@ -172,11 +175,15 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   }
   // Slice 01B: one-click connect/disconnect (nut nguon trong popup).
   // Disconnect = tat thuc thi (dung poll/inbox), giu link + policy.
-  // Connect = bat lai, tu reconnect neu session het han.
+  // Connect = bat lai, tu reconnect neu session het han. Chua pair thi
+  // tu tao link-request (khong bat user nhap lai).
   if (msg && msg.type === "miro-connect") {
     cfg.enabled = true;
     (async () => {
       try { await saveCfg(); } catch (e) { /* ignore */ }
+      if (!cfg.sessionId || !cfg.token) {
+        await requestLinkIfNeeded();
+      }
       const ok = await ensureConnected();
       try { sendResponse({ ok }); } catch (e) { /* popup dong */ }
     })();
@@ -193,6 +200,8 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   }
   // Popup hoi trang thai (mo lai sau khi chuyen tab): da pair hay chua.
   // Tra ve session PRESENCE (co/khong), KHONG tra token ra popup.
+  // Phan biet: requested (da gui cho duyet) / verified (challenge xong,
+  // cho approve) / unverified (chua verify, cho Miro xu ly).
   if (msg && msg.type === "miro-status") {
     sendResponse({ session: !!(cfg.sessionId && cfg.token),
                    paired: !!(cfg.sessionId && cfg.token),
@@ -204,7 +213,10 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
                    instanceId: cfg.instanceId || "",
                    displayName: cfg.displayName || "",
                    installationId: cfg.installationId || "",
-                   linkPending: !!(cfg.linkRequestId && cfg.linkSecret) });
+                   linkPending: !!(cfg.linkRequestId && cfg.linkSecret),
+                   linkState: cfg.linkVerifiedProfile ? "verified"
+                     : ((cfg.linkRequestId && cfg.linkSecret)
+                        ? "requested" : "") });
     return;
   }
   // One-click Approval: tao yeu cau lien ket (giua secret o background).
@@ -409,6 +421,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         // Giu installationId on dinh (per-profile); xoa link-request cu.
         cfg.linkRequestId = "";
         cfg.linkSecret = "";
+        cfg.linkVerifiedProfile = "";
         cfg.seq = 0;
         await saveCfg();
         sendResponse({ ok: true, forgotten: true });
@@ -498,6 +511,36 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   }
 });
 
+// Tu tao link-request moi khi ON ma chua co (bridge restart mat request
+// cu, hoac lan dau bat). Khong tu approve, khong tu tao quyen.
+async function requestLinkIfNeeded() {
+  if (cfg.enabled === false) return false;
+  if (cfg.sessionId && cfg.token) return false;
+  if (cfg.linkRequestId && cfg.linkSecret) return false;
+  if (!cfg.baseUrl) cfg.baseUrl = BASE_DEFAULT;
+  try {
+    ensureInstallationId();
+    const res = await fetch(cfg.baseUrl + "/link-request", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ installation_id: cfg.installationId || "" }),
+    });
+    const out = await res.json().catch(() => ({}));
+    if (res.ok && out.ok && out.request_id && out.secret) {
+      cfg.linkRequestId = String(out.request_id);
+      cfg.linkSecret = String(out.secret);
+      cfg.linkVerifiedProfile = "";
+      await saveCfg();
+      console.log("[miro-bridge] link requested",
+        cfg.linkRequestId.slice(0, 12) + "...");
+      return true;
+    }
+    return false;
+  } catch (e) {
+    return false; // bridge offline: backoff o vong sau
+  }
+}
+
 // Poll inbox: server -> extension (dispatch tu dong, khong can mo popup).
 // Contract: CLAIM truoc EXECUTE (atomic claim). Hai poll dong thoi lan 2
 // -> CLAIM_CONFLICT, khong double-exec. Late result sau deadline bi server
@@ -508,6 +551,12 @@ async function pollInbox() {
   if (!cfg.baseUrl) cfg.baseUrl = BASE_DEFAULT;
   // One-click Approval: doi user duyet tren Miro roi tu redeem ngam.
   // Khong can mo popup; redeem thanh cong 1 lan roi xoa secret.
+  // Recovery (dung error contract hien co, khong che them ma):
+  // - LINK_NOT_APPROVED: request con cho duyet -> cho tiep.
+  // - LINK_UNKNOWN_OR_EXPIRED: bridge restart mat request -> tu tao moi
+  //   neu van ON (khong bat user bam Ket noi lai).
+  // - LINK_FORBIDDEN/INSTALLATION_MISMATCH/PAIRING_LOCKED: dung, popup hien.
+  // - BRIDGE_UNREACHABLE (net-fail): backoff, poll lai vong sau.
   if ((!cfg.sessionId || !cfg.token) && cfg.linkRequestId && cfg.linkSecret) {
     try {
       const res = await fetch(cfg.baseUrl + "/link-redeem", {
@@ -529,6 +578,17 @@ async function pollInbox() {
         cfg.enabled = true;
         await saveCfg();
         console.log("[miro-bridge] link approved, connected (one-click)");
+        return;
+      }
+      const err = String((out && out.error) || res.status);
+      if (err === "LINK_UNKNOWN_OR_EXPIRED") {
+        // Bridge restart mat request: tu tao moi neu van ON.
+        console.log("[miro-bridge] link request lost (bridge restart),",
+          "re-issuing");
+        cfg.linkRequestId = "";
+        cfg.linkSecret = "";
+        await saveCfg();
+        await requestLinkIfNeeded();
         return;
       }
       // LINK_NOT_APPROVED: cho tiep. Loi han/forbidden: giu, popup hien.
@@ -649,6 +709,10 @@ chrome.tabs.onUpdated.addListener((tabId, change, tab) => {
         console.log("[miro-bridge] challenge answered:",
           out && out.ok ? ("verified=" + out.verified_profile)
                         : ("fail=" + ((out && out.error) || "?")));
+        if (out && out.ok && out.verified_profile) {
+          cfg.linkVerifiedProfile = String(out.verified_profile);
+          saveCfg().catch(() => {});
+        }
       }).catch(() => { /* bridge chua chay: bo qua */ });
     }
   } catch (e) { /* ignore */ }
