@@ -622,6 +622,10 @@ async function pollInbox() {
     cfg.token = "";
     cfg.seq = 0;
     await saveCfg();
+    // Persistent pairing: thu reconnect bang trusted device TRUOC,
+    // chi tao link-request moi khi khong co device (chua tung pair).
+    // Khong approve lai, khong tao quyen moi.
+    if (await ensureConnected()) return;
     await requestLinkIfNeeded();
     return;
   }
