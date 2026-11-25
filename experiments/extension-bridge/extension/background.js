@@ -181,8 +181,10 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 });
 
 // Poll inbox: server -> extension (dispatch tu dong, khong can mo popup).
-// Chay moi 1s khi da paired; nhan lenh {request_id, tabId, spec} -> thuc
-// thi readFixed -> POST /read-result kem request_id (correlation).
+// Contract: CLAIM truoc EXECUTE (atomic claim). Hai poll dong thoi lan 2
+// -> CLAIM_CONFLICT, khong double-exec. Late result sau deadline bi server
+// tu choi (REQUEST_EXPIRED/CANCELLED). Execution loi (NAVIGATION_RACE,
+// NOT_ACTIVE_TAB) -> gui exec_error de backend nhan terminal thay vi data gia.
 async function pollInbox() {
   if (!cfg.baseUrl || !cfg.sessionId || !cfg.token) return;
   let res;
@@ -201,29 +203,67 @@ async function pollInbox() {
   const pend = (out && out.pending) || [];
   for (const job of pend) {
     if (!job || !job.request_id || !job.tabId || !job.spec) continue;
+    // 1. Claim nguyen tu: chi 1 worker thang.
+    let claim;
     try {
-      const data = await readFixed(job.tabId, job.spec);
-      const tabs = await chrome.tabs.get(job.tabId).catch(() => null);
-      const liveUrl = (tabs && tabs.url) || "";
-      await fetch(cfg.baseUrl + "/read-result", {
+      claim = await fetch(cfg.baseUrl + "/claim", {
         method: "POST",
         headers: { "Content-Type": "application/json",
                    "X-Session": cfg.sessionId, "X-Token": cfg.token },
-        body: JSON.stringify({ seq: cfg.seq + 1, tabId: job.tabId,
-          read: job.spec, live_origin: liveUrl, data,
-          request_id: job.request_id }),
-      }).then(async (r) => {
-        if (r.ok) { cfg.seq += 1; await saveCfg(); }
-      }).catch(() => {});
-      console.log("[miro-bridge] inbox served:", job.spec,
-        "request=", job.request_id);
+        body: JSON.stringify({ request_id: job.request_id }),
+      });
     } catch (e) {
-      console.log("[miro-bridge] inbox denied:",
-        String(e && e.message || e));
+      continue;
     }
+    if (!claim.ok) continue; // CLAIM_CONFLICT/CANCELLED/EXPIRED: bo qua
+    // 2. Execute: doc FIXED func, kem live_origin de server check grant.
+    let data = null;
+    let execError = "";
+    try {
+      data = await readFixed(job.tabId, job.spec);
+    } catch (e) {
+      execError = String(e && e.message || e).slice(0, 200);
+    }
+    let liveUrl = "";
+    try {
+      const tabs = await chrome.tabs.get(job.tabId).catch(() => null);
+      liveUrl = (tabs && tabs.url) || "";
+    } catch (e) { execError = execError || "TAB_GONE"; }
+    if (!liveUrl && !execError) execError = "TAB_GONE";
+    // 3. Report: thanh cong -> data; that bai -> exec_error (terminal).
+    try {
+      const r = await fetch(cfg.baseUrl + "/read-result", {
+        method: "POST",
+        headers: { "Content-Type": "application/json",
+                   "X-Session": cfg.sessionId, "X-Token": cfg.token },
+        body: JSON.stringify(execError
+          ? { seq: cfg.seq + 1, tabId: job.tabId, read: job.spec,
+              live_origin: liveUrl, data: {}, request_id: job.request_id,
+              exec_error: execError }
+          : { seq: cfg.seq + 1, tabId: job.tabId, read: job.spec,
+              live_origin: liveUrl, data, request_id: job.request_id }),
+      });
+      if (r.ok) { cfg.seq += 1; await saveCfg(); }
+      else {
+        const err = await r.json().catch(() => ({}));
+        console.log("[miro-bridge] inbox result refused:",
+          (err && err.error) || r.status);
+      }
+    } catch (e) { /* net-fail: giu claim, retry o poll sau */ }
+    console.log("[miro-bridge] inbox served:", job.spec,
+      "request=", job.request_id, execError ? ("err=" + execError) : "ok");
   }
 }
 setInterval(pollInbox, 1000);
+
+// Worker lifecycle observability: heartbeat moi 15s de kiem thu
+// service worker con song khi popup dong (khong can mo DevTools).
+setInterval(async () => {
+  try {
+    await chrome.storage.local.set(
+      { bridge_heartbeat: Date.now(), bridge_seq: cfg.seq });
+  } catch (e) { /* ignore */ }
+}, 15000);
 
 chrome.tabs.onCreated.addListener((tab) => report("opened", tab));
 chrome.tabs.onRemoved.addListener((tabId) => {

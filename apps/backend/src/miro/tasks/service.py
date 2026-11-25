@@ -94,11 +94,16 @@ class TaskService:
     STEPS = ("import", "track", "assemble", "apply", "render")
 
     def __init__(self, store: TaskStore, permissions: PermissionStore | None = None,
-                 remote: FakeRemote | None = None, stop_grace_seconds: float = 10.0):
+                 remote: FakeRemote | None = None, stop_grace_seconds: float = 10.0,
+                 bridge=None):
         self.store = store
         self.permissions = permissions or PermissionStore()
         self.remote = remote or FakeRemote()
         self.stop_grace_seconds = float(stop_grace_seconds)
+        # Production Bridge caller config (Slice 01): khong mac dinh session/
+        # token/backend_key trong code — caller truyen vao tu env/secret.
+        # task_id/lease owner chi de truy vet, KHONG thay HTTP auth.
+        self.bridge = bridge or {}
         self._seq: dict[str, int] = {}
 
     def _emit(self, record: dict, type: str, data: dict | None = None) -> None:
@@ -267,6 +272,87 @@ class TaskService:
             self._save(record)
             self._emit(record, "task_blocked", {"code": "AGENT_EXECUTION_ERROR"})
             return self.get(task_id)
+
+    # ---- Slice 01 production caller: user task -> Gateway -> Bridge ----
+    async def run_browser_actor_check(self, task_id: str, *, tab_id: int,
+                                      live_origin: str = "",
+                                      url: str | None = None,
+                                      grant_epoch=None,
+                                      timeout: int = 30) -> dict:
+        """Actual production call chain Slice 01:
+
+        TaskService.run_browser_actor_check(task_id)
+          -> gateway.read_actor_via_bridge
+            -> bridge_transport.read_via_bridge (backend-key tao request)
+              -> extension claim/execute (session/token)
+              -> wait_observation(request_id=...)
+            -> eye.evaluate_actor_signals -> Evidence rea-eye.
+
+        Caller truyen http auth qua self.bridge (session/token/backend_key/
+        instance_id/base); task_id + lease owner chi de truy vet, khong thay
+        the HTTP auth. Task STOP_REQUESTED giua chung -> huy request.
+        """
+        from miro.browser import gateway as _gateway
+
+        record = self.get(task_id)
+        if record.get("status") == TaskStatus.STOP_REQUESTED:
+            return {"ok": False, "error": "TASK_STOP_REQUESTED"}
+        if self.bridge.get("require_lease", False):
+            lease = (record.get("lease") or self.bridge.get("lease"))
+            if isinstance(lease, dict) and lease.get("resource"):
+                try:
+                    from miro.browser.lease_store import LeaseStore
+                    LeaseStore(self.bridge.get(
+                        "lease_db", r"C:\Miro\var\lease.db")).validate(lease)
+                except Exception as exc:
+                    return {"ok": False,
+                            "error": "LEASE_LOST: " + type(exc).__name__}
+        cfg = self.bridge or {}
+        cancelled = False
+
+        def _is_cancelled():
+            try:
+                st = self.get(task_id).get("status")
+            except Exception:
+                return True
+            return st == TaskStatus.STOP_REQUESTED
+
+        self._emit(record, "browser_check_started",
+                   {"tab_id": tab_id, "url": url or live_origin or ""})
+        r = await _gateway.read_actor_via_bridge(
+            str(cfg.get("session_id") or ""), str(cfg.get("token") or ""),
+            instance_id=str(cfg.get("instance_id") or "profile20-main"),
+            tab_id=int(tab_id), live_origin=str(live_origin or ""),
+            url=url, grant_epoch=grant_epoch,
+            base=str(cfg.get("base") or ""), timeout=int(timeout or 30),
+            backend_key=str(cfg.get("backend_key") or ""),
+            task_id=str(task_id), is_cancelled=_is_cancelled)
+        if not isinstance(r, dict) or not r.get("ok"):
+            err = str((r or {}).get("error", "BRIDGE_READ_FAILED")) \
+                if isinstance(r, dict) else "BRIDGE_READ_FAILED"
+            try:
+                record = self.get(task_id)
+                record["error"] = {"code": err,
+                                   "message": "browser actor check failed"}
+                self._save(record)
+                self._emit(record, "browser_check_failed", {"error": err})
+            except Exception:
+                pass
+            cancelled = err in ("REQUEST_CANCELLED", "TASK_STOP_REQUESTED")
+            return {"ok": False, "error": err,
+                    "cancelled": cancelled, "task_id": task_id}
+        try:
+            record = self.get(task_id)
+            record["evidence"] = r.get("evidence")
+            self._save(record)
+            self._emit(record, "browser_check_completed",
+                       {"actor": str(((r.get("evidence") or {})
+                                      .get("actor") or ""))})
+        except Exception:
+            pass
+        return {"ok": True, "task_id": task_id,
+                "evidence": r.get("evidence"),
+                "observation": r.get("observation")}
 
     # ---- stop: requested vs worker-stopped are distinct ----
     def request_stop(self, task_id: str) -> dict:

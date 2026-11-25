@@ -11,7 +11,7 @@ class FakeClient:
     def __init__(self, obs=None):
         self._obs = obs
 
-    def request_read(self, tab_id, spec):
+    def request_read(self, tab_id, spec, **kw):
         return {"ok": True, "read": spec, "status": "AUTHORIZED"}
 
     def observations(self):

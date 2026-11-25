@@ -325,7 +325,9 @@ async def read_actor_via_bridge(session_id: str, token: str, *,
                                 instance_id: str, tab_id: int,
                                 live_origin: str, url: str | None = None,
                                 grant_epoch=None, base: str = "",
-                                timeout: int = 30) -> dict:
+                                timeout: int = 30, backend_key: str = "",
+                                task_id: str = "",
+                                is_cancelled=None) -> dict:
     """Production READ actor qua Bridge (không CDP/không Page).
 
     Bridge observation (actor-login) -> evaluate_actor_signals -> Evidence
@@ -339,7 +341,8 @@ async def read_actor_via_bridge(session_id: str, token: str, *,
         session_id, token, instance_id=instance_id, tab_id=tab_id,
         live_origin=live_origin, spec="actor-login",
         base=base or BRIDGE_BASE, timeout=timeout,
-        grant_epoch=grant_epoch, url=url)
+        grant_epoch=grant_epoch, url=url, backend_key=backend_key,
+        task_id=task_id)
     if not isinstance(r, dict) or not r.get("ok"):
         return r if isinstance(r, dict) else {
             "ok": False, "error": "BRIDGE_READ_FAILED"}

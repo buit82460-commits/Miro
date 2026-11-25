@@ -14,6 +14,7 @@ Luat:
 from __future__ import annotations
 
 import json
+import os
 import time
 import urllib.request
 
@@ -35,12 +36,14 @@ SPEC_FIELDS = {
 }
 
 
-def _post(base, path, body, session_id="", token="", timeout=10):
+def _post(base, path, body, session_id="", token="", timeout=10,
+           backend_key=""):
     data = json.dumps(body or {}).encode()
-    req = urllib.request.Request(
-        base + path, data=data,
-        headers={"Content-Type": "application/json",
-                 "X-Session": session_id, "X-Token": token})
+    headers = {"Content-Type": "application/json",
+               "X-Session": session_id, "X-Token": token}
+    if backend_key:
+        headers["X-Backend-Key"] = backend_key
+    req = urllib.request.Request(base + path, data=data, headers=headers)
     with urllib.request.urlopen(req, timeout=timeout) as resp:
         return json.loads(resp.read().decode("utf-8", "replace"))
 
@@ -51,14 +54,23 @@ def _get(base, path, timeout=10):
 
 
 class BridgeClient:
-    """HTTP client toi bridge server (loopback). Khong mo CDP."""
+    """HTTP client toi bridge server (loopback). Khong mo CDP.
+
+    Credential separation:
+    - Backend role (tao request/huy): X-Backend-Key (MIRO_BRIDGE_BACKEND_KEY).
+    - Extension role (thuc thi/gui result): X-Session/X-Token (pairing).
+    - task_id/lease owner KHONG phai HTTP auth, chi de truy vet.
+    """
 
     def __init__(self, base=BRIDGE_BASE, session_id="", token="",
-                 timeout=10):
+                 timeout=10, backend_key=""):
         self.base = base.rstrip("/")
         self.session_id = session_id
         self.token = token
         self.timeout = timeout
+        self.backend_key = (backend_key
+                            or os.environ.get("MIRO_BRIDGE_BACKEND_KEY")
+                            or "")
 
     def health(self):
         return _get(self.base, "/health", self.timeout)
@@ -66,7 +78,9 @@ class BridgeClient:
     def tabs(self):
         return _get(self.base, "/tabs", self.timeout)
 
-    def request_read(self, tab_id, spec):
+    def request_read(self, tab_id, spec, *, instance="profile20-main",
+                     timeout_s=30, task_id=""):
+        # BACKEND ROLE: tao production request, auth = backend key.
         if spec not in READ_SPECS:
             return {"ok": False, "error": "READ_SPEC_DENIED"}
         try:
@@ -74,8 +88,14 @@ class BridgeClient:
         except (TypeError, ValueError):
             return {"ok": False, "error": "TAB_INVALID"}
         return _post(self.base, "/read",
-                     {"tabId": tab_id, "read": spec},
-                     self.session_id, self.token, self.timeout)
+                     {"tabId": tab_id, "read": spec, "instance": instance,
+                      "timeout_s": timeout_s, "task_id": task_id},
+                     "", "", self.timeout, self.backend_key)
+
+    def cancel_read(self, request_id):
+        # BACKEND ROLE: huy request dang cho (task cancel/stop).
+        return _post(self.base, "/cancel", {"request_id": request_id},
+                     "", "", self.timeout, self.backend_key)
 
     def observations(self):
         return _get(self.base, "/observations", self.timeout)
@@ -110,6 +130,9 @@ def clean_observation(obs):
     return {"ok": True, "spec": obs.get("spec"),
             "live_origin": obs.get("live_origin"), "data": clean,
             "untrusted": True,
+            "request_id": str(obs.get("request_id") or ""),
+            "task_id": str(obs.get("task_id") or ""),
+            "manual": bool(obs.get("manual", False)),
             "instance_id": str(obs.get("instance_id") or ""),
             "tab_id": obs.get("tab_id"),
             "grant_epoch": obs.get("grant_epoch", 0),
@@ -118,12 +141,29 @@ def clean_observation(obs):
 
 
 def wait_observation(client, *, tab_id, spec, timeout=30,
-                     request_id="", clock=None):
-    """Poll /observations cho toi khi co observation moi dung tab+spec."""
+                     request_id="", clock=None, is_cancelled=None):
+    """Poll /observations cho observation moi dung tab+spec (+request_id).
+
+    is_cancelled: callback -> True thi huy request tren server va tra
+    REQUEST_CANCELLED ngay (task stop), khong doi het timeout.
+    Manual observation (manual:true, request_id rong) KHONG bao gio duoc
+    nhan lam ket qua production request co request_id.
+    """
     clock = clock or time.time
     deadline = clock() + timeout
     seen = set()
     while clock() < deadline:
+        if callable(is_cancelled):
+            try:
+                if is_cancelled():
+                    try:
+                        if request_id:
+                            client.cancel_read(request_id)
+                    except Exception:
+                        pass
+                    return {"ok": False, "error": "REQUEST_CANCELLED"}
+            except Exception:
+                pass
         try:
             out = client.observations()
         except Exception as exc:
@@ -141,6 +181,8 @@ def wait_observation(client, *, tab_id, spec, timeout=30,
                 continue
             if str(ob.get("spec") or "") != str(spec):
                 continue
+            if request_id and ob.get("manual"):
+                continue
             if request_id and str(ob.get("request_id") or "") != str(request_id):
                 continue
             key = (ob.get("tab_id"), ob.get("spec"),
@@ -157,17 +199,22 @@ def wait_observation(client, *, tab_id, spec, timeout=30,
 
 async def read_via_bridge(session_id, token, *, instance_id, tab_id,
                           live_origin, spec, base=BRIDGE_BASE,
-                          timeout=30, grant_epoch=None, url=None):
+                          timeout=30, grant_epoch=None, url=None,
+                          backend_key="", task_id="",
+                           is_cancelled=None):
     """Production READ qua Bridge: request -> doi observation -> validate.
 
     Tra {"ok": True, "observation"} hoac {"ok": False, "error"}.
-    Khong CDP, khong Page, khong WRITE.
+    Khong CDP, khong Page, khong WRITE. Request tao bang backend key;
+    extension gui result bang session/token (credential separation).
     """
     from miro.browser.observation import check_observed_binding
     from miro.eye import evaluate_actor_signals
 
-    client = BridgeClient(base, session_id, token)
-    req = client.request_read(tab_id, spec)
+    client = BridgeClient(base, session_id, token,
+                          backend_key=backend_key)
+    req = client.request_read(tab_id, spec, instance=instance_id,
+                              timeout_s=timeout, task_id=task_id)
     if not isinstance(req, dict) or not req.get("ok"):
         err = (req or {}).get("error", "READ_REQUEST_DENIED") \
             if isinstance(req, dict) else "READ_REQUEST_DENIED"
@@ -177,7 +224,8 @@ async def read_via_bridge(session_id, token, *, instance_id, tab_id,
             return {"ok": False, "error": str(err)}
     rid = str((req or {}).get("request_id") or "")
     w = wait_observation(client, tab_id=tab_id, spec=spec,
-                         timeout=timeout, request_id=rid)
+                         timeout=timeout, request_id=rid,
+                         is_cancelled=is_cancelled)
     if not w.get("ok"):
         return w
     obs = w["observation"]

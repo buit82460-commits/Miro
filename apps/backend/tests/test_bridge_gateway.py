@@ -13,7 +13,7 @@ class FakeClient:
         self._err = err
         self.requested = []
 
-    def request_read(self, tab_id, spec):
+    def request_read(self, tab_id, spec, **kw):
         self.requested.append((tab_id, spec))
         return {"ok": True, "read": spec, "status": "AUTHORIZED"}
 

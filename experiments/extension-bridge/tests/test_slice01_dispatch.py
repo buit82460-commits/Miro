@@ -23,11 +23,13 @@ from bridge.server import Handler  # noqa: E402
 BASE = "http://127.0.0.1:18799"
 
 
-def _post(path, body, sid="", tok=""):
+def _post(path, body, sid="", tok="", bkey=""):
+    headers = {"Content-Type": "application/json",
+               "X-Session": sid, "X-Token": tok}
+    if bkey:
+        headers["X-Backend-Key"] = bkey
     req = urllib.request.Request(
-        BASE + path, data=json.dumps(body or {}).encode(),
-        headers={"Content-Type": "application/json",
-                 "X-Session": sid, "X-Token": tok})
+        BASE + path, data=json.dumps(body or {}).encode(), headers=headers)
     with urllib.request.urlopen(req, timeout=5) as resp:
         return json.loads(resp.read().decode())
 
@@ -38,13 +40,17 @@ def _get(path):
 
 
 def _reset():
-    from bridge.server import CHANNEL, GRANTS, REGISTRY, OBSERVATIONS, PENDING
+    import os
+    os.environ["MIRO_BRIDGE_BACKEND_KEY"] = "test-backend-key-01"
+    from bridge.server import CHANNEL, GRANTS, REGISTRY, OBSERVATIONS, PENDING, DONE, CANCELLED
     CHANNEL._sessions.clear()
     CHANNEL._pairing.clear()
     GRANTS._grants.clear()
     REGISTRY.tabs.clear()
     OBSERVATIONS.clear()
     PENDING.clear()
+    DONE.clear()
+    CANCELLED.clear()
 
 
 def _boot():
@@ -92,7 +98,7 @@ def test_slice01_read_returns_request_id_and_inbox():
     try:
         sid, tok = _pair()
         _grant(sid, tok, 11)
-        r = _post("/read", {"tabId": 11, "read": "actor-login"}, sid, tok)
+        r = _post("/read", {"tabId": 11, "read": "actor-login"}, bkey="test-backend-key-01")
         assert r.get("status") == "AUTHORIZED", r
         assert r.get("request_id"), r
         ib = _post("/inbox", {}, sid, tok)
@@ -110,7 +116,7 @@ def test_slice01_read_result_requires_request_id():
     try:
         sid, tok = _pair()
         _grant(sid, tok, 12)
-        r = _post("/read", {"tabId": 12, "read": "actor-login"}, sid, tok)
+        r = _post("/read", {"tabId": 12, "read": "actor-login"}, bkey="test-backend-key-01")
         rid = r.get("request_id")
         assert rid, r
         from bridge.server import CHANNEL
@@ -120,21 +126,22 @@ def test_slice01_read_result_requires_request_id():
                "data": {"title": "t", "url": "https://www.tiktok.com/",
                         "has_login_button": "", "profile_href": "/@hank",
                         "has_upload_link": "1"}}
-        # thieu request_id -> tu choi
-        try:
-            _post("/read-result", bad, sid, tok)
-            assert False, "thieu request_id phai bi tu choi"
-        except Exception as exc:
-            assert "403" in str(exc) or "REQUEST_ID_MISMATCH" in str(exc), exc
-        # sai request_id -> tu choi
+        # thieu request_id -> MANUAL PATH (contract COMPLETION):
+        # stored rieng manual:true, KHONG hoan thanh production request.
+        m = _post("/read-result", bad, sid, tok)
+        assert m.get("stored") and m.get("manual"), m
+        from bridge.server import PENDING as _PEND
+        assert rid in _PEND, "manual khong duoc xoa production request"
+        # sai request_id format -> tu choi
         bad2 = dict(bad, request_id="nope" * 4)
         try:
             _post("/read-result", bad2, sid, tok)
             assert False, "sai request_id phai bi tu choi"
         except Exception as exc:
             assert "403" in str(exc) or "REQUEST_ID_MISMATCH" in str(exc), exc
-        # dung request_id -> nhan
-        good = dict(bad, request_id=rid)
+        # dung request_id -> nhan (tinh lai seq sau manual bump)
+        seq3 = int(CHANNEL._sessions[sid].get("last_seq", 0)) + 1
+        good = dict(bad, seq=seq3, request_id=rid)
         ok = _post("/read-result", good, sid, tok)
         assert ok.get("ok") and ok.get("stored"), ok
         obs = _get("/observations")
