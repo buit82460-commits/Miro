@@ -118,7 +118,7 @@ def clean_observation(obs):
 
 
 def wait_observation(client, *, tab_id, spec, timeout=30,
-                     clock=None):
+                     request_id="", clock=None):
     """Poll /observations cho toi khi co observation moi dung tab+spec."""
     clock = clock or time.time
     deadline = clock() + timeout
@@ -140,6 +140,8 @@ def wait_observation(client, *, tab_id, spec, timeout=30,
             if int(ob.get("tab_id") or -1) != int(tab_id):
                 continue
             if str(ob.get("spec") or "") != str(spec):
+                continue
+            if request_id and str(ob.get("request_id") or "") != str(request_id):
                 continue
             key = (ob.get("tab_id"), ob.get("spec"),
                    ob.get("observed_at"), ob.get("seq"))
@@ -173,8 +175,9 @@ async def read_via_bridge(session_id, token, *, instance_id, tab_id,
         if not ((req or {}).get("status") == "AUTHORIZED"
                 or (req or {}).get("ok")):
             return {"ok": False, "error": str(err)}
+    rid = str((req or {}).get("request_id") or "")
     w = wait_observation(client, tab_id=tab_id, spec=spec,
-                         timeout=timeout)
+                         timeout=timeout, request_id=rid)
     if not w.get("ok"):
         return w
     obs = w["observation"]

@@ -29,6 +29,7 @@ CHANNEL = BridgeChannel()
 REGISTRY = TabRegistry()
 GRANTS = GrantStore()
 OBSERVATIONS = {}  # (instance, tab, seq) -> untrusted DOM observation (B3)
+PENDING = {}  # request_id -> {instance, tab_id, spec, created_at} (inbox dispatch)
 INSTANCE = "profile20-main"
 
 
@@ -98,7 +99,7 @@ class Handler(BaseHTTPRequestHandler):
                 items.append({"instance_id": inst, "tab_id": tab,
                               "seq": seq, "spec": ob.get("spec"),
                               "live_origin": ob.get("live_origin"),
-                              "grant_epoch": ob.get("grant_seq", 0),
+                              "grant_epoch": ob.get("grant_seq", 0), "request_id": ob.get("request_id", ""),
                               "data": ob.get("data"),
                               "untrusted": True,
                               "observed_at": ob.get("observed_at")})
@@ -223,9 +224,33 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(403, g)
             # Backend KHONG doc DOM truc tiep; chi cho phep lenh doc co dinh.
             # Du lieu tra ve = chua tin cay, cho REA/Eye xac minh.
+            import secrets as _secrets
+            import time as _time_req
+            request_id = _secrets.token_hex(8)
+            PENDING[request_id] = {"instance": s["instance"],
+                                   "tab_id": tab_id,
+                                   "spec": spec["spec"],
+                                   "created_at": _time_req.time()}
             return self._send(200, {"ok": True, "read": spec["spec"],
                                     "tabId": tab_id,
-                                    "status": "AUTHORIZED"})
+                                    "status": "AUTHORIZED",
+                                    "request_id": request_id})
+        if path == "/inbox":
+            # Extension poll lenh doc cho (dispatch server -> extension).
+            s, err = CHANNEL._auth(sid, tok)
+            if s is None:
+                return self._send(403, {"ok": False, "error": err})
+            import time as _time_ib
+            now = _time_ib.time()
+            stale = [k for k, v in PENDING.items()
+                     if now - float(v.get("created_at", 0)) > 120
+                     or v.get("instance") != s["instance"]]
+            for k in stale:
+                PENDING.pop(k, None)
+            mine = [{"request_id": k, "tabId": v["tab_id"],
+                     "spec": v["spec"]} for k, v in PENDING.items()
+                    if v.get("instance") == s["instance"]]
+            return self._send(200, {"ok": True, "pending": mine})
         if path == "/read-result":
             # B3: DOM result TACH RIENG khoi /push lifecycle. Khong ghi de
             # TabRegistry. Luu untrusted observation, cho REA/Eye xac minh.
@@ -248,18 +273,31 @@ class Handler(BaseHTTPRequestHandler):
                 rseq = int(data.get("seq"))
             except (TypeError, ValueError):
                 return self._send(400, {"ok": False, "error": "SEQ_INVALID"})
+            # Correlation TRUOC seq: observation phai gan dung request_id
+            # vua dispatch. Thieu/sai -> REQUEST_ID_MISMATCH, khong bump
+            # last_seq, khong pop PENDING (cho phep retry dung request_id).
+            # Chong nhan nham observation cu cua popup thu cong.
+            rid = str(data.get("request_id") or "")
+            pend = PENDING.get(rid) if rid else None
+            if pend is None or pend.get("instance") != s["instance"] \
+                    or int(pend.get("tab_id", -1)) != int(tab_id) \
+                    or str(pend.get("spec") or "") != str(spec["spec"] or ""):
+                return self._send(403, {"ok": False,
+                                        "error": "REQUEST_ID_MISMATCH"})
             if rseq <= int(str(s.get("last_seq") or 0)):
                 return self._send(403, {"ok": False, "error": "SEQ_REPLAY"})
             payload = data.get("data")
             if not isinstance(payload, dict):
                 return self._send(400, {"ok": False, "error": "BAD_RESULT"})
             s["last_seq"] = rseq
+            PENDING.pop(rid, None)
             import time as _time
             from bridge.grants import SPEC_FIELDS as _SPEC_FIELDS
             fields = _SPEC_FIELDS.get(spec["spec"], ("title", "url"))
             OBSERVATIONS[(s["instance"], tab_id, rseq)] = {
                 "spec": spec["spec"], "live_origin": live_origin,
                 "grant_seq": GRANTS.epoch(s["instance"], tab_id),
+                "request_id": rid,
                 "data": {k: str(payload.get(k) or "")[:2000]
                          for k in fields},
                 "untrusted": True,

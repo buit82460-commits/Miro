@@ -38,7 +38,7 @@ LOGS_DIR = STATE_DIR / "logs"
 MANIFEST = STATE_DIR / "processes.json"
 CONTROL = STATE_DIR / "control.json"
 
-SERVICES = ("be", "fe", "browser-worker", "media-worker", "node-youtube")
+SERVICES = ("be", "fe", "browser-worker", "media-worker", "node-youtube", "bridge")
 
 
 def _env_int(name: str, default: int) -> int:
@@ -54,6 +54,7 @@ PORTS = {
     "browser-worker": _env_int("MIRO_BROWSER_WORKER_PORT", 8771),
     "media-worker": _env_int("MIRO_MEDIA_WORKER_PORT", 8772),
     "node-youtube": _env_int("MIRO_YOUTUBE_PORT", 3457),
+    "bridge": _env_int("MIRO_BRIDGE_PORT", 18767),
 }
 
 HEALTH_PATHS = {
@@ -62,6 +63,7 @@ HEALTH_PATHS = {
     "browser-worker": "/health",
     "media-worker": "/health",
     "node-youtube": "/health",
+    "bridge": "/health",
 }
 
 
@@ -278,6 +280,12 @@ def service_command(name: str) -> tuple[list[str], Path, dict] | None:
             return None
         env["MIRO_YOUTUBE_PORT"] = str(PORTS["node-youtube"])
         return ([node, str(entry)], entry.parent, env)
+    if name == "bridge":
+        entry = ROOT / "experiments" / "extension-bridge" / "bridge" / "server.py"
+        if not entry.is_file():
+            return None
+        return ([sys.executable, str(entry), str(PORTS["bridge"])],
+                entry.parent, env)
     raise ValueError(f"unknown service: {name}")
 
 

@@ -180,6 +180,51 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   }
 });
 
+// Poll inbox: server -> extension (dispatch tu dong, khong can mo popup).
+// Chay moi 1s khi da paired; nhan lenh {request_id, tabId, spec} -> thuc
+// thi readFixed -> POST /read-result kem request_id (correlation).
+async function pollInbox() {
+  if (!cfg.baseUrl || !cfg.sessionId || !cfg.token) return;
+  let res;
+  try {
+    res = await fetch(cfg.baseUrl + "/inbox", {
+      method: "POST",
+      headers: { "Content-Type": "application/json",
+                 "X-Session": cfg.sessionId, "X-Token": cfg.token },
+      body: JSON.stringify({}),
+    });
+  } catch (e) {
+    return; // bridge chua chay: im lang, poll lai vong sau
+  }
+  if (!res.ok) return;
+  const out = await res.json().catch(() => ({}));
+  const pend = (out && out.pending) || [];
+  for (const job of pend) {
+    if (!job || !job.request_id || !job.tabId || !job.spec) continue;
+    try {
+      const data = await readFixed(job.tabId, job.spec);
+      const tabs = await chrome.tabs.get(job.tabId).catch(() => null);
+      const liveUrl = (tabs && tabs.url) || "";
+      await fetch(cfg.baseUrl + "/read-result", {
+        method: "POST",
+        headers: { "Content-Type": "application/json",
+                   "X-Session": cfg.sessionId, "X-Token": cfg.token },
+        body: JSON.stringify({ seq: cfg.seq + 1, tabId: job.tabId,
+          read: job.spec, live_origin: liveUrl, data,
+          request_id: job.request_id }),
+      }).then(async (r) => {
+        if (r.ok) { cfg.seq += 1; await saveCfg(); }
+      }).catch(() => {});
+      console.log("[miro-bridge] inbox served:", job.spec,
+        "request=", job.request_id);
+    } catch (e) {
+      console.log("[miro-bridge] inbox denied:",
+        String(e && e.message || e));
+    }
+  }
+}
+setInterval(pollInbox, 1000);
+
 chrome.tabs.onCreated.addListener((tab) => report("opened", tab));
 chrome.tabs.onRemoved.addListener((tabId) => {
   seen.delete(tabId);
