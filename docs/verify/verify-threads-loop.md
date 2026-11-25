@@ -531,4 +531,28 @@ Phat hien va sua trong luc nghiem thu (khong mo rong pham vi):
 - **Session-chet ket**: extension co session cu nhung bridge mat RAM → `/inbox` 403 bo qua im lang → xoa session + tu tao request moi khi ON.
 - **Budget ket do kill chu dong**: RestartBudget dung (chan crash-loop that sau 3 lan/600s); kill test tay lam can budget → reset + dung lai sach. Launcher khong phat hien treo-socket-khong-exit (process song, port chet) — ghi nhan gioi han, khong sua dot nay.
 
+## § Persistent Pairing — Final Acceptance (2026-11-25, Chrome that + Launcher that) — **ACCEPTED 8/8**
+
+- Commit: `668014a` (recovery order: request-mat → reconnect device truoc) tren `865b644` (session-chet → reconnect truoc) tren `ecb8450` (fix persist path ve `C:/Miro/.miro-runtime`) tren `f3d1af3` (persist trusted identity).
+- Test: suite bridge **19/19 slice01b** (them `test_trusted_persist_reconnect_after_restart_no_reapprove`) + full bridge **85 passed** (`python -m pytest experiments/extension-bridge/tests/ -p no:cacheprovider -q`).
+- Moi truong: bridge duoi **Launcher that** (pid bridge 38476 cuoi, health http-200), key `live-dev-key-01`, Chrome that Profile 20 (`81979097-6044-4ad5-9b43-55dfee6ce493`).
+- Request/approve cuoi: `lr-7857d69ee5ae72b3` → challenge `ch-29aa8110b002fb2a` (launched) → verify Profile 20 → approve → pending rong. Device moi `dev-62d46646d6ab8b3e`, instance `inst-d01ea6bd`, mapping verified giu `Profile 20`.
+
+| # | Nghiem thu | Bang chung live | Ket qua |
+|---|---|---|---|
+| 1 | Trusted identity + mapping luu xuong dia | `.miro-runtime/bridge-trusted.json` co 2 devices + policies + `verified[81979097...] = {Profile 20, inst-d01ea6bd}` | **DAT** |
+| 2 | Bridge restart va tu reconnect | kill 16352 → Launcher tu len 15536 → kill 15536 → len 38476; `/health` OK moi lan | **DAT** |
+| 3 | Khong phat sinh Link Request moi | `/link-pending` = `[]` sau moi restart (doi 20s + 35s, khong moc `lr-...` moi) | **DAT** |
+| 4 | Instance ID giu nguyen sau reconnect | popup + file deu `inst-d01ea6bd` / `Profile 20` truoc va sau restart; khong approve/grant lai | **DAT** |
+| 5 | Chrome restart khong can Approve lai | tat han Chrome → mo lai Profile 20, khong bam gi → pending `[]`, popup `Connected inst-d01ea6bd` | **DAT** |
+| 6 | OFF thuc su ngan thuc thi | popup `Disconnected` (enabled=false, giu link+quyen); extension dung poll (`background.js:550` return som); bridge khong nhan yeu cau moi tu extension | **DAT** |
+| 7 | OFF duoc duy tri sau restart | restart bridge khi dang OFF → pending `[]`, khong tu bat lai | **DAT** |
+| 8 | ON tu ket noi lai, khong Grant thu cong | bam nguon 1 lan → `Connected inst-d01ea6bd` ("Dang bat..."), pending `[]`, policy cu van hieu luc | **DAT** |
+
+Mat phu dinh: `/reconnect` voi `device_id` la → **403** (fail-closed, khong cap session).
+Gioi han trung thuc (khong danh PASS ngoai pham vi):
+- Reconnect xac thuc bang so huu `device_id` ngau nhien (bearer 64-bit, luu per-profile) + mapping installation da verify; **khong phai mTLS/khoa rieng** — `device_id` vua la dinh danh vua la bearer hien tai.
+- Chua co Automatic Profile Discovery, Profile Binding doc lap launcher, multi-profile that → giu trong backlog.
+- **Slice 01B CHOT tai day** (khong mo rong them). Tiep theo: Slice 02 bang task thuc te (VD: TikTok Profile 20, KANS 377, 5 video dau).
+
 Con lai: Chrome restart that (8), OFF that tren Chrome (9-10) — can 1 phien live ngan voi user. Discovery tu dong + multi-profile that chua nghiem thu (ngoai pham vi dot nay).
