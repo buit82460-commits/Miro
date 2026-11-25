@@ -216,6 +216,9 @@ async function pollInbox() {
       continue;
     }
     if (!claim.ok) continue; // CLAIM_CONFLICT/CANCELLED/EXPIRED: bo qua
+    const claimBody = await claim.json().catch(() => ({}));
+    const claimToken = (claimBody && claimBody.claim_token) || "";
+    if (!claimToken) continue; // khong co fencing token: khong execute
     // 2. Execute: doc FIXED func, kem live_origin de server check grant.
     let data = null;
     let execError = "";
@@ -239,9 +242,10 @@ async function pollInbox() {
         body: JSON.stringify(execError
           ? { seq: cfg.seq + 1, tabId: job.tabId, read: job.spec,
               live_origin: liveUrl, data: {}, request_id: job.request_id,
-              exec_error: execError }
+              claim_token: claimToken, exec_error: execError }
           : { seq: cfg.seq + 1, tabId: job.tabId, read: job.spec,
-              live_origin: liveUrl, data, request_id: job.request_id }),
+              live_origin: liveUrl, data, request_id: job.request_id,
+              claim_token: claimToken }),
       });
       if (r.ok) { cfg.seq += 1; await saveCfg(); }
       else {

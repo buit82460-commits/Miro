@@ -34,8 +34,17 @@ def _post(path, body, sid="", tok="", bkey=""):
         return json.loads(resp.read().decode())
 
 
-def _get(path):
-    with urllib.request.urlopen(BASE + path, timeout=5) as resp:
+def _get(path, sid="", tok="", bkey=""):
+    headers = {}
+    if bkey:
+        headers["X-Backend-Key"] = bkey
+    elif sid or tok:
+        headers["X-Session"] = sid
+        headers["X-Token"] = tok
+    else:
+        headers["X-Backend-Key"] = "test-backend-key-01"
+    req = urllib.request.Request(BASE + path, headers=headers, method="GET")
+    with urllib.request.urlopen(req, timeout=5) as resp:
         return json.loads(resp.read().decode())
 
 

@@ -54,8 +54,17 @@ def _post_expect(path, body, sid="", tok="", bkey=""):
 import urllib.error  # noqa: E402
 
 
-def _get(path):
-    with urllib.request.urlopen(BASE + path, timeout=5) as resp:
+def _get(path, sid="", tok="", bkey=""):
+    headers = {}
+    if bkey:
+        headers["X-Backend-Key"] = bkey
+    elif sid or tok:
+        headers["X-Session"] = sid
+        headers["X-Token"] = tok
+    else:
+        headers["X-Backend-Key"] = BACKEND_KEY
+    req = urllib.request.Request(BASE + path, headers=headers, method="GET")
+    with urllib.request.urlopen(req, timeout=5) as resp:
         return json.loads(resp.read().decode())
 
 
@@ -290,7 +299,42 @@ def test_exec_error_and_grant_revoke():
         srv.shutdown()
 
 
-# ---- 6. registry bound + restart ----
+# ---- 7. claim fencing: result tu claim cu -> CLAIM_STALE ----
+def test_claim_stale_fencing():
+    srv = _boot()
+    try:
+        from bridge.server import CHANNEL, PENDING
+        import time as _t
+        sid, tok = _pair()
+        _grant(sid, tok, 26)
+        r = _mkreq(26, timeout_s=60)
+        rid = r["request_id"]
+        c1 = _post("/claim", {"request_id": rid}, sid, tok)
+        assert c1.get("claim_token"), c1
+        old_tok = c1["claim_token"]
+        # Gia reclaim sau cua so: doi claimed_at ve qua khu.
+        PENDING[rid]["claimed_at"] = _t.time() - 31
+        c2 = _post("/claim", {"request_id": rid}, sid, tok)
+        assert c2.get("claim_token") and c2["claim_token"] != old_tok, c2
+        # Result kem token cu -> CLAIM_STALE, request van pending.
+        seq = int(CHANNEL._sessions[sid].get("last_seq", 0)) + 1
+        body = _result(sid, tok, 26, seq, rid)
+        body["claim_token"] = old_tok
+        code, out = _post_expect("/read-result", body, sid, tok)
+        assert code == 409 and out.get("error") == "CLAIM_STALE", (code, out)
+        assert rid in PENDING, "stale result khong duoc hoan thanh request"
+        # Result kem token moi -> stored.
+        seq2 = int(CHANNEL._sessions[sid].get("last_seq", 0)) + 1
+        body2 = _result(sid, tok, 26, seq2, rid)
+        body2["claim_token"] = c2["claim_token"]
+        ok = _post("/read-result", body2, sid, tok)
+        assert ok.get("stored"), ok
+        print("claim fencing (CLAIM_STALE): PASS")
+    finally:
+        srv.shutdown()
+
+
+# ---- 8. registry bound + restart ----
 def test_registry_bound_and_restart():
     from bridge import server as _srv
     _reset()

@@ -98,7 +98,21 @@ class BridgeClient:
                      "", "", self.timeout, self.backend_key)
 
     def observations(self):
-        return _get(self.base, "/observations", self.timeout)
+        # /observations can backend-key hoac extension session. Backend
+        # role gui kem key cua minh; transport cua extension gui session.
+        import urllib.request as _u
+        import json as _j
+        try:
+            req = _u.Request(self.base + "/observations", method="GET")
+            if self.backend_key:
+                req.add_header("X-Backend-Key", self.backend_key)
+            else:
+                req.add_header("X-Session", self.session_id)
+                req.add_header("X-Token", self.token)
+            with _u.urlopen(req, timeout=self.timeout) as resp:
+                return _j.loads(resp.read().decode("utf-8", "replace"))
+        except Exception:
+            return _get(self.base, "/observations", self.timeout)
 
     def revoke(self):
         return _post(self.base, "/revoke", {},

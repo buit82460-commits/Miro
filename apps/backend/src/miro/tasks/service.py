@@ -273,6 +273,55 @@ class TaskService:
             self._emit(record, "task_blocked", {"code": "AGENT_EXECUTION_ERROR"})
             return self.get(task_id)
 
+    # ---- Slice 01 message routing: user message -> job_type ----
+    # Reviewer A (COMPLETION): chung minh Miro HIEU yeu cau, khong chi chay
+    # job da dinh san. route_message() doc message tieng Viet tu nhien,
+    # tra job_type + params. run_task_message() la production entry point
+    # user-facing: message -> route -> run_browser_actor_check.
+    BROWSER_ACTOR_PATTERNS = (
+        "tai khoan tiktok", "tiktok dang nhap", "dang nhap tiktok",
+        "tai khoan dang nhap", "profile 20", "chrome profile",
+        "kiem tra tai khoan", "tai khoan nao",
+    )
+
+    @classmethod
+    def route_message(cls, message: str) -> dict:
+        """Dinh tuyen message tu nhien -> job. Khong NLP nang, khong Planner.
+        Tra {"job_type": "browser_actor_check", "params": {...}} hoac
+        {"job_type": "unsupported", "reason": ...}.
+        """
+        text = str(message or "").strip().lower()
+        if not text:
+            return {"job_type": "unsupported", "reason": "EMPTY_MESSAGE"}
+        hits = [p for p in cls.BROWSER_ACTOR_PATTERNS if p in text]
+        if hits:
+            return {"job_type": "browser_actor_check",
+                    "params": {},
+                    "matched": hits[:2],
+                    "note": "user-facing task execution, chua phai Planner day du"}
+        return {"job_type": "unsupported", "reason": "NO_ROUTE_MATCH"}
+
+    async def run_task_message(self, task_id: str, *, tab_id: int,
+                               live_origin: str = "",
+                               url: str | None = None,
+                               grant_epoch=None,
+                               timeout: int = 30) -> dict:
+        """Production entry point user-facing: message(task) -> route -> check.
+        Luu route vao event de Reviewer doi chieu message thuc -> job.
+        """
+        record = self.get(task_id)
+        route = self.route_message((record.get("request") or {}).get(
+            "message", ""))
+        self._emit(record, "task_routed", {"route": route})
+        if route.get("job_type") != "browser_actor_check":
+            return {"ok": False, "error": "NO_ROUTE_MATCH",
+                    "route": route, "task_id": task_id}
+        out = await self.run_browser_actor_check(
+            task_id, tab_id=tab_id, live_origin=live_origin, url=url,
+            grant_epoch=grant_epoch, timeout=timeout)
+        out["route"] = route
+        return out
+
     # ---- Slice 01 production caller: user task -> Gateway -> Bridge ----
     async def run_browser_actor_check(self, task_id: str, *, tab_id: int,
                                       live_origin: str = "",

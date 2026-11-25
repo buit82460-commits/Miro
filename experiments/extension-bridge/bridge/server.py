@@ -153,7 +153,16 @@ class Handler(BaseHTTPRequestHandler):
                     for k, v in sorted(REGISTRY.tabs.items())]
             return self._send(200, {"ok": True, "tabs": tabs})
         if self.path == "/observations":
-            # Production transport poll: observation untrusted moi nhat.
+            # Production transport poll: backend (key) hoac extension
+            # (session) moi duoc doc. Khong cho anonymous doc observation.
+            _bkey_ok = _backend_ok(self.headers.get("X-Backend-Key", ""))
+            _sess, _serr = CHANNEL._auth(
+                self.headers.get("X-Session", ""),
+                self.headers.get("X-Token", ""))
+            if not _bkey_ok and _sess is None:
+                return self._send(403, {"ok": False,
+                                        "error": "OBS_AUTH_REQUIRED"})
+            # Observation untrusted moi nhat, ke ca manual (co flag manual).
             items = []
             for (inst, tab, seq), ob in sorted(OBSERVATIONS.items()):
                 items.append({"instance_id": inst, "tab_id": tab,
@@ -372,15 +381,23 @@ class Handler(BaseHTTPRequestHandler):
             if pend.get("state") == "claimed":
                 # Reclaim sau CLAIM_RETRY_S cho phep (extension chet giua
                 # chung); trong cua so thi tu choi de chong double-exec.
+                # Fencing: moi claim cap claim_token moi; result phai kem
+                # token khop — result tu claim cu (da het hieu luc) bi
+                # CLAIM_STALE, khong hoan thanh request.
                 if now - float(pend.get("claimed_at", 0)) < CLAIM_RETRY_S:
                     return self._send(409, {"ok": False,
                                             "error": "CLAIM_CONFLICT"})
+            import secrets as _secrets_cl
+            claim_token = _secrets_cl.token_hex(8)
             pend["state"] = "claimed"
             pend["claimed_by"] = str(sid or "")
             pend["claimed_at"] = now
+            pend["claim_token"] = claim_token
+            pend["claim_seq"] = int(pend.get("claim_seq", 0) or 0) + 1
             return self._send(200, {"ok": True, "request_id": rid,
                                     "tabId": pend["tab_id"],
-                                    "spec": pend["spec"]})
+                                    "spec": pend["spec"],
+                                    "claim_token": claim_token})
         if path == "/inbox":
             # Extension poll lenh doc cho (dispatch server -> extension).
             # Chi tra request queued (chua claimed/cancelled/het han).
@@ -493,6 +510,15 @@ class Handler(BaseHTTPRequestHandler):
                     or str(pend.get("spec") or "") != str(spec["spec"] or ""):
                 return self._send(403, {"ok": False,
                                         "error": "REQUEST_ID_MISMATCH"})
+            # Claim fencing: neu request da duoc claim (co claim_token),
+            # result phai kem token khop. Reclaim cap token moi -> result tu
+            # claim cu bi CLAIM_STALE, khong hoan thanh request (Reviewer B:
+            # reclaim 30s). Request chua claim lan nao (test truc tiep,
+            # flow cu) -> chap nhan de tuong thich nguoc.
+            _ct = str(pend.get("claim_token") or "")
+            if _ct and str(data.get("claim_token") or "") != _ct:
+                return self._send(409, {"ok": False,
+                                        "error": "CLAIM_STALE"})
             # Grant bi thu hoi giua claim va execution -> tu choi execution,
             # giu request de backend timeout/huy dung contract.
             gg = GRANTS.check(pend.get("instance"), pend.get("tab_id"),

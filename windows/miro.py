@@ -284,6 +284,12 @@ def service_command(name: str) -> tuple[list[str], Path, dict] | None:
         entry = ROOT / "experiments" / "extension-bridge" / "bridge" / "server.py"
         if not entry.is_file():
             return None
+        # Backend role auth: truyen MIRO_BRIDGE_BACKEND_KEY (neu co) cho
+        # bridge process. Khong hard-code key; thieu key -> bridge tu choi
+        # /read (BACKEND_AUTH_REQUIRED), fail-closed.
+        if os.environ.get("MIRO_BRIDGE_BACKEND_KEY"):
+            env["MIRO_BRIDGE_BACKEND_KEY"] = \
+                os.environ["MIRO_BRIDGE_BACKEND_KEY"]
         return ([sys.executable, str(entry), str(PORTS["bridge"])],
                 entry.parent, env)
     raise ValueError(f"unknown service: {name}")
