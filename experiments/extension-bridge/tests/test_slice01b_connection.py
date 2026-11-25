@@ -59,6 +59,7 @@ def _reset():
     _srv.CHANNEL._link_requests.clear()
     _srv.CHANNEL._challenges.clear()
     _srv.CHANNEL._verified_installations.clear()
+    _srv.CHANNEL._persist_path = None  # test: khong ghi file that
     _srv.GRANTS._grants.clear()
     _srv.GRANTS._used_grant_seq.clear()
     _srv.REGISTRY.tabs.clear()
@@ -693,5 +694,43 @@ def test_concurrent_verify_and_status_do_not_block():
         raw.close()
         assert code == 404 and st.get("error") == "LINK_UNKNOWN", (code, st)
         print("concurrent verify does not block: PASS")
+    finally:
+        srv.shutdown()
+
+
+def test_trusted_persist_reconnect_after_restart_no_reapprove():
+    """Restart bridge (mat RAM) nhung trusted identity con tren dia ->
+    reconnect bang device_id thanh cong, KHONG can approve lai."""
+    import tempfile as _tf
+    import os as _os
+    srv = _boot()
+    try:
+        from bridge.channel import BridgeChannel as _BC
+        tmp = _os.path.join(_tf.gettempdir(), "miro-test-trusted.json")
+        try:
+            _os.remove(tmp)
+        except OSError:
+            pass
+        ch = _BC(persist_path=tmp)
+        q = ch.create_link_request("install-P", "")
+        assert q.get("ok"), q
+        ch.confirm_profile_once(q["request_id"], "Profile 20")
+        a = ch.approve_link_request(q["request_id"])
+        assert a.get("approved"), a
+        r = ch.redeem_link_request(q["request_id"], q["secret"], "install-P")
+        assert r.get("ok"), r
+        dev = r["device_id"]
+        inst = r["instance_id"]
+        # Mat RAM (restart) nhung file con -> nap lai van reconnect duoc.
+        ch2 = _BC(persist_path=tmp)
+        assert dev in ch2._devices, "device phai con sau restart"
+        out = ch2.reconnect(dev)
+        assert out.get("ok"), out
+        assert out.get("instance_id") == inst, out
+        try:
+            _os.remove(tmp)
+        except OSError:
+            pass
+        print("trusted persist reconnect no reapprove: PASS")
     finally:
         srv.shutdown()

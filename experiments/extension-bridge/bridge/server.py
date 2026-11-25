@@ -28,7 +28,9 @@ from bridge.grants import GrantStore, validate_read_spec  # noqa: E402
 from bridge.importer import import_outbox  # noqa: E402
 from bridge.registry import TabRegistry  # noqa: E402
 
-CHANNEL = BridgeChannel()
+CHANNEL = BridgeChannel(persist_path=str(
+    Path(__file__).resolve().parent.parent.parent
+    / ".miro-runtime" / "bridge-trusted.json"))
 REGISTRY = TabRegistry()
 GRANTS = GrantStore()
 OBSERVATIONS = {}  # (instance, tab, seq) -> untrusted DOM observation (B3)

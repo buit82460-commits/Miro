@@ -38,8 +38,9 @@ def _redact(value):
 class BridgeChannel:
     """Server logic thuan (khong socket) de de test. HTTP wrapper o ngoai."""
 
-    def __init__(self, clock=None):
+    def __init__(self, clock=None, persist_path=None):
         self._clock = clock or time.time
+        self._persist_path = persist_path  # json file giu trusted identity
         self._pairing = {}   # code -> expires_at
         self._sessions = {}  # session_id -> {instance, expires_at, last_seq}
         self._pair_secret = secrets.token_hex(16)
@@ -47,6 +48,7 @@ class BridgeChannel:
         # Slice 01B: trusted connection + persistent authorization.
         self._devices = {}   # device_id -> {instance, created_at, revoked}
         self._policies = {}  # instance -> {read_allowed, origins, ...}
+        self._load_trusted()
         # One-click Approval: yeu cau lien ket dung 1 lan, co han.
         # request_id -> {secret_digest, fingerprint, hint, installation_id,
         #   created_at, expires_at, state, approved_at}.
@@ -63,6 +65,48 @@ class BridgeChannel:
         # verified_at, instance_id}. Tai dung khi reconnect (khong
         # challenge lai). Mat khi forget device.
         self._verified_installations = {}
+        self._load_trusted()
+
+    # -- trusted persist (survive bridge restart) ----------------------
+    # Chi devices/policies/mapping (trusted identity + quyen). Session
+    # (token song) KHONG persist: restart xong extension reconnect bang
+    # device_id de lay session moi. Forget/revoke xoa ca file.
+    def _load_trusted(self):
+        p = self._persist_path
+        if not p:
+            return
+        try:
+            import json as _js
+            import os as _os
+            if not _os.path.isfile(str(p)):
+                return
+            d = _js.loads(open(str(p), encoding="utf-8").read() or "{}")
+            if isinstance(d.get("devices"), dict):
+                self._devices = d["devices"]
+            if isinstance(d.get("policies"), dict):
+                self._policies = d["policies"]
+            if isinstance(d.get("verified"), dict):
+                self._verified_installations = d["verified"]
+        except Exception:
+            pass
+
+    def _save_trusted(self):
+        p = self._persist_path
+        if not p:
+            return
+        try:
+            import json as _js
+            import os as _os
+            _os.makedirs(_os.path.dirname(str(p)) or ".", exist_ok=True)
+            tmp = str(p) + ".tmp"
+            open(tmp, "w", encoding="utf-8").write(_js.dumps({
+                "devices": self._devices,
+                "policies": self._policies,
+                "verified": self._verified_installations,
+            }))
+            _os.replace(tmp, str(p))
+        except Exception:
+            pass
 
     # -- pairing ---------------------------------------------------------
     def issue_pairing_code(self):
@@ -200,6 +244,7 @@ class BridgeChannel:
             m = self._verified_installations.get(installation)
             if isinstance(m, dict):
                 m["instance_id"] = str(out.get("instance_id") or "")
+            self._save_trusted()
         return out
 
     # -- Profile Binding Challenge --------------------------------------
@@ -297,6 +342,7 @@ class BridgeChannel:
             "verified_at": now,
             "instance_id": "",
         }
+        self._save_trusted()
         return {"ok": True, "verified_profile": prof}
 
     def confirm_profile_once(self, request_id, profile_directory,
@@ -325,6 +371,7 @@ class BridgeChannel:
         }
         if display_name:
             v["display_name"] = str(display_name or "")[:40]
+        self._save_trusted()
         return {"ok": True, "verified_profile": profile_directory,
                 "verified_via": "manual-confirm"}
 
@@ -365,6 +412,7 @@ class BridgeChannel:
             "device_id": device_id,
             "profile_name": name,
         }
+        self._save_trusted()
         return {"ok": True, "session_id": session_id, "token": token,
                 "expires_in": SESSION_TTL_S, "device_id": device_id,
                 "instance_id": instance_id}
@@ -434,6 +482,7 @@ class BridgeChannel:
             pol["read_allowed"] = False
             pol["revoked"] = True
             pol["revoked_at"] = self._clock()
+            self._save_trusted()
         return {"ok": True, "revoked": True}
 
     def grant_policy(self, browser_instance_id):
@@ -446,6 +495,7 @@ class BridgeChannel:
         pol["read_allowed"] = True
         pol["revoked"] = False
         pol["regranted_at"] = self._clock()
+        self._save_trusted()
         return {"ok": True, "regranted": True}
 
     def rename(self, browser_instance_id, display_name):
@@ -466,6 +516,7 @@ class BridgeChannel:
             pol["profile_name"] = name
         if isinstance(dev, dict):
             dev["profile_name"] = name
+        self._save_trusted()
         return {"ok": True, "display_name": name}
 
     def forget_device(self, device_id):
@@ -484,6 +535,7 @@ class BridgeChannel:
             for iid in [k for k, v in self._verified_installations.items()
                         if str(v.get("instance_id") or "") == gone_inst]:
                 self._verified_installations.pop(iid, None)
+            self._save_trusted()
         return {"ok": True, "forgotten": d is not None, "sessions": gone}
 
     # -- events ----------------------------------------------------------
