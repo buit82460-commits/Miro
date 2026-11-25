@@ -85,10 +85,13 @@ class BridgeChannel:
         # Slice 01B: device link ben vung (one-click reconnect). device_id
         # on dinh theo trinh duyet (extension sinh + luu local); session van
         # ngan han, nhung device duoc tin de cap lai session khong can code.
+        # Slate: ten hien thi do user dat khi pair (khong dung cho auth).
+        # Mac dinh lay profile_name neu co; user doi sau qua /rename.
+        name = str(profile_name or "")[:40]
         device_id = "dev-" + secrets.token_hex(8)
         self._devices[device_id] = {
             "instance": instance_id,
-            "profile_name": str(profile_name or "")[:40],
+            "profile_name": name,
             "created_at": now,
             "revoked": False,
         }
@@ -103,10 +106,13 @@ class BridgeChannel:
         # cho phep auto-grant. User thu hoi qua /policy (revoke).
         self._policies[instance_id] = {
             "read_allowed": True,
+            "revoked": False,
             "origins": ["https://www.tiktok.com"],
             "granted_at": now,
+            "revoked_at": None,
+            "regranted_at": None,
             "device_id": device_id,
-            "profile_name": str(profile_name or "")[:40],
+            "profile_name": name,
         }
         return {"ok": True, "session_id": session_id, "token": token,
                 "expires_in": SESSION_TTL_S, "device_id": device_id,
@@ -155,18 +161,61 @@ class BridgeChannel:
     def policy(self, browser_instance_id):
         pol = self._policies.get(str(browser_instance_id or ""))
         if not isinstance(pol, dict):
-            return {"ok": True, "read_allowed": False}
+            return {"ok": True, "read_allowed": False,
+                    "revoked": False, "granted_at": None,
+                    "capabilities": [], "origins": [],
+                    "display_name": ""}
         return {"ok": True, "read_allowed": bool(pol.get("read_allowed")),
+                "revoked": bool(pol.get("revoked")),
                 "origins": list(pol.get("origins") or []),
-                "granted_at": pol.get("granted_at")}
+                "capabilities": ["read"],
+                "display_name": str(pol.get("profile_name") or ""),
+                "granted_at": pol.get("granted_at"),
+                "revoked_at": pol.get("revoked_at"),
+                "regranted_at": pol.get("regranted_at")}
 
     def revoke_policy(self, browser_instance_id):
         """Revoke permission: giu device link, tat policy. Re-grant manual
-        van duoc; auto-grant bi chan cho toi khi policy bat lai."""
+        van duoc; auto-grant bi chan cho toi khi policy bat lai (grant_policy
+        hoac pair lai)."""
         pol = self._policies.get(str(browser_instance_id or ""))
         if isinstance(pol, dict):
             pol["read_allowed"] = False
+            pol["revoked"] = True
+            pol["revoked_at"] = self._clock()
         return {"ok": True, "revoked": True}
+
+    def grant_policy(self, browser_instance_id):
+        """Cap lai User Authorization sau revoke, KHONG can pair lai.
+        Chi goi tu thao tac xac nhan ro rang cua user (server doi confirm).
+        Device link giu nguyen; session cu neu con han van dung duoc."""
+        pol = self._policies.get(str(browser_instance_id or ""))
+        if not isinstance(pol, dict):
+            return {"ok": False, "error": "POLICY_UNKNOWN"}
+        pol["read_allowed"] = True
+        pol["revoked"] = False
+        pol["regranted_at"] = self._clock()
+        return {"ok": True, "regranted": True}
+
+    def rename(self, browser_instance_id, display_name):
+        """Doi ten hien thi cua instance (do user dat). Chi la nhan con
+        nguoi doc; KHONG dung cho auth, KHONG anh huong quyen/session."""
+        name = str(display_name or "").strip()[:40]
+        if not name:
+            return {"ok": False, "error": "NAME_REQUIRED"}
+        pol = self._policies.get(str(browser_instance_id or ""))
+        dev = None
+        for d in self._devices.values():
+            if str(d.get("instance") or "") == str(browser_instance_id or ""):
+                dev = d
+                break
+        if not isinstance(pol, dict) and dev is None:
+            return {"ok": False, "error": "INSTANCE_UNKNOWN"}
+        if isinstance(pol, dict):
+            pol["profile_name"] = name
+        if isinstance(dev, dict):
+            dev["profile_name"] = name
+        return {"ok": True, "display_name": name}
 
     def forget_device(self, device_id):
         """Forget device: xoa link + policy + moi session cua device.

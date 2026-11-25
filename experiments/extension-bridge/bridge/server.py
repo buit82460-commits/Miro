@@ -422,6 +422,27 @@ class Handler(BaseHTTPRequestHandler):
             else:
                 return self._send(403, {"ok": False, "error": "AUTH_REQUIRED"})
             return self._send(200, CHANNEL.revoke_policy(inst))
+        if path == "/grant-policy":
+            # Cap lai User Authorization sau revoke, KHONG can pair lai.
+            # Dieu kien cung: user xac nhan ro rang (confirm:true) qua kenh
+            # da xac thuc (session cua chinh instance do). Device link giu
+            # nguyen; khong mo rong origin/capability.
+            s, err = CHANNEL._auth(sid, tok)
+            if s is None:
+                return self._send(403, {"ok": False, "error": err})
+            if data.get("confirm") is not True:
+                return self._send(400, {"ok": False,
+                                        "error": "CONFIRM_REQUIRED"})
+            return self._send(200, CHANNEL.grant_policy(
+                str(s.get("instance") or "")))
+        if path == "/rename":
+            # Doi ten hien thi (nhan con nguoi). Chi la label, khong auth.
+            s, err = CHANNEL._auth(sid, tok)
+            if s is None:
+                return self._send(403, {"ok": False, "error": err})
+            r = CHANNEL.rename(str(s.get("instance") or ""),
+                               str(data.get("display_name") or ""))
+            return self._send(200 if r.get("ok") else 400, r)
         if path == "/forget":
             # Forget device: xoa link + policy + session. Pair lai tu dau.
             s, err = CHANNEL._auth(sid, tok)

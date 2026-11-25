@@ -5,13 +5,15 @@
 importScripts("read.js");
 const seen = new Map();
 let cfg = { baseUrl: "", sessionId: "", token: "", deviceId: "",
-            instanceId: "", seq: 0, enabled: true };
+            instanceId: "", displayName: "", seq: 0, enabled: true,
+            connecting: false, reconnecting: false };
 
 async function loadCfg() {
   try {
     const cur = await chrome.storage.local.get(
       { bridge: { baseUrl: "", sessionId: "", token: "", deviceId: "",
-                  instanceId: "", seq: 0, enabled: true } });
+                  instanceId: "", displayName: "",
+                  seq: 0, enabled: true } });
     cfg = { ...cfg, ...(cur.bridge || {}) };
   } catch (e) { /* chua pairing: chi log local */ }
 }
@@ -25,6 +27,7 @@ async function saveCfg() {
       { bridge: { baseUrl: cfg.baseUrl, sessionId: cfg.sessionId,
                   token: cfg.token || "", deviceId: cfg.deviceId || "",
                   instanceId: cfg.instanceId || "",
+                  displayName: cfg.displayName || "",
                   seq: cfg.seq, enabled: cfg.enabled !== false } });
   } catch (e) { /* ignore */ }
 }
@@ -36,6 +39,7 @@ async function ensureConnected() {
   if (!cfg.baseUrl) return false;
   if (cfg.sessionId && cfg.token) return true;
   if (!cfg.deviceId) return false;
+  cfg.reconnecting = true;
   try {
     const res = await fetch(cfg.baseUrl + "/reconnect", {
       method: "POST",
@@ -55,6 +59,8 @@ async function ensureConnected() {
     return true;
   } catch (e) {
     return false;
+  } finally {
+    cfg.reconnecting = false;
   }
 }
 
@@ -162,12 +168,154 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     return true;
   }
   // Popup hoi trang thai (mo lai sau khi chuyen tab): da pair hay chua.
+  // Tra ve session PRESENCE (co/khong), KHONG tra token ra popup.
   if (msg && msg.type === "miro-status") {
-    sendResponse({ paired: !!(cfg.sessionId && cfg.token),
+    sendResponse({ session: !!(cfg.sessionId && cfg.token),
+                   paired: !!(cfg.sessionId && cfg.token),
+                   sessionId: "", token: "",
                    enabled: cfg.enabled !== false,
+                   connecting: !!cfg.connecting,
+                   reconnecting: !!cfg.reconnecting,
                    deviceId: cfg.deviceId || "",
-                   instanceId: cfg.instanceId || "" });
+                   instanceId: cfg.instanceId || "",
+                   displayName: cfg.displayName || "" });
     return;
+  }
+  // Popup doc policy qua kenh da xac thuc (background giu session).
+  // Khong doc duoc != Revoked: tra nguyen loi de popup hien dung.
+  if (msg && msg.type === "miro-policy") {
+    (async () => {
+      try {
+        if (!cfg.baseUrl || !cfg.sessionId || !cfg.token) {
+          sendResponse({ ok: false, error: "NOT_PAIRED" });
+          return;
+        }
+        const res = await fetch(cfg.baseUrl + "/policy", {
+          method: "POST",
+          headers: { "Content-Type": "application/json",
+                     "X-Session": cfg.sessionId, "X-Token": cfg.token },
+          body: JSON.stringify({}),
+        });
+        const out = await res.json().catch(() => ({}));
+        if (!res.ok || !out.ok) {
+          sendResponse({ ok: false,
+            error: String((out && out.error) || res.status),
+            code: res.status });
+          return;
+        }
+        if (out.display_name) cfg.displayName = String(out.display_name);
+        sendResponse({ ok: true, read_allowed: !!out.read_allowed,
+          revoked: !!out.revoked, origins: out.origins || [],
+          capabilities: out.capabilities || ["read"],
+          display_name: out.display_name || cfg.displayName || "" });
+      } catch (e) {
+        sendResponse({ ok: false, error: "BRIDGE_UNREACHABLE" });
+      }
+    })();
+    return true;
+  }
+  // Cap lai User Authorization sau revoke: can confirm ro rang tu popup.
+  if (msg && msg.type === "miro-grant-policy") {
+    (async () => {
+      try {
+        if (!cfg.sessionId || !cfg.token) {
+          sendResponse({ ok: false, error: "NOT_PAIRED" });
+          return;
+        }
+        const res = await fetch(cfg.baseUrl + "/grant-policy", {
+          method: "POST",
+          headers: { "Content-Type": "application/json",
+                     "X-Session": cfg.sessionId, "X-Token": cfg.token },
+          body: JSON.stringify({ confirm: true }),
+        });
+        const out = await res.json().catch(() => ({}));
+        sendResponse(res.ok && out.ok
+          ? { ok: true, regranted: true }
+          : { ok: false, error: String((out && out.error) || res.status) });
+      } catch (e) {
+        sendResponse({ ok: false, error: "BRIDGE_UNREACHABLE" });
+      }
+    })();
+    return true;
+  }
+  if (msg && msg.type === "miro-rename") {
+    (async () => {
+      try {
+        if (!cfg.sessionId || !cfg.token) {
+          sendResponse({ ok: false, error: "NOT_PAIRED" });
+          return;
+        }
+        const res = await fetch(cfg.baseUrl + "/rename", {
+          method: "POST",
+          headers: { "Content-Type": "application/json",
+                     "X-Session": cfg.sessionId, "X-Token": cfg.token },
+          body: JSON.stringify(
+            { display_name: String((msg && msg.displayName) || "") }),
+        });
+        const out = await res.json().catch(() => ({}));
+        if (res.ok && out.ok) {
+          cfg.displayName = String(out.display_name || "");
+          await saveCfg();
+        }
+        sendResponse(res.ok && out.ok
+          ? { ok: true, display_name: cfg.displayName }
+          : { ok: false, error: String((out && out.error) || res.status) });
+      } catch (e) {
+        sendResponse({ ok: false, error: "BRIDGE_UNREACHABLE" });
+      }
+    })();
+    return true;
+  }
+  if (msg && msg.type === "miro-revoke-policy") {
+    (async () => {
+      try {
+        if (!cfg.sessionId || !cfg.token) {
+          sendResponse({ ok: false, error: "NOT_PAIRED" });
+          return;
+        }
+        const res = await fetch(cfg.baseUrl + "/revoke-policy", {
+          method: "POST",
+          headers: { "Content-Type": "application/json",
+                     "X-Session": cfg.sessionId, "X-Token": cfg.token },
+          body: JSON.stringify({}),
+        });
+        const out = await res.json().catch(() => ({}));
+        sendResponse(res.ok && out.ok
+          ? { ok: true, revoked: true }
+          : { ok: false, error: String((out && out.error) || res.status) });
+      } catch (e) {
+        sendResponse({ ok: false, error: "BRIDGE_UNREACHABLE" });
+      }
+    })();
+    return true;
+  }
+  if (msg && msg.type === "miro-forget") {
+    (async () => {
+      try {
+        const dev = cfg.deviceId || "";
+        if (cfg.baseUrl && (cfg.sessionId || dev)) {
+          try {
+            await fetch(cfg.baseUrl + "/forget", {
+              method: "POST",
+              headers: { "Content-Type": "application/json",
+                         "X-Session": cfg.sessionId || "",
+                         "X-Token": cfg.token || "" },
+              body: JSON.stringify({ device_id: dev }),
+            });
+          } catch (e) { /* best-effort: van xoa local */ }
+        }
+        cfg.sessionId = "";
+        cfg.token = "";
+        cfg.deviceId = "";
+        cfg.instanceId = "";
+        cfg.seq = 0;
+        await saveCfg();
+        sendResponse({ ok: true, forgotten: true });
+      } catch (e) {
+        sendResponse({ ok: false, error: "FORGET_FAILED" });
+      }
+    })();
+    return true;
   }
   if (msg && msg.type === "miro-grant" && msg.tabId) {
     // B1: extension tu kiem tra tab active + quyen truoc khi xin grant.

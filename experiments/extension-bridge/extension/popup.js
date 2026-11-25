@@ -1,64 +1,152 @@
-// Slice 01B: One-click connection popup.
-// Nut nguon: Connect/Disconnect (tat = dung thuc thi, giu link+policy).
-// Pair code chi khi thiet lap lan dau / device bi forget.
+// Popup chinh: phan anh trang thai he thong, khong tu tao trang thai.
+// Nguyen tac: khong doc duoc != Revoked; loi API hien dung ban chat.
+// Trang thai: NOT_PAIRED / DISCONNECTED / BRIDGE_OFFLINE / CONNECTING /
+// RECONNECTING / PERMISSION_REQUIRED / PERMISSION_REVOKED / READY / UNKNOWN.
 const BASE = "http://127.0.0.1:18767";
 
-async function refresh() {
-  const st = document.getElementById("st");
-  const power = document.getElementById("power");
-  const vb = document.getElementById("v-bridge");
-  const vp = document.getElementById("v-policy");
-  let status = null;
-  try {
-    status = await chrome.runtime.sendMessage({ type: "miro-status" });
-  } catch (e) { /* background chua san sang */ }
-  const on = !!(status && status.paired && status.enabled !== false);
-  vb.textContent = on ? "Online" : "Off";
-  vb.className = "dot" + (on ? "" : " off");
-  power.textContent = on ? "Dang bat (bam de tat)" : "Dang tat (bam de bat)";
-  try {
-    const r = await fetch(BASE + "/policy");
-    const p = await r.json();
-    vp.textContent = (p && p.read_allowed) ? "Until revoked"
-      : "Revoked";
-  } catch (e) {
-    vp.textContent = "Unknown";
-  }
-  return status;
-}
-refresh();
+const el = (id) => document.getElementById(id);
 
-document.getElementById("power").addEventListener("click", async () => {
-  const st = document.getElementById("st");
-  st.textContent = "...";
+async function bg(type, extra) {
   try {
-    const s = await chrome.runtime.sendMessage({ type: "miro-status" });
-    const on = !!(s && s.paired && s.enabled !== false);
-    if (on) {
-      await chrome.runtime.sendMessage({ type: "miro-disconnect" });
-      st.textContent = "Da tat. Miro khong thuc thi nua.";
-    } else if (s && s.paired) {
-      const r = await chrome.runtime.sendMessage({ type: "miro-connect" });
-      st.textContent = (r && r.ok) ? "Da bat. Tu ket noi."
-        : "Bat that bai: can pair lai.";
-    } else {
-      st.textContent = "Chua pair. Nhap code o muc thiet lap lan dau.";
-    }
+    return await chrome.runtime.sendMessage({ type, ...(extra || {}) });
   } catch (e) {
-    st.textContent = "FAIL: " + String(e && e.message || e);
+    return null; // background chua san sang
+  }
+}
+
+async function bridgeUp() {
+  try {
+    const r = await fetch(BASE + "/health", { method: "GET" });
+    return r.ok;
+  } catch (e) {
+    return false;
+  }
+}
+
+async function fetchPolicy() {
+  // Dung kenh da xac thuc: background giu session, khong lo token ra popup.
+  const s = await bg("miro-policy");
+  if (!s) return { error: "BG_UNAVAILABLE" };
+  return s;
+}
+
+function render(state, detail) {
+  // state: ma trang thai; detail: {displayName, instanceId, capabilities}.
+  const p = el("power"), t = el("state"), h = el("hint");
+  const vn = el("v-name"), vi = el("v-inst");
+  const names = {
+    NOT_PAIRED: ["Chua ket noi", "Nhap code de ket noi Miro lan dau"],
+    DISCONNECTED: ["Da tat", "Bam nut nguon de bat lai"],
+    BRIDGE_OFFLINE: ["Bridge offline", "Miro tren may chua chay"],
+    CONNECTING: ["Dang ket noi", "..."],
+    RECONNECTING: ["Dang ket noi lai", "..."],
+    PERMISSION_REQUIRED: ["Can cap quyen", "Xac nhan de Miro duoc doc"],
+    PERMISSION_REVOKED: ["Quyen da thu hoi", "Cap lai hoac giu nguyen"],
+    READY: ["Connected", "San sang nhan nhiem vu"],
+    UNKNOWN: ["Khong xac dinh", "Khong doc duoc trang thai"],
+  };
+  const n = names[state] || names.UNKNOWN;
+  t.textContent = n[0];
+  h.textContent = n[1];
+  const on = (state === "READY");
+  p.className = on ? "on" : "";
+  p.textContent = "\u23FB";
+  vn.textContent = (detail && detail.displayName) || "...";
+  vi.textContent = (detail && detail.instanceId) || "...";
+  el("pairbox").style.display = (state === "NOT_PAIRED") ? "" : "none";
+  el("grantbox").style.display =
+    (state === "PERMISSION_REQUIRED" || state === "PERMISSION_REVOKED")
+    ? "" : "none";
+  return state;
+}
+
+async function refresh() {
+  const st = el("st");
+  const up = await bridgeUp();
+  const s = await bg("miro-status");
+  if (!s) return render("UNKNOWN", {});
+  const paired = !!(s.session || (s.sessionId && s.token));
+  const detail = { displayName: s.displayName || "Chua dat ten",
+                   instanceId: s.instanceId || "Chua co" };
+  if (!paired) {
+    if (!up) return render("BRIDGE_OFFLINE", detail);
+    return render("NOT_PAIRED", detail);
+  }
+  if (s.enabled === false) return render("DISCONNECTED", detail);
+  if (!up) return render("BRIDGE_OFFLINE", detail);
+  // Da pair + bat: hoi policy qua kenh xac thuc de phan biet
+  // READY / PERMISSION_REQUIRED / PERMISSION_REVOKED / UNKNOWN.
+  if (s.connecting) return render("CONNECTING", detail);
+  if (s.reconnecting) return render("RECONNECTING", detail);
+  const pol = await fetchPolicy();
+  if (pol && pol.ok) {
+    if (pol.read_allowed) {
+      await renderAdv(pol);
+      return render("READY", {
+        displayName: pol.display_name || detail.displayName,
+        instanceId: s.instanceId || "Chua co",
+      });
+    }
+    await renderAdv(pol);
+    return render(pol.revoked ? "PERMISSION_REVOKED"
+                             : "PERMISSION_REQUIRED", {
+      displayName: pol.display_name || detail.displayName,
+      instanceId: s.instanceId || "Chua co",
+    });
+  }
+  // Loi doc policy: hien dung ban chat, KHONG doi thanh Revoked/OFF.
+  await renderAdv(pol);
+  return render("UNKNOWN", detail);
+}
+
+async function renderAdv(pol) {
+  const s = await bg("miro-status");
+  const lines = [];
+  lines.push("instance: " + ((s && s.instanceId) || "?"));
+  lines.push("device: " + ((s && s.deviceId)
+    ? String(s.deviceId).slice(0, 12) + "..." : "?"));
+  if (pol && pol.ok) {
+    lines.push("capability: " + (pol.capabilities || []).join(","));
+    lines.push("origins: " + (pol.origins || []).join(","));
+    lines.push("policy: " + (pol.read_allowed ? "granted"
+      : (pol.revoked ? "revoked" : "required")));
+  } else {
+    lines.push("policy: unreadable (" +
+      String((pol && (pol.error || pol.code)) || "unknown") + ")");
+  }
+  el("adv").textContent = lines.join("\n");
+}
+
+// Nut nguon: bat/tat ket noi (disconnect giu link + policy).
+el("power").addEventListener("click", async () => {
+  const st = el("st");
+  st.textContent = "...";
+  const s = await bg("miro-status");
+  if (!s) { st.textContent = "Background chua san sang."; refresh(); return; }
+  const paired = !!(s.session || (s.sessionId && s.token));
+  if (!paired) { refresh(); return; } // pairbox da hien
+  const on = (s.enabled !== false);
+  if (on) {
+    await bg("miro-disconnect");
+    st.textContent = "Da tat. Lien ket va quyen duoc giu nguyen.";
+  } else {
+    const r = await bg("miro-connect");
+    st.textContent = (r && r.ok) ? "Dang bat..." : "Bat that bai.";
   }
   refresh();
 });
 
-document.getElementById("go").addEventListener("click", async () => {
-  const st = document.getElementById("st");
-  const code = document.getElementById("code").value.trim();
+// Pair lan dau: gui kem ten goi nho do user dat (nhan hien thi, khong auth).
+el("go").addEventListener("click", async () => {
+  const st = el("st");
+  const code = el("code").value.trim();
+  const disp = el("dispname").value.trim();
   st.textContent = "...";
   try {
     const res = await fetch(BASE + "/redeem", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ code }),
+      body: JSON.stringify({ code, profile_name: disp }),
     });
     const data = await res.json();
     if (!data.ok) {
@@ -70,65 +158,51 @@ document.getElementById("go").addEventListener("click", async () => {
       sessionId: data.session_id, token: data.token,
       deviceId: data.device_id || "",
       instanceId: data.instance_id || "" });
-    st.textContent = "Da ket noi. Quyen doc duy tri den khi thu hoi.";
+    st.textContent = "Da ket noi.";
   } catch (e) {
     st.textContent = "FAIL: no backend (chay server.py 18767 chua?)";
   }
   refresh();
 });
 
-// Tuy chon nang cao: giu lai de debug + ho tro truong hop policy bi revoke.
-document.getElementById("grant").addEventListener("click", async () => {
-  const st = document.getElementById("st");
+// Cap lai quyen sau revoke: thao tac xac nhan ro rang (confirm:true),
+// khong pair lai, khong mo rong origin/capability.
+el("grantback").addEventListener("click", async () => {
+  const st = el("st");
   st.textContent = "...";
-  try {
-    const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-    const tab = tabs && tabs[0];
-    if (!tab) {
-      st.textContent = "FAIL: khong thay tab hien tai";
-      return;
-    }
-    const res = await chrome.runtime.sendMessage({ type: "miro-grant",
-      tabId: tab.id });
-    st.textContent = (res && res.ok)
-      ? ("Granted tab " + tab.id + " (manual, uu tien).")
-      : ("FAIL: " + ((res && res.error) || "no backend"));
-  } catch (e) {
-    st.textContent = "FAIL: " + String(e && e.message || e);
-  }
-});
-
-document.getElementById("revoke").addEventListener("click", async () => {
-  const st = document.getElementById("st");
-  st.textContent = "...";
-  try {
-    const res = await fetch(BASE + "/revoke-policy", { method: "POST" });
-    const data = await res.json();
-    st.textContent = (data && data.ok)
-      ? "Da thu hoi quyen. Auto-grant dung; grant tay van duoc."
-      : ("FAIL: " + ((data && data.error) || res.status));
-  } catch (e) {
-    st.textContent = "FAIL: " + String(e && e.message || e);
-  }
+  const r = await bg("miro-grant-policy");
+  st.textContent = (r && r.ok) ? "Da cap lai quyen doc."
+    : ("FAIL: " + ((r && (r.error || r.code)) || "unknown"));
   refresh();
 });
 
-document.getElementById("forget").addEventListener("click", async () => {
-  const st = document.getElementById("st");
-  st.textContent = "...";
-  try {
-    const s = await chrome.runtime.sendMessage({ type: "miro-status" });
-    const res = await fetch(BASE + "/forget", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ device_id: (s && s.deviceId) || "" }),
-    });
-    const data = await res.json();
-    st.textContent = (data && data.ok)
-      ? "Da xoa lien ket. Can pair lai tu dau."
-      : ("FAIL: " + ((data && data.error) || res.status));
-  } catch (e) {
-    st.textContent = "FAIL: " + String(e && e.message || e);
-  }
+el("rename").addEventListener("click", async () => {
+  const st = el("st");
+  const name = prompt("Ten goi nho cho thiet bi nay:", "");
+  if (name === null) return;
+  const r = await bg("miro-rename", { displayName: String(name || "") });
+  st.textContent = (r && r.ok) ? "Da doi ten."
+    : ("FAIL: " + ((r && (r.error || r.code)) || "unknown"));
   refresh();
 });
+
+el("revoke").addEventListener("click", async () => {
+  const st = el("st");
+  st.textContent = "...";
+  const r = await bg("miro-revoke-policy");
+  st.textContent = (r && r.ok)
+    ? "Da thu hoi. Lien ket duoc giu; cap lai bat cu luc nao."
+    : ("FAIL: " + ((r && (r.error || r.code)) || "unknown"));
+  refresh();
+});
+
+el("forget").addEventListener("click", async () => {
+  const st = el("st");
+  st.textContent = "...";
+  const r = await bg("miro-forget");
+  st.textContent = (r && r.ok) ? "Da xoa lien ket. Can pair lai tu dau."
+    : ("FAIL: " + ((r && (r.error || r.code)) || "unknown"));
+  refresh();
+});
+
+refresh();

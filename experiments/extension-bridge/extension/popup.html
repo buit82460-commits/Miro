@@ -2,38 +2,56 @@
 <meta charset="utf-8">
 <title>Miro Bridge</title>
 <style>
-body{font:13px sans-serif;padding:12px;width:260px;margin:0}
-h1{font-size:15px;margin:0 0 2px}
-.sub{color:#555;margin:0 0 8px}
-.row{display:flex;justify-content:space-between;padding:3px 0;border-top:1px solid #eee}
-.row b{font-weight:600}
-.dot{color:#1a7f37;font-weight:700}
-.dot.off{color:#999}
-#power{width:100%;margin:8px 0;padding:8px;font-size:14px}
-#st{color:#555;min-height:18px}
+body{font:13px sans-serif;padding:14px;width:264px;margin:0;color:#111}
+.top{display:flex;align-items:center;gap:10px}
+.logo{width:40px;height:40px;border-radius:10px;background:#111;color:#fff;
+  display:flex;align-items:center;justify-content:center;
+  font-weight:700;font-size:20px}
+.name{font-size:17px;font-weight:700}
+.sub{color:#555;font-size:12px;margin:2px 0 0}
+#power{width:110px;height:110px;border-radius:50%;border:0;margin:18px auto 10px;
+  display:block;font-size:34px;cursor:pointer;background:#e8e8e8;color:#666}
+#power.on{background:#1a7f37;color:#fff}
+#state{font-size:19px;font-weight:700;text-align:center;margin:0}
+#hint{color:#555;text-align:center;margin:4px 0 10px;font-size:12px}
+#ident{border-top:1px solid #eee;padding-top:8px;font-size:12px;color:#333}
+#ident .row{display:flex;justify-content:space-between;padding:2px 0}
+#ident code{font-family:monospace;font-size:11px}
+#st{color:#555;min-height:16px;font-size:12px;text-align:center}
+#pairbox{margin-top:8px}
 input{width:100%;margin:4px 0;box-sizing:border-box}
-button{width:100%;margin:2px 0}
+button.act{width:100%;margin:2px 0}
 .small{font-size:12px;color:#555}
 details{margin-top:6px}
+#adv{font-size:12px;color:#333;white-space:pre-wrap;word-break:break-word}
 </style>
-<h1>Miro</h1>
-<p class="sub">Chrome Bridge</p>
-<div class="row"><span>Bridge</span><b id="v-bridge" class="dot">...</b></div>
-<div class="row"><span>Browser</span><b>Chrome Profile 20</b></div>
-<div class="row"><span>Website</span><b>TikTok</b></div>
-<div class="row"><span>Permission</span><b>Read-only</b></div>
-<div class="row"><span>Policy</span><b id="v-policy">...</b></div>
-<button id="power">...</button>
+<div class="top">
+  <div class="logo">M</div>
+  <div><div class="name">Miro</div><div class="sub">Browser Assistant</div></div>
+</div>
+<button id="power" title="Bat/tat ket noi">&#x23FB;</button>
+<p id="state">...</p>
+<p id="hint"></p>
+<div id="ident">
+  <div class="row"><span>Thiet bi</span><b id="v-name">...</b></div>
+  <div class="row"><span>Instance</span><code id="v-inst">...</code></div>
+</div>
 <p id="st"></p>
-<details id="pairbox">
-<summary class="small">Thiet lap lan dau / pair lai</summary>
-<input id="code" placeholder="Pairing code 6 so" maxlength="6">
-<button id="go">Pair</button>
-</details>
+<div id="pairbox" style="display:none">
+  <input id="code" placeholder="Pairing code 6 so" maxlength="6"
+    inputmode="numeric">
+  <input id="dispname" placeholder="Ten goi nho (vd: Chrome ca nhan)"
+    maxlength="40">
+  <button class="act" id="go">Ket noi lan dau</button>
+</div>
+<div id="grantbox" style="display:none">
+  <button class="act" id="grantback">Cap lai quyen doc</button>
+</div>
 <details>
-<summary class="small">Tuy chon nang cao</summary>
-<button id="grant">Grant DOM thu cong (tab hien tai)</button>
-<button id="revoke">Revoke permission</button>
-<button id="forget">Forget device (pair lai tu dau)</button>
+<summary class="small">Settings / Advanced</summary>
+<div id="adv">...</div>
+<button class="act" id="rename">Doi ten goi nho</button>
+<button class="act" id="revoke">Thu hoi quyen (giu lien ket)</button>
+<button class="act" id="forget">Xoa lien ket (pair lai tu dau)</button>
 </details>
 <script src="popup.js"></script>

@@ -84,11 +84,14 @@ def _boot():
     return srv
 
 
-def _pair():
+def _pair(name=""):
     from bridge.server import CHANNEL
     c = CHANNEL.issue_pairing_code()
     assert c, "khong sinh duoc pairing code"
-    r = _post("/redeem", {"code": c})
+    body = {"code": c}
+    if name:
+        body["profile_name"] = name
+    r = _post("/redeem", body)
     assert r.get("ok") and r.get("device_id") and r.get("instance_id"), r
     return r
 
@@ -286,5 +289,84 @@ def test_reconnect_keeps_other_profile():
                    bkey="test-backend-key-01")
         assert rb.get("ok") and rb.get("auto_grant"), rb
         print("reconnect keeps other profile: PASS")
+    finally:
+        srv.shutdown()
+
+
+def test_display_name_never_auth():
+    """Ten hien thi do user dat khi pair; doi ten khong anh huong auth.
+    Ten khong dung lam can cu xac thuc/cap quyen o bat ky endpoint nao."""
+    srv = _boot()
+    try:
+        from bridge.server import CHANNEL
+        a = _pair(name="Chrome ca nhan")
+        sa, ta, ia = a["session_id"], a["token"], a["instance_id"]
+        assert CHANNEL.policy(ia).get("display_name") == "Chrome ca nhan"
+        _push(sa, ta, 91, 1)
+        # Doi ten: session/quyen/grant giu nguyen, doc van duoc.
+        r = _post("/rename", {"display_name": "Chrome lam content"},
+                  sa, ta)
+        assert r.get("ok"), r
+        assert CHANNEL.policy(ia).get("display_name") == "Chrome lam content"
+        assert CHANNEL.policy(ia).get("read_allowed") is True
+        c = _post("/read", {"tabId": 91, "read": "title", "instance": ia},
+                  bkey="test-backend-key-01")
+        assert c.get("ok"), c
+        # Ten rong -> tu choi, ten cu giu nguyen.
+        code, out = _post_expect("/rename", {"display_name": "  "}, sa, ta)
+        assert code == 400, (code, out)
+        print("display name never auth: PASS")
+    finally:
+        srv.shutdown()
+
+
+def test_regrant_after_revoke_without_repair():
+    """Cap lai quyen sau revoke KHONG can pair lai.
+    Dieu kien: confirm:true qua kenh da xac thuc (session cua instance).
+    Thieu confirm -> tu choi; khong mo rong origin/capability."""
+    srv = _boot()
+    try:
+        a = _pair()
+        sa, ta, ia = a["session_id"], a["token"], a["instance_id"]
+        _push(sa, ta, 92, 1)
+        v = _post("/revoke-policy", {}, sa, ta)
+        assert v.get("revoked"), v
+        code, out = _post_expect("/read", {"tabId": 92, "read": "title",
+                                           "instance": ia},
+                                 bkey="test-backend-key-01")
+        assert code == 403, (code, out)
+        # Thieu confirm -> tu choi.
+        code, out = _post_expect("/grant-policy", {}, sa, ta)
+        assert code == 400 and out.get("error") == "CONFIRM_REQUIRED", \
+            (code, out)
+        # Confirm ro rang -> cap lai duoc, doc lai auto-grant.
+        g = _post("/grant-policy", {"confirm": True}, sa, ta)
+        assert g.get("regranted"), g
+        c = _post("/read", {"tabId": 92, "read": "title", "instance": ia},
+                  bkey="test-backend-key-01")
+        assert c.get("ok") and c.get("auto_grant"), c
+        print("regrant without re-pair: PASS")
+    finally:
+        srv.shutdown()
+
+
+def test_policy_errors_are_not_revoked():
+    """/policy khong auth -> INSTANCE_REQUIRED (khong phai revoked).
+    Loi doc policy khong duoc dien giai thanh trang thai Revoked/OFF."""
+    srv = _boot()
+    try:
+        # Khong session, khong instance -> 400, khong phai revoked.
+        code, out = _post_expect("/policy", {})
+        assert code == 400 and out.get("error") == "INSTANCE_REQUIRED", \
+            (code, out)
+        assert "revoked" not in out, out
+        # Session hop le nhung instance la -> policy that.
+        a = _pair()
+        sa, ta = a["session_id"], a["token"]
+        p = _post("/policy", {}, sa, ta)
+        assert p.get("ok") and p.get("read_allowed") is True, p
+        assert p.get("revoked") is False, p
+        assert p.get("capabilities") == ["read"], p
+        print("policy errors are not revoked: PASS")
     finally:
         srv.shutdown()
