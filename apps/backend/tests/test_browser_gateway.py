@@ -54,6 +54,10 @@ def make_session(tmp_path, pages, account="user-1"):
         verify_actor=lambda p, r: p._account)
     runtime.profiles["prof-1"] = {"id": "prof-1", "status": "verified",
                                   "browserInstanceId": "inst-1"}
+    runtime.write_task_context = lambda caller: {
+        "task_id": "t", "scope": "demo-write", "revision": 3,
+        "fingerprint": "fp-1", "active": True, "platform_id": "demo",
+        "account_id": "user-1", "url": "https://example.com/a"}
     return ManagedChromeSession(runtime=runtime, endpoint="ws://fake")
 
 
@@ -139,8 +143,8 @@ def test_t7_no_evidence_no_write(tmp_path):
     with pytest.raises(RegistryError, match="EVIDENCE_INVALID"):
         asyncio.run(gateway.write_via_adapter(
             session, platform_id="demo", url="https://example.com/a",
-            caller="t", evidence={}, approval={"approved": True},
-            adapter_fn=adapter_fn))
+            caller="t", evidence={}, approval=_approval(_auth()),
+            auth=_auth(), adapter_fn=adapter_fn))
 
 
 # T8: evidence tab A khong dung cho tab B
@@ -162,6 +166,101 @@ async def _ok_adapter(p):
     return {"posted": True}
 
 
+def _auth(task_id="t", scope="demo-write", revision=3, fingerprint="fp-1"):
+    return {"task_id": task_id, "scope": scope, "revision": revision,
+            "fingerprint": fingerprint}
+
+
+def _approval(auth, approved=True):
+    return {"approved": approved,
+            "task_id": auth["task_id"], "scope": auth["scope"],
+            "revision": auth["revision"],
+            "fingerprint": auth["fingerprint"]}
+
+
+@pytest.mark.parametrize("field,value", [
+    ("task_id", "old-task"), ("scope", "other-write"),
+    ("revision", 2), ("fingerprint", "old-content"),
+    ("active", False), ("platform_id", "other"),
+    ("account_id", "other-user"), ("url", "https://example.com/other"),
+])
+def test_p1_current_state_blocks_matching_stale_auth_and_approval(tmp_path, field, value):
+    page = FakePage("https://example.com/a")
+    session = make_session(tmp_path, [page])
+    seed_tab(session, page)
+    state = session.runtime.write_task_context("t")
+    state[field] = value
+    session.runtime.write_task_context = lambda caller: dict(state)
+    calls = []
+
+    async def adapter(p):
+        calls.append(p)
+        return {"posted": True}
+
+    with pytest.raises(RegistryError, match="AUTH_REQUIRED"):
+        asyncio.run(gateway.write_via_adapter(
+            session, platform_id="demo", url=page.url, caller="t",
+            evidence=_fresh_evidence(page), auth=_auth(),
+            approval=_approval(_auth()), adapter_fn=adapter))
+    assert calls == []
+    # A rejection must release the tab, including state mismatch paths.
+    hold = asyncio.run(session.acquire_managed_tab(
+        platform_id="demo", url=page.url, caller="probe"))
+    asyncio.run(hold.release())
+
+
+@pytest.mark.parametrize("field,value,error", [
+    ("task_id", "old", "APPROVAL_TASK_MISMATCH"),
+    ("scope", "other", "SCOPE_DENIED"),
+    ("revision", 2, "STALE_REVISION"),
+    ("fingerprint", "other", "FINGERPRINT_CONFLICT"),
+])
+def test_p1_approval_must_match_current_intent(tmp_path, field, value, error):
+    page = FakePage("https://example.com/a")
+    session = make_session(tmp_path, [page])
+    seed_tab(session, page)
+    approval = _approval(_auth())
+    approval[field] = value
+    calls = []
+
+    async def adapter(p):
+        calls.append(p)
+        return {"posted": True}
+
+    with pytest.raises(RegistryError, match=error):
+        asyncio.run(gateway.write_via_adapter(
+            session, platform_id="demo", url=page.url, caller="t",
+            evidence=_fresh_evidence(page), auth=_auth(),
+            approval=approval, adapter_fn=adapter))
+    assert calls == []
+
+
+@pytest.mark.parametrize("missing", ["resolver", "verifier", "actor", "evidence_actor", "expected_actor"])
+def test_p1_missing_authority_or_actor_never_calls_adapter(tmp_path, missing):
+    page = FakePage("https://example.com/a")
+    session = make_session(tmp_path, [page])
+    seed_tab(session, page, account="" if missing == "expected_actor" else "user-1")
+    evidence = _fresh_evidence(page, actor="" if missing == "evidence_actor" else "user-1")
+    if missing == "resolver":
+        session.runtime.write_task_context = None
+    if missing == "verifier":
+        session.runtime.verify_actor = None
+    if missing == "actor":
+        session.runtime.verify_actor = lambda p, r: ""
+    calls = []
+
+    async def adapter(p):
+        calls.append(p)
+        return {"posted": True}
+
+    with pytest.raises((RegistryError, WorkerStopped)):
+        asyncio.run(gateway.write_via_adapter(
+            session, platform_id="demo", url=page.url, caller="t",
+            evidence=evidence, auth=_auth(), approval=_approval(_auth()),
+            adapter_fn=adapter))
+    assert calls == []
+
+
 # T13: evidence sai instance -> WRITE bi tu choi
 def test_t13_write_wrong_instance_denied(tmp_path):
     page = FakePage("https://example.com/a")
@@ -171,7 +270,8 @@ def test_t13_write_wrong_instance_denied(tmp_path):
         asyncio.run(gateway.write_via_adapter(
             session, platform_id="demo", url="https://example.com/a",
             caller="t", evidence=_fresh_evidence(page, instance="inst-khac"),
-            approval={"approved": True}, adapter_fn=_ok_adapter))
+            approval=_approval(_auth()), auth=_auth(),
+            adapter_fn=_ok_adapter))
 
 
 # T14: actor doi giua mat-doc va write -> tu choi (fail-closed)
@@ -185,7 +285,8 @@ def test_t14_write_actor_changed_denied(tmp_path):
         asyncio.run(gateway.write_via_adapter(
             session, platform_id="demo", url="https://example.com/a",
             caller="t", evidence=_fresh_evidence(page, actor="user-1"),
-            approval={"approved": True}, adapter_fn=_ok_adapter))
+            approval=_approval(_auth()), auth=_auth(),
+            adapter_fn=_ok_adapter))
 
 
 # T15: tab navigate sau mat-doc -> tu choi
@@ -199,7 +300,8 @@ def test_t15_write_tab_navigated_denied(tmp_path):
         asyncio.run(gateway.write_via_adapter(
             session, platform_id="demo", url="https://example.com/khac",
             caller="t", evidence=ev,
-            approval={"approved": True}, adapter_fn=_ok_adapter))
+            approval=_approval(_auth()), auth=_auth(),
+            adapter_fn=_ok_adapter))
 
 
 # T16: thieu approval dung task -> WRITE bi tu choi
@@ -211,7 +313,7 @@ def test_t16_write_no_approval_denied(tmp_path):
         asyncio.run(gateway.write_via_adapter(
             session, platform_id="demo", url="https://example.com/a",
             caller="t", evidence=_fresh_evidence(page),
-            approval=None, adapter_fn=_ok_adapter))
+            approval=None, auth=_auth(), adapter_fn=_ok_adapter))
 
 
 # T17: evidence hop le day du -> WRITE pass + read gan instance_id
@@ -226,7 +328,7 @@ def test_t17_write_happy_path_and_read_instance(tmp_path):
     receipt = asyncio.run(gateway.write_via_adapter(
         session, platform_id="demo", url="https://example.com/a",
         caller="t", evidence=ev,
-        approval={"approved": True}, adapter_fn=_ok_adapter))
+        approval=_approval(_auth()), auth=_auth(), adapter_fn=_ok_adapter))
     assert receipt == {"posted": True}
 
 
@@ -321,7 +423,7 @@ def test_t25_write_lease_expired_mid_write_unknown(tmp_path):
     out = asyncio.run(gateway.write_via_adapter(
         session, platform_id="demo", url="https://example.com/a",
         caller="t", evidence=ev,
-        approval={"approved": True}, adapter_fn=slow_adapter))
+        approval=_approval(_auth()), auth=_auth(), adapter_fn=slow_adapter))
     assert out["posted"] is False
     assert out["receipt"] == "UNCONFIRMED_NO_REPLAY"
 
@@ -361,7 +463,7 @@ def test_t20_write_lease_lost_mid_write_unknown(tmp_path):
     out = asyncio.run(gateway.write_via_adapter(
         session, platform_id="demo", url="https://example.com/a",
         caller="t", evidence=ev,
-        approval={"approved": True}, adapter_fn=evil_adapter))
+        approval=_approval(_auth()), auth=_auth(), adapter_fn=evil_adapter))
     assert out["posted"] is False
     assert out["receipt"] == "UNCONFIRMED_NO_REPLAY"
 

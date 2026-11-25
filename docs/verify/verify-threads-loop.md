@@ -494,3 +494,11 @@ Nghiem thu **DOM title read-only LIVE PASS** (log + code khop). **Chua chot REA 
 | Test | bridge unit 7/7 + 4/4 + channel/e2e/security/registry/importer PASS, khong vo |
 | Duyet | Cho phep live `/read-result` (chi title, chi tab grant, giu untrusted, chua Evidence, chua WRITE) |
 | Bao cao | `docs/REA_REMEDIATION_REVIEW_B.md` |
+
+## P1 A1+A2 ? 2026-11-24 (local contract verification)
+
+- Branch `fix/p1-gateway-task-binding`. Gateway compares approval and caller auth with runtime service-owned `write_task_context(caller)` current intent state, checks active task/account/platform/URL, and denies absent resolver. Lease owner is not task authority. Resolver must be installed by a trusted service, never from request/approval; production wiring remains UNVERIFIED (no Gateway WRITE production caller found).
+- A2: missing verifier, empty current/evidence/expected actor deny; no system/env bypass. Preserve original account mismatch errors.
+- `python -m pytest tests/test_browser_gateway.py tests/test_no_direct_browser.py -q -p no:cacheprovider` from apps/backend: **43 passed**, including 17 new negative cases with zero adapter calls. Full suite pending separately.
+- Publisher uses its own approval/intent gates; Threads browser/threads_page.submit remains unimplemented. Gateway contract PASS does not establish Publisher production safety.
+- Existing extension/read.js feed-scope diff and unrelated working tree files excluded. No browser actions, no push/merge.

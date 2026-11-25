@@ -192,6 +192,7 @@ class BrowserRuntime:
     allowed_origins: tuple[str, ...] = ()
     account_providers: dict = field(default_factory=dict)
     verify_actor: object = None  # async (page, record) -> account_id; inject per-task
+    write_task_context: object = None  # trusted service resolver(caller) -> current intent state; never request/approval
     profiles: dict = field(default_factory=dict)
     pages: dict = field(default_factory=dict)  # targetId -> page
     closed: bool = False

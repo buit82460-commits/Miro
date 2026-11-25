@@ -55,8 +55,25 @@ def check_evidence(evidence: dict, *, tab_id: str = "",
 
 
 async def check_write_gate(session, acquired, evidence: dict,
-                           approval: dict | None) -> dict:
-    """Gate 8 diem truoc moi WRITE (docs/security/eye-gate.md). Fail-closed.
+                           approval: dict | None,
+                           auth: dict | None = None) -> dict:
+    """Gate WRITE (docs/security/eye-gate.md). Fail-closed tuyet doi.
+
+    - `auth` BAT BUOC o production: authorization context do caller dang tin
+      cay truyen tu task/intent state (KHONG lay tu approval). Thieu hoac
+      thieu field bat buoc -> DENY (AUTH_REQUIRED), ke ca khi approval co
+      `approved is True`. Khong co che do warn-then-pass.
+    - runtime.write_task_context is installed by the trusted task service,
+      not by a request. It must reload current intent state for the executing
+      task, including active/scope/revision/fingerprint/account/destination.
+      No production resolver is wired yet: default WRITE is disabled.
+      Lease owner binding is an additional check, never task authority.
+    - approval phai khop `auth` tung truong: task_id/scope/revision/
+      fingerprint (APPROVAL_TASK_MISMATCH/SCOPE_DENIED/STALE_REVISION/
+      FINGERPRINT_CONFLICT).
+    - Moi WRITE qua Gateway mac dinh la account-bound: thieu verifier,
+      actor rong hoac khong khop -> DENY. Khong co nhanh `system`, khong co
+      env bypass, khong dung `actor=""` de bo qua so sanh.
 
     Tra ve record sau khi pass. Bat ky diem nao rot -> raise, khong bam.
     """
@@ -68,6 +85,71 @@ async def check_write_gate(session, acquired, evidence: dict,
                            "instance_id", "") or "")
     ev = check_evidence(evidence or {}, tab_id=target,
                         instance_id=instance)
+    # The service owns this resolver. A lease/caller string proves tab ownership,
+    # not task authorization. No resolver means WRITE stays disabled.
+    resolver = getattr(acquired.runtime, "write_task_context", None)
+    if not callable(resolver):
+        raise RegistryError("AUTH_REQUIRED: trusted task resolver unavailable")
+    owner = str((getattr(acquired, "lease", None) or {}).get("owner") or "")
+    caller = owner.rsplit(":", 1)[0]
+    trusted = resolver(caller)
+    if not isinstance(trusted, dict) or trusted.get("active") is not True:
+        raise RegistryError("AUTH_REQUIRED: current task/intent unavailable or inactive")
+    for key in ("task_id", "scope", "revision", "fingerprint"):
+        if not isinstance(auth, dict) or key not in trusted or auth.get(key) != trusted[key]:
+            raise RegistryError("AUTH_REQUIRED: auth differs from current task/intent: " + key)
+    if (trusted.get("platform_id") != record.get("platformId")
+            or trusted.get("account_id") != record.get("expectedAccountId")
+            or not trusted.get("account_id")
+            or not _urls_same_destination(str(trusted.get("url") or ""),
+                                          str(ev.get("url") or ""))):
+        raise RegistryError("AUTH_REQUIRED: task destination/account mismatch")
+    # -- A1: binding approval <-> auth (trusted task context) ---------------
+    if not isinstance(auth, dict):
+        raise RegistryError("AUTH_REQUIRED: thieu authorization context "
+                            "tu task/intent state; khong WRITE bang "
+                            "approval troi")
+    task_id = str(auth.get("task_id") or "")
+    scope = str(auth.get("scope") or "")
+    fingerprint = str(auth.get("fingerprint") or "")
+    try:
+        revision = int(auth.get("revision"))
+    except (TypeError, ValueError):
+        raise RegistryError("AUTH_REQUIRED: auth thieu revision hop le") \
+            from None
+    if not task_id or not scope or not fingerprint:
+        raise RegistryError("AUTH_REQUIRED: auth thieu "
+                            "task_id/scope/fingerprint")
+    lease = getattr(acquired, "lease", None)
+    owner = str((lease or {}).get("owner", "") or "")
+    if not isinstance(lease, dict) or not owner:
+        raise RegistryError("AUTH_REQUIRED: khong co lease de gan auth")
+    if owner.rsplit(":", 1)[0] != task_id:
+        raise RegistryError("APPROVAL_TASK_MISMATCH: auth.task_id '" +
+                            task_id + "' khong phai chu lease '" +
+                            owner.split(":")[0] + "'")
+    if not isinstance(approval, dict) or approval.get("approved") is not True:
+        raise RegistryError("WRITE_DENIED: thieu approval hop le cua dung task")
+    if str(approval.get("task_id") or "") != task_id:
+        raise RegistryError("APPROVAL_TASK_MISMATCH: approval cua task '" +
+                            str(approval.get("task_id") or "") +
+                            "', task hien tai '" + task_id + "'")
+    if str(approval.get("scope") or "") != scope:
+        raise RegistryError("SCOPE_DENIED: approval scope '" +
+                            str(approval.get("scope") or "") + "', can '" +
+                            scope + "'")
+    try:
+        approval_rev = int(approval.get("revision"))
+    except (TypeError, ValueError):
+        raise RegistryError("STALE_REVISION: approval thieu revision") \
+            from None
+    if approval_rev != revision:
+        raise RegistryError("STALE_REVISION: approval gan revision " +
+                            str(approval.get("revision")) + "; hien tai " +
+                            str(revision))
+    if str(approval.get("fingerprint") or "") != fingerprint:
+        raise RegistryError("FINGERPRINT_CONFLICT: intent doi sau khi "
+                            "duyet; can duyet lai")
     page = acquired.page
     current_url = getattr(page, "url", None)
     if isinstance(current_url, str) and not _urls_same_destination(
@@ -81,14 +163,19 @@ async def check_write_gate(session, acquired, evidence: dict,
                             "write (" + type(exc).__name__ + ")") from None
     verify = getattr(getattr(acquired, "runtime", None), "_verify_actor",
                      None)
+    actor_now = ""
+    if not ev.get("actor") or not record.get("expectedAccountId"):
+        raise RegistryError("WRITE_DENIED: evidence and expected actor required")
     if callable(verify):
         try:
             actor_now = await verify(page, record, acquired.lease) or ""
         except RegistryError as exc:
-            if "ACCOUNT_VERIFIER_UNAVAILABLE" in str(exc):
-                actor_now = ""
-            else:
+            # A2: account-bound WRITE thieu verifier -> DENY tuyet doi.
+            # Khong nuot thanh actor="", khong env bypass, khong nhanh system.
+            if "ACCOUNT_VERIFIER_UNAVAILABLE" not in str(exc):
                 raise
+            raise RegistryError("WRITE_DENIED: no actor verifier "
+                                "('" + str(exc)[:80] + "')") from None
         if actor_now and ev.get("actor") and actor_now != ev.get("actor"):
             raise RegistryError("EVIDENCE_ACTOR_CHANGED: actor doi tu "
                                 + str(ev.get("actor")) + " sang "
@@ -97,8 +184,14 @@ async def check_write_gate(session, acquired, evidence: dict,
         if expected and actor_now and actor_now != expected:
             from miro.browser.errors import WorkerStopped
             raise WorkerStopped("WORKER_STOPPED: ACCOUNT_MISMATCH")
-    if not isinstance(approval, dict) or approval.get("approved") is not True:
-        raise RegistryError("WRITE_DENIED: thieu approval hop le cua dung task")
+    else:
+        raise RegistryError("WRITE_DENIED: no actor verifier (runtime "
+                            "khong co _verify_actor)")
+    # Account-bound: actor bat buoc non-empty sau verify. Khong dung
+    # actor="" de bo qua so sanh.
+    if not actor_now:
+        raise RegistryError("WRITE_DENIED: actor khong xac minh duoc; "
+                            "khong WRITE mu")
     return record
 
 
@@ -181,11 +274,13 @@ async def read_via_eye(session, *, platform_id: str, url: str, caller: str,
 async def write_via_adapter(session, *, platform_id: str, url: str,
                             caller: str, evidence: dict,
                             approval: dict | None,
-                            adapter_fn) -> dict:
-    """WRITE duy nhất: gate 8 diem (docs/security/eye-gate.md) roi moi goi adapter.
+                            adapter_fn, auth: dict | None = None) -> dict:
+    """WRITE duy nhất: gate (docs/security/eye-gate.md) roi moi goi adapter.
 
+    - `auth` BAT BUOC o production: authorization context tu task/intent
+      state do caller dang tin truyen; thieu -> DENY (AUTH_REQUIRED).
     - evidence qua check_evidence + check_write_gate (instance/tab tuoi,
-      actor, url destination, lease, approval dung task) — rot la DENY.
+      actor, url destination, lease, auth binding, approval dung task).
     - adapter_fn: async (page) -> receipt dict.
     Sau thao tac: receipt phai co (ack/toast/url), khong co -> UNKNOWN giu.
     """
@@ -195,7 +290,8 @@ async def write_via_adapter(session, *, platform_id: str, url: str,
                                   caller=caller)
     acquired = out["handle"]
     try:
-        await check_write_gate(session, acquired, evidence, approval)
+        await check_write_gate(session, acquired, evidence, approval,
+                               auth=auth)
     except Exception:
         with suppress(Exception):
             await acquired.release()

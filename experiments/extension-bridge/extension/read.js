@@ -67,38 +67,47 @@ const READ_FUNCS = {
   },
   // Video dau tien trong feed For You (trang chu https://www.tiktok.com/).
   // URL trang van la homepage nen phai mo anchor /video/ that trong DOM.
+  // CHI lay trong feed chinh (recommend-list-item-container), BO QUA
+  // anchor o sidebar/notification (author dang so ID nhu @7455898...).
   // KHONG caption day du/comment — chi preview 300 ky tu.
   "feed-video": () => {
     const url = location.href || "";
-    const anchors = [...document.querySelectorAll('a[href*="/video/"]')];
-    let videoUrl = "", aweme = "", author = "";
-    for (const a of anchors) {
-      const href = a.getAttribute("href") || "";
-      const m = href.match(/\/video\/(\d+)/);
-      if (!m) continue;
-      const am = href.match(/\/@([^/?]+)/);
-      if (!am) continue;
-      aweme = m[1];
-      author = "@" + am[1];
-      videoUrl = href.startsWith("http") ? href
-        : ("https://www.tiktok.com" + (href.startsWith("/") ? href : "/" + href));
-      break;
-    }
+    const isHandle = (h) => /^[\w.\-]{2,24}$/.test(h || "")
+      && !/^\d{10,}$/.test(h || "");
+    const pick = (root) => {
+      const anchors = [...root.querySelectorAll('a[href*="/video/"]')];
+      for (const a of anchors) {
+        const href = a.getAttribute("href") || "";
+        const m = href.match(/\/video\/(\d+)/);
+        const am = href.match(/\/@([^/?]+)/);
+        if (!m || !am || !isHandle(am[1])) continue;
+        const vurl = href.startsWith("http") ? href
+          : ("https://www.tiktok.com" + (href.startsWith("/") ? href : "/" + href));
+        return { a, href: vurl, aweme: m[1], author: "@" + am[1] };
+      }
+      return null;
+    };
+    // Uu tien feed chinh truoc, toan trang chi la fallback.
+    const feed = document.querySelector(
+      '[data-e2e="recommend-list-item-container"]')
+      || document.querySelector('[data-e2e="feed"]')
+      || document.querySelector("main")
+      || document.body;
+    let hit = pick(feed) || pick(document);
     let caption = "";
-    if (videoUrl) {
-      const scope = anchors.length
-        ? (anchors[0].closest('[data-e2e="recommend-list-item-container"]')
-          || anchors[0].closest("div")) : null;
-      caption = (((scope || document.body) || {}).innerText || "")
-        .slice(0, 300);
+    if (hit) {
+      const scope = hit.a.closest(
+        '[data-e2e="recommend-list-item-container"]')
+        || hit.a.closest("article") || hit.a.closest("div");
+      caption = (((scope || {})).innerText || "").slice(0, 300);
     }
     const hasVideo = !!document.querySelector("video");
     return {
       title: document.title,
       url: url,
-      video_url: videoUrl,
-      aweme_id: aweme,
-      author: author,
+      video_url: hit ? hit.href : "",
+      aweme_id: hit ? hit.aweme : "",
+      author: hit ? hit.author : "",
       caption_preview: caption,
       has_video: hasVideo ? "1" : "",
     };
