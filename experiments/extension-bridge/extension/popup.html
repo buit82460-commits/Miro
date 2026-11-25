@@ -2,56 +2,72 @@
 <meta charset="utf-8">
 <title>Miro Bridge</title>
 <style>
-body{font:13px sans-serif;padding:14px;width:264px;margin:0;color:#111}
+body{background:#161616;color:#f2f2f2;font:13px sans-serif;
+  padding:16px 16px 12px;width:264px;margin:0;border-radius:16px}
 .top{display:flex;align-items:center;gap:10px}
-.logo{width:40px;height:40px;border-radius:10px;background:#111;color:#fff;
+.logo{width:40px;height:40px;border-radius:10px;background:#2b2f36;color:#fff;
   display:flex;align-items:center;justify-content:center;
   font-weight:700;font-size:20px}
 .name{font-size:17px;font-weight:700}
-.sub{color:#555;font-size:12px;margin:2px 0 0}
-#power{width:110px;height:110px;border-radius:50%;border:0;margin:18px auto 10px;
-  display:block;font-size:34px;cursor:pointer;background:#e8e8e8;color:#666}
-#power.on{background:#1a7f37;color:#fff}
-#state{font-size:19px;font-weight:700;text-align:center;margin:0}
-#hint{color:#555;text-align:center;margin:4px 0 10px;font-size:12px}
-#ident{border-top:1px solid #eee;padding-top:8px;font-size:12px;color:#333}
-#ident .row{display:flex;justify-content:space-between;padding:2px 0}
-#ident code{font-family:monospace;font-size:11px}
-#st{color:#555;min-height:16px;font-size:12px;text-align:center}
+#gear{margin-left:auto;background:none;border:0;color:#cfcfcf;
+  font-size:18px;cursor:pointer;padding:4px}
+#power{width:110px;height:110px;border-radius:50%;border:0;margin:22px auto 12px;
+  display:block;font-size:34px;cursor:pointer;background:#5a5e64;color:#e8e8e8}
+#power.on{background:#2e7d32;color:#fff}
+#state{font-size:19px;font-weight:600;text-align:center;margin:0}
+#hint{color:#bdbdbd;text-align:center;margin:6px 0 12px;font-size:12px}
+#dev{border-top:1px solid #333;padding-top:10px;display:flex;gap:8px;
+  align-items:flex-start;font-size:12px}
+#dev .ic{color:#bdbdbd;font-size:15px}
+#dev .nm{color:#f2f2f2}
+#dev code{display:block;color:#9e9e9e;font-family:monospace;font-size:11px}
+#dev .dot{margin-left:auto;color:#9e9e9e;font-size:16px;line-height:1}
+#dev .dot.ok{color:#4caf50}
+#st{color:#bdbdbd;min-height:16px;font-size:12px;text-align:center}
 #pairbox{margin-top:8px}
-input{width:100%;margin:4px 0;box-sizing:border-box}
-button.act{width:100%;margin:2px 0}
-.small{font-size:12px;color:#555}
-details{margin-top:6px}
-#adv{font-size:12px;color:#333;white-space:pre-wrap;word-break:break-word}
+input{width:100%;margin:4px 0;box-sizing:border-box;background:#222;
+  border:1px solid #444;color:#f2f2f2;padding:7px;border-radius:8px}
+input::placeholder{color:#888}
+button.act{width:100%;margin:3px 0;background:#2e7d32;border:0;color:#fff;
+  padding:8px;border-radius:8px;cursor:pointer}
+button.ghost{width:100%;margin:3px 0;background:#2b2f36;border:0;color:#eee;
+  padding:8px;border-radius:8px;cursor:pointer}
+#settings{display:none;margin-top:10px;border-top:1px solid #333;padding-top:8px}
+#adv{font-size:11px;color:#bdbdbd;white-space:pre-wrap;word-break:break-word;
+  margin:6px 0}
+.lbl{font-size:11px;color:#9e9e9e;margin:6px 0 2px}
 </style>
 <div class="top">
   <div class="logo">M</div>
-  <div><div class="name">Miro</div><div class="sub">Browser Assistant</div></div>
+  <div class="name">Miro</div>
+  <button id="gear" title="Settings">&#x2699;</button>
 </div>
 <button id="power" title="Bat/tat ket noi">&#x23FB;</button>
 <p id="state">...</p>
 <p id="hint"></p>
-<div id="ident">
-  <div class="row"><span>Thiet bi</span><b id="v-name">...</b></div>
-  <div class="row"><span>Instance</span><code id="v-inst">...</code></div>
-</div>
-<p id="st"></p>
 <div id="pairbox" style="display:none">
   <input id="code" placeholder="Pairing code 6 so" maxlength="6"
     inputmode="numeric">
   <input id="dispname" placeholder="Ten goi nho (vd: Chrome ca nhan)"
     maxlength="40">
-  <button class="act" id="go">Ket noi lan dau</button>
+  <button class="act" id="go">Ket noi</button>
 </div>
 <div id="grantbox" style="display:none">
   <button class="act" id="grantback">Cap lai quyen doc</button>
 </div>
-<details>
-<summary class="small">Settings / Advanced</summary>
-<div id="adv">...</div>
-<button class="act" id="rename">Doi ten goi nho</button>
-<button class="act" id="revoke">Thu hoi quyen (giu lien ket)</button>
-<button class="act" id="forget">Xoa lien ket (pair lai tu dau)</button>
-</details>
+<div id="dev">
+  <span class="ic">&#x25C9;</span>
+  <div><span class="nm" id="v-name">...</span><code id="v-inst">...</code></div>
+  <span class="dot" id="v-dot">&#x25CF;</span>
+</div>
+<p id="st"></p>
+<div id="settings">
+  <div class="lbl">Diagnostics</div>
+  <div id="adv">...</div>
+  <div class="lbl">Ten goi nho</div>
+  <input id="newname" placeholder="Ten goi nho moi" maxlength="40">
+  <button class="ghost" id="rename">Doi ten</button>
+  <button class="ghost" id="revoke">Thu hoi quyen (giu lien ket)</button>
+  <button class="ghost" id="forget">Xoa lien ket (pair lai tu dau)</button>
+</div>
 <script src="popup.js"></script>

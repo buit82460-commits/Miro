@@ -33,15 +33,15 @@ async function fetchPolicy() {
 function render(state, detail) {
   // state: ma trang thai; detail: {displayName, instanceId, capabilities}.
   const p = el("power"), t = el("state"), h = el("hint");
-  const vn = el("v-name"), vi = el("v-inst");
+  const vn = el("v-name"), vi = el("v-inst"), dot = el("v-dot");
   const names = {
-    NOT_PAIRED: ["Chua ket noi", "Nhap code de ket noi Miro lan dau"],
-    DISCONNECTED: ["Da tat", "Bam nut nguon de bat lai"],
+    NOT_PAIRED: ["Disconnected", "Bam de ket noi Miro"],
+    DISCONNECTED: ["Disconnected", "Bam de ket noi Miro"],
     BRIDGE_OFFLINE: ["Bridge offline", "Miro tren may chua chay"],
     CONNECTING: ["Dang ket noi", "..."],
     RECONNECTING: ["Dang ket noi lai", "..."],
-    PERMISSION_REQUIRED: ["Can cap quyen", "Xac nhan de Miro duoc doc"],
-    PERMISSION_REVOKED: ["Quyen da thu hoi", "Cap lai hoac giu nguyen"],
+    PERMISSION_REQUIRED: ["Can cap quyen", "Mo Settings de xac nhan"],
+    PERMISSION_REVOKED: ["Quyen da thu hoi", "Mo Settings de cap lai"],
     READY: ["Connected", "San sang nhan nhiem vu"],
     UNKNOWN: ["Khong xac dinh", "Khong doc duoc trang thai"],
   };
@@ -51,9 +51,13 @@ function render(state, detail) {
   const on = (state === "READY");
   p.className = on ? "on" : "";
   p.textContent = "\u23FB";
-  vn.textContent = (detail && detail.displayName) || "...";
-  vi.textContent = (detail && detail.instanceId) || "...";
-  el("pairbox").style.display = (state === "NOT_PAIRED") ? "" : "none";
+  vn.textContent = (detail && detail.displayName) || "Chua dat ten";
+  vi.textContent = (detail && detail.instanceId) || "Chua co";
+  dot.className = "dot" + (on ? " ok" : "");
+  // Form pair an mac dinh; chi hien khi user bam nut nguon luc chua pair.
+  if (state !== "NOT_PAIRED" && state !== "DISCONNECTED") {
+    el("pairbox").style.display = "none";
+  }
   el("grantbox").style.display =
     (state === "PERMISSION_REQUIRED" || state === "PERMISSION_REVOKED")
     ? "" : "none";
@@ -117,14 +121,22 @@ async function renderAdv(pol) {
   el("adv").textContent = lines.join("\n");
 }
 
-// Nut nguon: bat/tat ket noi (disconnect giu link + policy).
+// Nut nguon la hanh dong duy nhat ngoai Settings:
+// - Chua pair -> bam: hien form nhap code (khong tu hien).
+// - Da pair + dang bat -> bam: tat (giu link + policy).
+// - Da pair + dang tat -> bam: bat lai (tu reconnect neu can).
 el("power").addEventListener("click", async () => {
   const st = el("st");
   st.textContent = "...";
   const s = await bg("miro-status");
   if (!s) { st.textContent = "Background chua san sang."; refresh(); return; }
   const paired = !!(s.session || (s.sessionId && s.token));
-  if (!paired) { refresh(); return; } // pairbox da hien
+  if (!paired) {
+    const box = el("pairbox");
+    box.style.display = (box.style.display === "none") ? "" : "none";
+    st.textContent = "";
+    return;
+  }
   const on = (s.enabled !== false);
   if (on) {
     await bg("miro-disconnect");
@@ -134,6 +146,17 @@ el("power").addEventListener("click", async () => {
     st.textContent = (r && r.ok) ? "Dang bat..." : "Bat that bai.";
   }
   refresh();
+});
+
+// Banh rang: mo/dong Settings (diagnostics + doi ten + revoke + forget).
+el("gear").addEventListener("click", async () => {
+  const box = el("settings");
+  const open = (box.style.display === "none") || !box.style.display;
+  box.style.display = open ? "" : "none";
+  if (open) {
+    const pol = await fetchPolicy();
+    await renderAdv(pol);
+  }
 });
 
 // Pair lan dau: gui kem ten goi nho do user dat (nhan hien thi, khong auth).
