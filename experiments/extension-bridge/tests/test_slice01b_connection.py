@@ -605,3 +605,66 @@ def test_manual_confirm_fallback_and_mapping_reuse():
         print("manual confirm fallback and mapping reuse: PASS")
     finally:
         srv.shutdown()
+
+
+def test_restart_after_connected_requires_relink_not_autogrant():
+    """Bridge restart (mat RAM) khi da Connected: session/device cu mat ->
+    reconnect DEVICE_UNKNOWN (khong tu cap), read TAB_UNKNOWN/expired,
+    khong tu tao quyen. Fail-closed, doi user link lai."""
+    srv = _boot()
+    try:
+        # Pair + approve + redeem nhu production that.
+        q = _post("/link-request", {"installation_id": "install-R"})
+        rid = q["request_id"]
+        _post("/link-confirm",
+              {"request_id": rid, "profile_directory": "Profile 20"},
+              bkey="test-backend-key-01")
+        _post("/link-approve", {"request_id": rid},
+              bkey="test-backend-key-01")
+        from bridge.server import CHANNEL as _CH
+        v = _CH._link_requests.get(rid)
+        sec = q["secret"]
+        inst = "install-R"
+        import hashlib as _h
+        assert _h.sha256(sec.encode()).hexdigest() == v["secret_digest"]
+        r = _post("/link-redeem",
+                  {"request_id": rid, "secret": sec,
+                   "installation_id": inst})
+        assert r.get("ok"), r
+        # Mo phong bridge restart: mat toan bo RAM.
+        _reset()
+        # Session/device cu khong con -> tu choi, khong tu cap moi.
+        code, out = _post_expect(
+            "/reconnect", {"device_id": r["device_id"]})
+        assert code == 403 and out.get("error") == "DEVICE_UNKNOWN", (code, out)
+        code, out = _post_expect(
+            "/inbox", {}, sid=r["session_id"], tok=r["token"])
+        assert code == 403, (code, out)
+        # Khong tu sinh request/credential moi tu phia server.
+        assert _CH._link_requests == {}, _CH._link_requests
+        print("restart after connected requires relink: PASS")
+    finally:
+        srv.shutdown()
+
+
+def test_challenge_answer_without_launched_does_not_verify():
+    """Answer truoc khi launcher xac nhan -> CHALLENGE_NOT_LAUNCHED,
+    khong bind sai. Dung tham so launcher lam bang chung."""
+    srv = _boot()
+    try:
+        from bridge.server import CHANNEL as _CH
+        q = _post("/link-request", {"installation_id": "install-L"})
+        rid = q["request_id"]
+        ch = _post("/challenge",
+                   {"request_id": rid, "profile_directory": "Profile 20"},
+                   bkey="test-backend-key-01")
+        a = _CH.answer_challenge(
+            rid, ch["challenge_id"], q["secret"], "install-L")
+        assert a.get("error") == "CHALLENGE_NOT_LAUNCHED", a
+        st = _post("/link-status", {"request_id": rid},
+                   bkey="test-backend-key-01")
+        assert st.get("link_stage") == "requested", st
+        assert st.get("verified_profile") == "", st
+        print("answer without launched stays requested: PASS")
+    finally:
+        srv.shutdown()

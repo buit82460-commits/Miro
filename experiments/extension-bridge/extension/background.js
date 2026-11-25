@@ -610,6 +610,21 @@ async function pollInbox() {
   } catch (e) {
     return; // bridge chua chay: im lang, poll lai vong sau
   }
+  if (res && res.status === 403) {
+    // Bridge restart mat session (SESSION_UNKNOWN/EXPIRED...) hoac tu choi
+    // (AUTH_DENIED): xoa session chet, tu tao request moi neu van ON (user
+    // duyet 1 lan). Khong tu approve, khong tu tao quyen. Revoke/policy do
+    // /policy quyet dinh rieng, khong nham voi mat session o day.
+    const gone = await res.json().catch(() => ({}));
+    console.log("[miro-bridge] session gone (bridge restart),",
+      (gone && gone.error) || res.status, "-> re-link");
+    cfg.sessionId = "";
+    cfg.token = "";
+    cfg.seq = 0;
+    await saveCfg();
+    await requestLinkIfNeeded();
+    return;
+  }
   if (!res.ok) return;
   const out = await res.json().catch(() => ({}));
   const pend = (out && out.pending) || [];
