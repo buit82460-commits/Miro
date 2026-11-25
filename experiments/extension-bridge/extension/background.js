@@ -630,6 +630,28 @@ chrome.tabs.onUpdated.addListener((tabId, change, tab) => {
   if (change.url || change.title || change.status === "complete") {
     report(change.url ? "url-changed" : "updated", tab);
   }
+  // Profile Binding Challenge: Miro mo /verify/<id> tren Profile chi dinh;
+  // extension trong Profile do thay URL tab cua minh -> nop challenge qua
+  // kenh link-request cua minh (secret-bound). Khong can inject DOM.
+  try {
+    const url = String(change.url || (tab && tab.url) || "");
+    const m = url.match(/^http:\/\/127\.0\.0\.1:18767\/verify\/([A-Za-z0-9_-]{1,64})/);
+    if (m && cfg.linkRequestId && cfg.linkSecret) {
+      fetch((cfg.baseUrl || BASE_DEFAULT) + "/link-answer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          request_id: cfg.linkRequestId,
+          challenge_id: m[1],
+          secret: cfg.linkSecret,
+          installation_id: cfg.installationId || "" }),
+      }).then((r) => r.json().catch(() => ({}))).then((out) => {
+        console.log("[miro-bridge] challenge answered:",
+          out && out.ok ? ("verified=" + out.verified_profile)
+                        : ("fail=" + ((out && out.error) || "?")));
+      }).catch(() => { /* bridge chua chay: bo qua */ });
+    }
+  } catch (e) { /* ignore */ }
 });
 
 chrome.runtime.onStartup.addListener(async () => {

@@ -52,6 +52,12 @@ class BridgeChannel:
         #   created_at, expires_at, state, approved_at}.
         # state: pending|approved|consumed. Secret chi extension tao moi co.
         self._link_requests = {}
+        # Profile Binding Challenge: challenge_id -> {request_id,
+        #   profile_directory, created_at, expires_at, state}.
+        # state: pending|consumed. Server mo trang verify tren Profile chi
+        # dinh; extension trong Profile do thay URL -> nop challenge qua
+        # kenh link-request cua minh -> server bind installation<->profile.
+        self._challenges = {}
 
     # -- pairing ---------------------------------------------------------
     def issue_pairing_code(self):
@@ -137,21 +143,26 @@ class BridgeChannel:
         return {"ok": True, "pending": out}
 
     def approve_link_request(self, request_id, display_name=""):
-        """User xac nhan 1 lan tren Miro. Chi doi state pending->approved;
-        credential chi cap o redeem_link_request (secret-bound)."""
+        """User xac nhan 1 lan tren Miro. Dieu kien: Profile da duoc xac
+        minh qua challenge (verified_profile) — khong duyet request mo.
+        Ten hien thi mac dinh = Profile directory da verify; operator co
+        the dat ten khac (chi la nhan, khong dung auth)."""
         now = self._clock()
         v = self._link_requests.get(str(request_id or ""))
         if v is None or v.get("expires_at", 0) <= now:
             return {"ok": False, "error": "LINK_UNKNOWN_OR_EXPIRED"}
         if v.get("state") != "pending":
             return {"ok": False, "error": "LINK_ALREADY_USED"}
+        prof = str(v.get("verified_profile") or "")
+        if not prof:
+            return {"ok": False, "error": "PROFILE_UNVERIFIED"}
         v["state"] = "approved"
         v["approved_at"] = now
-        # Ten goi nho: uu tien ten operator nhap khi duyet; fallback ten
-        # user da go trong extension (hint). Chi la nhan hien thi.
-        v["display_name"] = (str(display_name or "")[:40]
-                             or str(v.get("hint") or "")[:40])
-        return {"ok": True, "approved": True}
+        # Ten mac dinh = Profile da verify (tu dong, khong nhap tay);
+        # operator/user doi sau qua /rename (chi la nhan hien thi).
+        v["display_name"] = (str(display_name or "")[:40] or prof)
+        return {"ok": True, "approved": True,
+                "verified_profile": prof}
 
     def redeem_link_request(self, request_id, secret, installation_id=""):
         """Extension doi secret lay credential sau khi user approve.
@@ -178,6 +189,69 @@ class BridgeChannel:
         name = str(v.get("display_name") or "")[:40]
         self._link_requests.pop(str(request_id or ""), None)
         return self._issue_credentials(name)
+
+    # -- Profile Binding Challenge --------------------------------------
+    # Miro mo trang verify tren Profile chi dinh (qua launcher san co);
+    # extension trong Profile do thay URL /verify/<id> -> nop challenge qua
+    # kenh link-request cua minh. Server bind installation<->profile that.
+    # Khong doan tu URL, khong doc chrome://, khong sua du lieu Chrome.
+    def issue_challenge(self, request_id, profile_directory):
+        """Tao challenge dung 1 lan cho link-request dang pending.
+        Can Backend role (nguoi duyet chi dinh Profile muc tieu)."""
+        import re as _re
+        now = self._clock()
+        if not isinstance(profile_directory, str) or not _re.fullmatch(
+                r"Default|Profile \d{1,5}", profile_directory):
+            return {"ok": False, "error": "INVALID_PROFILE_DIRECTORY"}
+        v = self._link_requests.get(str(request_id or ""))
+        if v is None or v.get("expires_at", 0) <= now:
+            return {"ok": False, "error": "LINK_UNKNOWN_OR_EXPIRED"}
+        if v.get("state") != "pending":
+            return {"ok": False, "error": "LINK_ALREADY_USED"}
+        challenge_id = "ch-" + secrets.token_hex(8)
+        self._challenges[challenge_id] = {
+            "request_id": str(request_id),
+            "profile_directory": profile_directory,
+            "created_at": now,
+            "expires_at": now + 300,
+            "state": "pending",
+        }
+        return {"ok": True, "challenge_id": challenge_id,
+                "verify_path": "/verify/" + challenge_id,
+                "expires_in": 300}
+
+    def answer_challenge(self, request_id, challenge_id, secret,
+                         installation_id):
+        """Extension nop challenge thay duoc trong tab cua Profile minh.
+        Rang buoc: link-request con pending + secret/installation khop +
+        challenge pending + cung request_id + con han. Dung 1 lan."""
+        import re as _re
+        now = self._clock()
+        v = self._link_requests.get(str(request_id or ""))
+        if v is None or v.get("expires_at", 0) <= now:
+            self._redeem_fails.append(now)
+            return {"ok": False, "error": "LINK_UNKNOWN_OR_EXPIRED"}
+        if str(v.get("installation_id") or "") != str(installation_id or ""):
+            self._redeem_fails.append(now)
+            return {"ok": False, "error": "INSTALLATION_MISMATCH"}
+        got = hashlib.sha256(str(secret or "").encode()).hexdigest()
+        if not hmac.compare_digest(str(v.get("secret_digest") or ""), got):
+            self._redeem_fails.append(now)
+            return {"ok": False, "error": "LINK_FORBIDDEN"}
+        c = self._challenges.get(str(challenge_id or ""))
+        if c is None or c.get("expires_at", 0) <= now:
+            return {"ok": False, "error": "CHALLENGE_UNKNOWN_OR_EXPIRED"}
+        if c.get("state") != "pending":
+            return {"ok": False, "error": "CHALLENGE_ALREADY_USED"}
+        if str(c.get("request_id") or "") != str(request_id or ""):
+            return {"ok": False, "error": "CHALLENGE_MISMATCH"}
+        prof = str(c.get("profile_directory") or "")
+        if not _re.fullmatch(r"Default|Profile \d{1,5}", prof):
+            return {"ok": False, "error": "INVALID_PROFILE_DIRECTORY"}
+        c["state"] = "consumed"
+        v["verified_profile"] = prof
+        v["verified_at"] = now
+        return {"ok": True, "verified_profile": prof}
 
     def _issue_credentials(self, name=""):
         """Cap instance/device/session/policy moi (dung chung cho redeem

@@ -57,6 +57,7 @@ def _reset():
     _srv.CHANNEL._policies.clear()
     _srv.CHANNEL._redeem_fails.clear()
     _srv.CHANNEL._link_requests.clear()
+    _srv.CHANNEL._challenges.clear()
     _srv.GRANTS._grants.clear()
     _srv.GRANTS._used_grant_seq.clear()
     _srv.REGISTRY.tabs.clear()
@@ -373,15 +374,29 @@ def test_policy_errors_are_not_revoked():
         srv.shutdown()
 
 
+def _link_verified(rid, prof="Profile 20", bkey="test-backend-key-01"):
+    """Helper: tao challenge + extension nop -> verified_profile."""
+    from bridge.server import CHANNEL
+    c = _post("/challenge", {"request_id": rid,
+                             "profile_directory": prof}, bkey=bkey)
+    assert c.get("ok") and c.get("challenge_id"), c
+    return c["challenge_id"]
+
+
 def test_link_approve_redeem_once():
-    """One-click Approval: request -> approve (backend key) -> redeem 1 lan.
-    Chua approve -> tu choi; redeem xong -> request het (replay bi tu choi)."""
+    """One-click Approval: request -> challenge verified (Profile 20) ->
+    approve (backend key) -> redeem 1 lan. Chua verify -> approve bi tu
+    choi (PROFILE_UNVERIFIED). Redeem xong -> het (replay bi tu choi)."""
     srv = _boot()
     try:
-        q = _post("/link-request",
-                  {"installation_id": "install-A", "hint": "Chrome ca nhan"})
+        q = _post("/link-request", {"installation_id": "install-A"})
         assert q.get("ok") and q.get("request_id") and q.get("secret"), q
         rid, sec = q["request_id"], q["secret"]
+        # Chua verify Profile: approve bi tu choi (khong duyet mo).
+        code, out = _post_expect("/link-approve", {"request_id": rid},
+                                 bkey="test-backend-key-01")
+        assert code == 400 and out.get("error") == "PROFILE_UNVERIFIED", \
+            (code, out)
         # Chua approve: redeem bi tu choi, chua consume.
         code, out = _post_expect("/link-redeem",
                                  {"request_id": rid, "secret": sec,
@@ -389,16 +404,21 @@ def test_link_approve_redeem_once():
         assert code == 400 and out.get("error") == "LINK_NOT_APPROVED", \
             (code, out)
         # Extension KHONG tu approve duoc (thieu backend key).
-        code, out = _post_expect("/link-approve",
-                                 {"request_id": rid,
-                                  "display_name": "Chrome ca nhan"})
+        code, out = _post_expect("/link-approve", {"request_id": rid})
         assert code == 403, (code, out)
-        # User duyet 1 lan tren Miro (backend key).
-        a = _post("/link-approve",
-                  {"request_id": rid, "display_name": "Chrome ca nhan"},
+        # Challenge: Miro mo /verify/<id> tren Profile 20; extension trong
+        # Profile do nop lai qua kenh cua minh (secret-bound).
+        cid = _link_verified(rid, "Profile 20")
+        ans = _post("/link-answer",
+                    {"request_id": rid, "challenge_id": cid, "secret": sec,
+                     "installation_id": "install-A"})
+        assert ans.get("verified_profile") == "Profile 20", ans
+        # User duyet 1 lan tren Miro (backend key): ten mac dinh = Profile.
+        a = _post("/link-approve", {"request_id": rid},
                   bkey="test-backend-key-01")
-        assert a.get("approved"), a
-        # Redeem thanh cong: co credential + instance rieng + ten hien thi.
+        assert a.get("approved") and a.get("verified_profile") == \
+            "Profile 20", a
+        # Redeem thanh cong: co credential + instance rieng + ten tu dong.
         r = _post("/link-redeem",
                   {"request_id": rid, "secret": sec,
                    "installation_id": "install-A"})
@@ -406,7 +426,7 @@ def test_link_approve_redeem_once():
         assert r.get("instance_id", "").startswith("inst-"), r
         from bridge.server import CHANNEL
         assert CHANNEL.policy(
-            r["instance_id"]).get("display_name") == "Chrome ca nhan"
+            r["instance_id"]).get("display_name") == "Profile 20"
         # Replay bi tu choi (request da consume).
         code, out = _post_expect("/link-redeem",
                                  {"request_id": rid, "secret": sec,
@@ -419,12 +439,16 @@ def test_link_approve_redeem_once():
 
 def test_link_no_autopair_and_binding():
     """Khong auto-pair: sai secret / sai installation / het han deu tu choi.
-    Approve 2 lan bi tu choi (khong cap credential trung)."""
+    Approve 2 lan bi tu choi; challenge/Profile khac nhau khong lan nhau."""
     srv = _boot()
     try:
         from bridge.server import CHANNEL
         q = _post("/link-request", {"installation_id": "install-B"})
         rid, sec = q["request_id"], q["secret"]
+        cid = _link_verified(rid, "Profile 21")
+        _post("/link-answer",
+              {"request_id": rid, "challenge_id": cid, "secret": sec,
+               "installation_id": "install-B"})
         _post("/link-approve", {"request_id": rid}, bkey="test-backend-key-01")
         # Approve lan 2 -> tu choi.
         code, out = _post_expect("/link-approve", {"request_id": rid},
@@ -449,5 +473,51 @@ def test_link_no_autopair_and_binding():
                                   "installation_id": "install-B"})
         assert code == 400, (code, out)
         print("link no autopair and binding: PASS")
+    finally:
+        srv.shutdown()
+
+
+def test_challenge_binding_requires_matching_profile():
+    """Challenge dung 1 lan, rang dung request + con han. Profile A khong
+    dung challenge cua Profile B; sai secret/installation bi tu choi."""
+    srv = _boot()
+    try:
+        from bridge.server import CHANNEL
+        qa = _post("/link-request", {"installation_id": "install-A"})
+        qb = _post("/link-request", {"installation_id": "install-B"})
+        ra, sa = qa["request_id"], qa["secret"]
+        rb, sb = qb["request_id"], qb["secret"]
+        ca = _link_verified(ra, "Profile 20")
+        cb = _link_verified(rb, "Profile 21")
+        # Challenge cheo request -> tu choi.
+        code, out = _post_expect("/link-answer",
+                                 {"request_id": ra, "challenge_id": cb,
+                                  "secret": sa, "installation_id": "install-A"})
+        assert code == 400 and out.get("error") == "CHALLENGE_MISMATCH", \
+            (code, out)
+        # Sai secret -> 403.
+        code, out = _post_expect("/link-answer",
+                                 {"request_id": ra, "challenge_id": ca,
+                                  "secret": "wrong",
+                                  "installation_id": "install-A"})
+        assert code == 403, (code, out)
+        # Dung -> verified Profile 20; dung lai -> da dung.
+        ok = _post("/link-answer",
+                   {"request_id": ra, "challenge_id": ca, "secret": sa,
+                    "installation_id": "install-A"})
+        assert ok.get("verified_profile") == "Profile 20", ok
+        code, out = _post_expect("/link-answer",
+                                 {"request_id": ra, "challenge_id": ca,
+                                  "secret": sa,
+                                  "installation_id": "install-A"})
+        assert code == 400, (code, out)
+        # Het han -> tu choi.
+        CHANNEL._challenges[cb]["expires_at"] = CHANNEL._clock() - 1
+        code, out = _post_expect("/link-answer",
+                                 {"request_id": rb, "challenge_id": cb,
+                                  "secret": sb,
+                                  "installation_id": "install-B"})
+        assert code == 400, (code, out)
+        print("challenge binding requires matching profile: PASS")
     finally:
         srv.shutdown()

@@ -189,9 +189,8 @@ async function linkTick(st) {
 
 el("go").addEventListener("click", async () => {
   const st = el("st");
-  const disp = el("dispname").value.trim();
   st.textContent = "...";
-  const q = await bg("miro-link-request", { hint: disp });
+  const q = await bg("miro-link-request", {});
   if (!q || !q.ok) {
     st.textContent = "FAIL: " + ((q && q.error) || "khong tao duoc yeu cau");
     return;

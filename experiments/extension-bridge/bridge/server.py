@@ -148,6 +148,15 @@ class Handler(BaseHTTPRequestHandler):
         # Khong ho tro GET tham so/token tren URL. Pair qua POST /pair.
         if self.path == "/health":
             return self._send(200, {"ok": True})
+        # Trang verify cho Profile Binding Challenge: Miro mo URL nay tren
+        # Profile chi dinh (launcher san co). Extension trong Profile do doc
+        # URL tab cua minh (chrome.tabs, khong can inject DOM) -> nop lai
+        # challenge_id qua /link-answer. Khong token, khong auth o day.
+        if (self.path or "").startswith("/verify/"):
+            cid = (self.path or "")[len("/verify/"):].split(
+                "?", 1)[0].split("/", 1)[0][:64]
+            return self._send(200, {"ok": True, "challenge_id": cid,
+                                    "hint": "miro-verify"})
         if self.path == "/tabs":
             # Spike only: doc registry tren loopback de nghiem thu live.
             tabs = [{"browser": k[0], "tab": k[1], "url": v.url,
@@ -244,7 +253,8 @@ class Handler(BaseHTTPRequestHandler):
                                         "error": "BACKEND_AUTH_REQUIRED"})
             return self._send(200, CHANNEL.list_link_requests())
         if path == "/link-approve":
-            # User xac nhan 1 lan tren Miro. Can Backend role.
+            # User xac nhan 1 lan tren Miro. Can Backend role + Profile da
+            # duoc xac minh qua challenge (verified_profile).
             if not _backend_ok(self.headers.get("X-Backend-Key", "")):
                 return self._send(403, {"ok": False,
                                         "error": "BACKEND_AUTH_REQUIRED"})
@@ -252,6 +262,28 @@ class Handler(BaseHTTPRequestHandler):
                 str(data.get("request_id") or ""),
                 str(data.get("display_name") or ""))
             return self._send(200 if r.get("ok") else 400, r)
+        if path == "/challenge":
+            # Tao Profile Binding Challenge cho link-request dang pending.
+            # Can Backend role. Miro mo verify_path tren Profile chi dinh
+            # (qua launcher san co); extension trong Profile do nop lai.
+            if not _backend_ok(self.headers.get("X-Backend-Key", "")):
+                return self._send(403, {"ok": False,
+                                        "error": "BACKEND_AUTH_REQUIRED"})
+            r = CHANNEL.issue_challenge(
+                str(data.get("request_id") or ""),
+                str(data.get("profile_directory") or ""))
+            return self._send(200 if r.get("ok") else 400, r)
+        if path == "/link-answer":
+            # Extension nop challenge thay trong tab cua Profile minh.
+            r = CHANNEL.answer_challenge(
+                str(data.get("request_id") or ""),
+                str(data.get("challenge_id") or ""),
+                str(data.get("secret") or ""),
+                str(data.get("installation_id") or ""))
+            code = 200 if r.get("ok") else (
+                403 if r.get("error") in ("LINK_FORBIDDEN",
+                                          "INSTALLATION_MISMATCH") else 400)
+            return self._send(code, r)
         if path == "/link-redeem":
             # Extension doi secret lay credential sau approve.
             # Rang buoc: secret + installation khop + da approve + 1 lan.
