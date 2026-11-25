@@ -668,3 +668,30 @@ def test_challenge_answer_without_launched_does_not_verify():
         print("answer without launched stays requested: PASS")
     finally:
         srv.shutdown()
+
+
+def test_concurrent_verify_and_status_do_not_block():
+    """Server production phai chiu concurrent: Chrome giu tab /verify
+    keep-alive khong chan /link-status (don luong gay refused that)."""
+    import socket as _sock
+    from bridge.server import Handler as _H
+    from http.server import ThreadingHTTPServer as _THS
+    # Boot dung loai server production (khong phai HTTPServer don luong).
+    import bridge.server as _srvmod
+    import inspect as _insp
+    src = _insp.getsource(_srvmod)
+    assert "ThreadingHTTPServer" in src, "production phai dung ThreadingHTTPServer"
+    srv = _boot()
+    try:
+        raw = _sock.create_connection(("127.0.0.1", BASE_PORT[0]),
+                                          timeout=5)
+        raw.settimeout(5)
+        raw.sendall(b"GET /verify/ch-song-song HTTP/1.1\r\n"
+                    b"Host: x\r\nConnection: keep-alive\r\n\r\n")
+        code, st = _post_expect("/link-status", {"request_id": "nope"},
+                                bkey="test-backend-key-01")
+        raw.close()
+        assert code == 404 and st.get("error") == "LINK_UNKNOWN", (code, st)
+        print("concurrent verify does not block: PASS")
+    finally:
+        srv.shutdown()

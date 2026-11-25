@@ -18,7 +18,7 @@ import hmac
 import json
 import os
 import sys
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -111,6 +111,7 @@ def _origin_ok(value):
 
 class Handler(BaseHTTPRequestHandler):
     server_version = "MiroBridge/0.3"
+    timeout = 10
 
     def log_message(self, *a):
         pass
@@ -805,5 +806,6 @@ class Handler(BaseHTTPRequestHandler):
 if __name__ == "__main__":
     port = int(sys.argv[1]) if len(sys.argv) > 1 else 18767
     print("bridge demo tren 127.0.0.1:%d (spike only)" % port, flush=True)
-    # Bind duy nhat loopback.
-    HTTPServer(("127.0.0.1", port), Handler).serve_forever()
+    # Bind duy nhat loopback. Threading: Chrome giu tab /verify keep-alive
+    # khong chan request khac (don luong gay refused that o production).
+    ThreadingHTTPServer(("127.0.0.1", port), Handler).serve_forever()
