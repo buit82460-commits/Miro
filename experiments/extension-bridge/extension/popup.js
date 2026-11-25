@@ -68,7 +68,8 @@ document.getElementById("go").addEventListener("click", async () => {
     await chrome.runtime.sendMessage({ type: "miro-pair",
       baseUrl: BASE,
       sessionId: data.session_id, token: data.token,
-      deviceId: data.device_id || "" });
+      deviceId: data.device_id || "",
+      instanceId: data.instance_id || "" });
     st.textContent = "Da ket noi. Quyen doc duy tri den khi thu hoi.";
   } catch (e) {
     st.textContent = "FAIL: no backend (chay server.py 18767 chua?)";

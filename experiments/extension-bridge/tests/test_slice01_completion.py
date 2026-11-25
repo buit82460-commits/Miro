@@ -72,11 +72,16 @@ def _reset():
     from bridge import server as _srv
     _srv.CHANNEL._sessions.clear()
     _srv.CHANNEL._pairing.clear()
+    _srv.CHANNEL._devices.clear()
+    _srv.CHANNEL._policies.clear()
+    _srv.CHANNEL._redeem_fails.clear()
     _srv.GRANTS._grants.clear()
+    _srv.GRANTS._used_grant_seq.clear()
     _srv.REGISTRY.tabs.clear()
     _srv.OBSERVATIONS.clear()
     _srv.PENDING.clear()
     _srv.DONE.clear()
+    _srv.CANCELLED.clear()
     os.environ["MIRO_BRIDGE_BACKEND_KEY"] = BACKEND_KEY
 
 
@@ -103,7 +108,8 @@ def _pair():
     assert c, "khong sinh duoc pairing code"
     r = _post("/redeem", {"code": c})
     assert r.get("ok"), r
-    return r["session_id"], r["token"]
+    assert r.get("instance_id"), r
+    return r["session_id"], r["token"], r["instance_id"]
 
 
 def _grant(sid, tok, tab):
@@ -125,8 +131,9 @@ def _grant(sid, tok, tab):
     return seq
 
 
-def _mkreq(tab, timeout_s=30, task_id="task-1"):
+def _mkreq(tab, inst, timeout_s=30, task_id="task-1"):
     return _post("/read", {"tabId": tab, "read": "actor-login",
+                           "instance": inst,
                            "timeout_s": timeout_s, "task_id": task_id},
                  bkey=BACKEND_KEY)
 
@@ -145,14 +152,14 @@ def _result(sid, tok, tab, seq, rid, data=None, exec_error=""):
 def test_credential_roles():
     srv = _boot()
     try:
-        sid, tok = _pair()
+        sid, tok, inst = _pair()
         _grant(sid, tok, 21)
         # extension tao production request -> tu choi
         code, out = _post_expect("/read", {"tabId": 21, "read": "actor-login"},
                                  sid, tok)
         assert code == 403 and out.get("error") == "BACKEND_AUTH_REQUIRED", out
         # backend tao ok
-        r = _mkreq(21)
+        r = _mkreq(21, inst)
         assert r.get("request_id"), r
         rid = r["request_id"]
         # backend gia danh result -> tu choi
@@ -173,9 +180,9 @@ def test_credential_roles():
 def test_atomic_claim():
     srv = _boot()
     try:
-        sid, tok = _pair()
+        sid, tok, inst = _pair()
         _grant(sid, tok, 22)
-        r = _mkreq(22)
+        r = _mkreq(22, inst)
         rid = r["request_id"]
         ib = _post("/inbox", {}, sid, tok)
         assert any(p.get("request_id") == rid for p in ib.get("pending", [])), ib
@@ -196,9 +203,9 @@ def test_atomic_claim():
 def test_manual_regression():
     srv = _boot()
     try:
-        sid, tok = _pair()
+        sid, tok, inst = _pair()
         _grant(sid, tok, 23)
-        r = _mkreq(23)
+        r = _mkreq(23, inst)
         rid = r["request_id"]
         from bridge.server import CHANNEL
         seq = int(CHANNEL._sessions[sid].get("last_seq", 0)) + 1
@@ -228,11 +235,11 @@ def test_manual_regression():
 def test_deadline_cancel_terminal():
     srv = _boot()
     try:
-        sid, tok = _pair()
+        sid, tok, inst = _pair()
         _grant(sid, tok, 24)
         from bridge.server import CHANNEL
         # deadline ngan: doi het han roi gui -> EXPIRED
-        r = _mkreq(24, timeout_s=1)
+        r = _mkreq(24, inst, timeout_s=1)
         rid = r["request_id"]
         import time as _t
         _t.sleep(1.2)
@@ -241,7 +248,7 @@ def test_deadline_cancel_terminal():
                                  _result(sid, tok, 24, seq, rid), sid, tok)
         assert code == 410 and out.get("error") == "REQUEST_EXPIRED", (code, out)
         # cancel: request moi -> cancel -> late result CANCELLED
-        r2 = _mkreq(24)
+        r2 = _mkreq(24, inst)
         rid2 = r2["request_id"]
         c = _post("/cancel", {"request_id": rid2}, bkey=BACKEND_KEY)
         assert c.get("cancelled"), c
@@ -250,7 +257,7 @@ def test_deadline_cancel_terminal():
                                  _result(sid, tok, 24, seq2, rid2), sid, tok)
         assert code == 410 and out.get("error") == "REQUEST_CANCELLED", (code, out)
         # duplicate sau terminal: hoan thanh roi gui lai -> COMPLETED
-        r3 = _mkreq(24)
+        r3 = _mkreq(24, inst)
         rid3 = r3["request_id"]
         seq3 = int(CHANNEL._sessions[sid].get("last_seq", 0)) + 1
         ok = _post("/read-result", _result(sid, tok, 24, seq3, rid3), sid, tok)
@@ -272,10 +279,10 @@ def test_exec_error_and_grant_revoke():
     srv = _boot()
     try:
         from bridge.server import CHANNEL, GRANTS
-        sid, tok = _pair()
+        sid, tok, inst = _pair()
         _grant(sid, tok, 25)
         # exec error: extension bao loi -> terminal, khong data gia
-        r = _mkreq(25)
+        r = _mkreq(25, inst)
         rid = r["request_id"]
         seq = int(CHANNEL._sessions[sid].get("last_seq", 0)) + 1
         ok = _post("/read-result",
@@ -285,11 +292,11 @@ def test_exec_error_and_grant_revoke():
         obs = _get("/observations").get("observations") or []
         assert not any(i.get("request_id") == rid for i in obs), obs
         # grant revoke giua claim va execution -> GRANT tu choi
-        r2 = _mkreq(25)
+        r2 = _mkreq(25, inst)
         rid2 = r2["request_id"]
         c = _post("/claim", {"request_id": rid2}, sid, tok)
         assert c.get("ok"), c
-        assert GRANTS.revoke_tab("profile20-main", 25)
+        assert GRANTS.revoke_tab(inst, 25)
         seq2 = int(CHANNEL._sessions[sid].get("last_seq", 0)) + 1
         code, out = _post_expect("/read-result",
                                  _result(sid, tok, 25, seq2, rid2), sid, tok)
@@ -305,9 +312,9 @@ def test_claim_stale_fencing():
     try:
         from bridge.server import CHANNEL, PENDING
         import time as _t
-        sid, tok = _pair()
+        sid, tok, inst = _pair()
         _grant(sid, tok, 26)
-        r = _mkreq(26, timeout_s=60)
+        r = _mkreq(26, inst, timeout_s=60)
         rid = r["request_id"]
         c1 = _post("/claim", {"request_id": rid}, sid, tok)
         assert c1.get("claim_token"), c1

@@ -39,7 +39,10 @@ PENDING = {}
 # cung request_id sau khi stored -> REQUEST_COMPLETED, khong ghi de.
 DONE = {}
 CANCELLED = {}  # request_id -> cancelled_at (TTL don 300s)
-INSTANCE = "profile20-main"
+# Multi-profile: KHONG co instance mac dinh. Moi Extension installation
+# duoc server cap instance_id RIENG (inst-xxxx) khi redeem thanh cong.
+# Moi request backend phai chi ro instance; auth lay tu session/device,
+# khong tin client tu khai instance de huong quyen instance khac.
 
 # Credential separation:
 # - Extension role: X-Session/X-Token (pairing). Duoc: /push /resync /grant
@@ -208,7 +211,11 @@ class Handler(BaseHTTPRequestHandler):
             print("PAIRING_CODE:", code, flush=True)
             return self._send(200, {"ok": True, "hint": "nhap code vao ext"})
         if path == "/redeem":
-            r = CHANNEL.redeem(str(data.get("code") or ""), INSTANCE)
+            # Multi-profile: server cap instance_id RIENG cho moi lan pair
+            # thanh cong. profile_name chi la nhan hien thi, khong dung auth.
+            r = CHANNEL.redeem(str(data.get("code") or ""),
+                               profile_name=str(data.get("profile_name")
+                                                or "")[:40])
             safe = {"ok": r["ok"], "error": r.get("error", "")}
             if r["ok"]:
                 safe["session_id"] = r["session_id"]
@@ -216,6 +223,9 @@ class Handler(BaseHTTPRequestHandler):
                 # Slice 01B: tra device_id de extension luu + reconnect.
                 if r.get("device_id"):
                     safe["device_id"] = r["device_id"]
+                # Multi-profile: extension luu instance rieng cua minh.
+                if r.get("instance_id"):
+                    safe["instance_id"] = r["instance_id"]
             return self._send(200, safe)
         if path == "/push":
             r = CHANNEL.push_events(sid, tok, data.get("seq"),
@@ -247,10 +257,24 @@ class Handler(BaseHTTPRequestHandler):
                                     "removed": rec["removed"],
                                     "generation": r["generation"]})
         if path == "/revoke":
-            n = CHANNEL.revoke(INSTANCE)
-            REGISTRY.mark_unavailable(INSTANCE)
-            GRANTS.revoke_instance(INSTANCE)
-            return self._send(200, {"ok": True, "revoked": n})
+            # Multi-profile: revoke theo session goi toi (instance cua minh),
+            # khong cham instance khac. Backend role (khong session) bat buoc
+            # chi ro instance.
+            s, err = CHANNEL._auth(sid, tok)
+            if s is not None:
+                inst = str(s.get("instance") or "")
+            elif _backend_ok(self.headers.get("X-Backend-Key", "")):
+                inst = str(data.get("instance") or "")
+                if not inst:
+                    return self._send(400, {"ok": False,
+                                            "error": "INSTANCE_REQUIRED"})
+            else:
+                return self._send(403, {"ok": False, "error": "AUTH_REQUIRED"})
+            n = CHANNEL.revoke(inst)
+            REGISTRY.mark_unavailable(inst)
+            GRANTS.revoke_instance(inst)
+            return self._send(200, {"ok": True, "revoked": n,
+                                    "instance": inst})
         if path == "/grant":
             # B1: KHONG tin truong `gesture` do caller gui. Grant chi cap khi:
             # session hop le + tab da co trong registry (extension that
@@ -293,11 +317,14 @@ class Handler(BaseHTTPRequestHandler):
                 tab_id = int(data.get("tabId"))
             except (TypeError, ValueError):
                 return self._send(400, {"ok": False, "error": "TAB_INVALID"})
-            inst = str(data.get("instance") or INSTANCE)
-            # Profile/tab binding: chi instance nay (profile20-main).
-            if inst != INSTANCE:
-                return self._send(403, {"ok": False,
-                                        "error": "INSTANCE_DENIED"})
+            # Multi-profile: instance do BACKEND chi dinh theo ket noi dang
+            # quan ly (service -> gateway -> transport). Khong tin client/JS
+            # tu khai instance de huong quyen instance khac; instance chi hop
+            # le khi trung tab da observed trong registry cho instance do.
+            inst = str(data.get("instance") or "")
+            if not inst:
+                return self._send(400, {"ok": False,
+                                        "error": "INSTANCE_REQUIRED"})
             rec = REGISTRY.tabs.get((inst, tab_id))
             if rec is None:
                 return self._send(404, {"ok": False, "error": "TAB_UNKNOWN"})
@@ -359,23 +386,42 @@ class Handler(BaseHTTPRequestHandler):
         # ---- Slice 01B: one-click connection & persistent auth ----
         if path == "/reconnect":
             # Trusted reconnect: device da link xin session moi, khong code.
-            r = CHANNEL.reconnect(str(data.get("device_id") or ""),
-                                  INSTANCE)
+            # Instance lay tu device da luu, tra ve de extension cap nhat.
+            r = CHANNEL.reconnect(str(data.get("device_id") or ""))
             safe = {"ok": r["ok"], "error": r.get("error", "")}
             if r["ok"]:
                 safe["session_id"] = r["session_id"]
                 safe["token"] = r["token"]
+                if r.get("instance_id"):
+                    safe["instance_id"] = r["instance_id"]
             return self._send(200 if r["ok"] else 403, safe)
         if path == "/policy":
-            # Xem policy hien tai (extension role hoac backend role).
-            return self._send(200, CHANNEL.policy(INSTANCE))
+            # Xem policy hien tai. Session role: policy cua instance minh.
+            # Backend role: bat buoc chi ro instance.
+            s, err = CHANNEL._auth(sid, tok)
+            if s is not None:
+                inst = str(s.get("instance") or "")
+            else:
+                inst = str(data.get("instance") or "")
+                if not inst:
+                    return self._send(400, {"ok": False,
+                                            "error": "INSTANCE_REQUIRED"})
+            return self._send(200, CHANNEL.policy(inst))
         if path == "/revoke-policy":
             # Revoke permission: tat auto-grant, giu device link.
+            # Chi revoke instance cua session goi toi (khong cham B).
             s, err = CHANNEL._auth(sid, tok)
-            if s is None and not _backend_ok(
+            if s is not None:
+                inst = str(s.get("instance") or "")
+            elif _backend_ok(
                     self.headers.get("X-Backend-Key", "")):
+                inst = str(data.get("instance") or "")
+                if not inst:
+                    return self._send(400, {"ok": False,
+                                            "error": "INSTANCE_REQUIRED"})
+            else:
                 return self._send(403, {"ok": False, "error": "AUTH_REQUIRED"})
-            return self._send(200, CHANNEL.revoke_policy(INSTANCE))
+            return self._send(200, CHANNEL.revoke_policy(inst))
         if path == "/forget":
             # Forget device: xoa link + policy + session. Pair lai tu dau.
             s, err = CHANNEL._auth(sid, tok)

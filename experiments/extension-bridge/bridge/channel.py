@@ -65,8 +65,11 @@ class BridgeChannel:
         self._redeem_fails = [t for t in self._redeem_fails if t > cutoff]
         return len(self._redeem_fails) >= MAX_REDEEM_FAILS
 
-    def redeem(self, code, browser_instance_id):
-        """Doi pairing code lay session token. Tra token 1 lan duy nhat."""
+    def redeem(self, code, browser_instance_id=None, profile_name=""):
+        """Doi pairing code lay session token. Tra token 1 lan duy nhat.
+        Slice multi-profile: moi redeem cap instance_id RIENG (inst-xxxx),
+        khong tin instance do client khai bao. profile_name chi la nhan
+        hien thi, khong dung cho auth."""
         now = self._clock()
         if self._redeem_locked():
             return {"ok": False, "error": "PAIRING_LOCKED"}
@@ -74,8 +77,8 @@ class BridgeChannel:
         if exp is None or exp <= now:
             self._redeem_fails.append(now)
             return {"ok": False, "error": "PAIRING_INVALID"}
-        if not browser_instance_id:
-            return {"ok": False, "error": "INSTANCE_REQUIRED"}
+        # Server cap instance rieng cho moi lan pair thanh cong.
+        instance_id = "inst-" + secrets.token_hex(4)
         session_id = secrets.token_hex(16)
         token = secrets.token_hex(32)
         digest = hashlib.sha256(token.encode()).hexdigest()
@@ -84,12 +87,13 @@ class BridgeChannel:
         # ngan han, nhung device duoc tin de cap lai session khong can code.
         device_id = "dev-" + secrets.token_hex(8)
         self._devices[device_id] = {
-            "instance": str(browser_instance_id),
+            "instance": instance_id,
+            "profile_name": str(profile_name or "")[:40],
             "created_at": now,
             "revoked": False,
         }
         self._sessions[session_id] = {
-            "instance": str(browser_instance_id),
+            "instance": instance_id,
             "expires_at": now + SESSION_TTL_S,
             "last_seq": 0,
             "token_digest": digest,
@@ -97,14 +101,16 @@ class BridgeChannel:
         }
         # Slice 01B: policy mac dinh sau pair thanh cong: read-only TikTok,
         # cho phep auto-grant. User thu hoi qua /policy (revoke).
-        self._policies[str(browser_instance_id)] = {
+        self._policies[instance_id] = {
             "read_allowed": True,
             "origins": ["https://www.tiktok.com"],
             "granted_at": now,
             "device_id": device_id,
+            "profile_name": str(profile_name or "")[:40],
         }
         return {"ok": True, "session_id": session_id, "token": token,
-                "expires_in": SESSION_TTL_S, "device_id": device_id}
+                "expires_in": SESSION_TTL_S, "device_id": device_id,
+                "instance_id": instance_id}
 
     # -- auth ------------------------------------------------------------
     def _auth(self, session_id, token):
@@ -121,30 +127,30 @@ class BridgeChannel:
         return s, ""
 
     # -- Slice 01B: trusted reconnect + policy ---------------------------
-    def reconnect(self, device_id, browser_instance_id):
+    def reconnect(self, device_id, browser_instance_id=None):
         """Cap lai session cho device da link, khong can pairing code.
+        Instance lay tu device da luu — khong tin client khai bao.
         Device bi revoke/forget -> tu choi, phai pair lai tu dau."""
         now = self._clock()
         d = self._devices.get(str(device_id or ""))
         if d is None or d.get("revoked"):
             return {"ok": False, "error": "DEVICE_UNKNOWN"}
-        if str(d.get("instance") or "") != str(browser_instance_id or ""):
-            return {"ok": False, "error": "INSTANCE_DENIED"}
-        pol = self._policies.get(str(browser_instance_id or ""))
+        inst = str(d.get("instance") or "")
+        pol = self._policies.get(inst)
         if not isinstance(pol, dict) or not pol.get("read_allowed"):
             return {"ok": False, "error": "POLICY_REVOKED"}
         session_id = secrets.token_hex(16)
         token = secrets.token_hex(32)
         digest = hashlib.sha256(token.encode()).hexdigest()
         self._sessions[session_id] = {
-            "instance": str(browser_instance_id),
+            "instance": inst,
             "expires_at": now + SESSION_TTL_S,
             "last_seq": 0,
             "token_digest": digest,
             "device_id": str(device_id),
         }
         return {"ok": True, "session_id": session_id, "token": token,
-                "expires_in": SESSION_TTL_S}
+                "expires_in": SESSION_TTL_S, "instance_id": inst}
 
     def policy(self, browser_instance_id):
         pol = self._policies.get(str(browser_instance_id or ""))

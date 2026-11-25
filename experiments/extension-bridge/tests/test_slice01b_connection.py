@@ -1,11 +1,13 @@
-"""Slice 01B: one-click connection & persistent authorization.
+"""Slice 01B + multi-profile: one-click connection & persistent authorization.
 
-- Pair 1 lan -> device_id + policy read_allowed.
-- /reconnect cap lai session bang device_id, khong can code.
-- /read tu dong auto-grant runtime ngan han khi policy cho phep
-  (khong can Grant DOM thu cong). Grant tay van uu tien (epoch cao hon).
-- /revoke-policy tat auto-grant (grant tay van duoc).
+- Pair 1 lan -> instance_id RIENG (inst-xxxx) + device_id + policy read_allowed.
+- /reconnect cap lai session bang device_id, khong can code (tra instance).
+- /read bat buoc instance (backend chi dinh); tu dong auto-grant runtime
+  ngan han khi policy cho phep. Grant tay van uu tien (epoch cao hon).
+- /revoke-policy tat auto-grant cua RIENG instance do (grant tay van duoc).
 - /forget xoa link + policy + session -> reconnect that bai, phai pair lai.
+- Hai Profile pair doc lap: request dung instance, khong doc nham;
+  revoke A khong anh huong B; restart A khong mat B.
 - Disconnect la trang thai extension-local (dung poll); server khong giu
   flag — OFF/ON nghiem thu tren Chrome that.
 """
@@ -53,11 +55,14 @@ def _reset():
     _srv.CHANNEL._pairing.clear()
     _srv.CHANNEL._devices.clear()
     _srv.CHANNEL._policies.clear()
+    _srv.CHANNEL._redeem_fails.clear()
     _srv.GRANTS._grants.clear()
+    _srv.GRANTS._used_grant_seq.clear()
     _srv.REGISTRY.tabs.clear()
     _srv.OBSERVATIONS.clear()
     _srv.PENDING.clear()
     _srv.DONE.clear()
+    _srv.CANCELLED.clear()
     import os
     os.environ["MIRO_BRIDGE_BACKEND_KEY"] = "test-backend-key-01"
 
@@ -84,7 +89,7 @@ def _pair():
     c = CHANNEL.issue_pairing_code()
     assert c, "khong sinh duoc pairing code"
     r = _post("/redeem", {"code": c})
-    assert r.get("ok") and r.get("device_id"), r
+    assert r.get("ok") and r.get("device_id") and r.get("instance_id"), r
     return r
 
 
@@ -132,11 +137,11 @@ def test_auto_grant_on_read():
     srv = _boot()
     try:
         r = _pair()
-        sid, tok = r["session_id"], r["token"]
+        sid, tok, inst = r["session_id"], r["token"], r["instance_id"]
         _push(sid, tok, 42, 1)
         # KHONG grant tay. Backend tao /read -> server tu auto-grant.
         c = _post("/read", {"tabId": 42, "read": "title",
-                            "timeout_s": 30},
+                            "instance": inst, "timeout_s": 30},
                   bkey="test-backend-key-01")
         assert c.get("ok") and c.get("request_id"), c
         assert c.get("auto_grant") is True, c
@@ -161,18 +166,20 @@ def test_revoke_policy_blocks_auto_grant():
     srv = _boot()
     try:
         r = _pair()
-        sid, tok = r["session_id"], r["token"]
+        sid, tok, inst = r["session_id"], r["token"], r["instance_id"]
         _push(sid, tok, 43, 1)
         v = _post("/revoke-policy", {}, sid, tok)
         assert v.get("revoked"), v
-        code, out = _post_expect("/read", {"tabId": 43, "read": "title"},
+        code, out = _post_expect("/read", {"tabId": 43, "read": "title",
+                                           "instance": inst},
                                  bkey="test-backend-key-01")
         assert code == 403, (code, out)
         # Grant tay van duoc sau revoke (uu tien manual).
         _push(sid, tok, 43, 2)
         g = _post("/grant", {"tabId": 43, "grant_seq": 3}, sid, tok)
         assert g.get("ok"), g
-        c = _post("/read", {"tabId": 43, "read": "title"},
+        c = _post("/read", {"tabId": 43, "read": "title",
+                            "instance": inst},
                   bkey="test-backend-key-01")
         assert c.get("ok") and not c.get("auto_grant"), c
         print("revoke blocks auto-grant, manual still works: PASS")
@@ -191,7 +198,93 @@ def test_forget_device_requires_repair():
         assert f.get("forgotten"), f
         code, out = _post_expect("/reconnect", {"device_id": dev})
         assert code in (403, 404), (code, out)
-        assert CHANNEL.policy("profile20-main").get("read_allowed") is False
+        assert CHANNEL.policy(r.get("instance_id", "")).get(
+            "read_allowed") is False
         print("forget requires re-pair: PASS")
+    finally:
+        srv.shutdown()
+
+
+def test_two_profiles_isolated():
+    """Acceptance multi-profile: 2 Profile pair doc lap, ket noi dong thoi.
+    - Instance khac nhau (server cap, khong tin client).
+    - /read dung instance A chi doc duoc tab cua A (B -> TAB_UNKNOWN).
+    - Revoke/revoke-policy A khong anh huong B.
+    - Restart A (reconnect bang device A) khong mat B.
+    """
+    srv = _boot()
+    try:
+        from bridge.server import CHANNEL
+        a = _pair()
+        b = _pair()
+        assert a["instance_id"] != b["instance_id"], (a, b)
+        assert a["device_id"] != b["device_id"], (a, b)
+        sa, ta, ia = a["session_id"], a["token"], a["instance_id"]
+        sb, tb, ib = b["session_id"], b["token"], b["instance_id"]
+        _push(sa, ta, 71, 1)
+        _push(sb, tb, 72, 1)
+        # Backend doc A -> ok; doc nham tab B bang instance A -> 404.
+        ra = _post("/read", {"tabId": 71, "read": "title",
+                             "instance": ia},
+                   bkey="test-backend-key-01")
+        assert ra.get("ok") and ra.get("request_id"), ra
+        code, out = _post_expect("/read", {"tabId": 72, "read": "title",
+                                           "instance": ia},
+                                 bkey="test-backend-key-01")
+        assert code == 404 and out.get("error") == "TAB_UNKNOWN", (code, out)
+        # Khong instance -> 400 (khong doan instance mac dinh).
+        code, out = _post_expect("/read", {"tabId": 71, "read": "title"},
+                                 bkey="test-backend-key-01")
+        assert code == 400 and out.get("error") == "INSTANCE_REQUIRED", \
+            (code, out)
+        # Revoke session A -> B van push/inbox binh thuong.
+        n = CHANNEL.revoke(ia)
+        assert n >= 1, n
+        code, out = _post_expect("/push", {"seq": 2, "events": []},
+                                 sa, ta)
+        assert code == 403, (code, out)
+        okb = _push(sb, tb, 72, 2)
+        assert okb.get("ok"), okb
+        ibx = _post("/inbox", {}, sb, tb)
+        assert ibx.get("ok"), ibx
+        # Revoke-policy A chi tat A, B van auto-grant duoc.
+        # (A da het session nen dung backend role + instance cu the.)
+        v = _post("/revoke-policy", {"instance": ib}, sb, tb)
+        assert v.get("revoked"), v
+        code, out = _post_expect("/read", {"tabId": 72, "read": "title",
+                                           "instance": ib},
+                                 bkey="test-backend-key-01")
+        assert code == 403, (code, out)
+        print("two profiles isolated: PASS")
+    finally:
+        srv.shutdown()
+
+
+def test_reconnect_keeps_other_profile():
+    """Restart 1 Profile (reconnect bang device) khong mat Profile con lai."""
+    srv = _boot()
+    try:
+        from bridge.server import CHANNEL
+        a = _pair()
+        b = _pair()
+        sa, ta = a["session_id"], a["token"]
+        sb, tb = b["session_id"], b["token"]
+        _push(sa, ta, 81, 1)
+        _push(sb, tb, 82, 1)
+        # Gia A restart: mat session, reconnect bang device A.
+        CHANNEL._sessions.pop(sa, None)
+        code, out = _post_expect("/reconnect",
+                                 {"device_id": a["device_id"]})
+        assert code == 200 and out.get("ok"), (code, out)
+        assert out.get("instance_id") == a["instance_id"], out
+        nsa, nta = out["session_id"], out["token"]
+        assert _push(nsa, nta, 81, 1).get("ok")
+        # B khong anh huong: session cu van dung.
+        assert _push(sb, tb, 82, 2).get("ok")
+        rb = _post("/read", {"tabId": 82, "read": "title",
+                             "instance": b["instance_id"]},
+                   bkey="test-backend-key-01")
+        assert rb.get("ok") and rb.get("auto_grant"), rb
+        print("reconnect keeps other profile: PASS")
     finally:
         srv.shutdown()

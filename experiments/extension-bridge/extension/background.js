@@ -5,23 +5,26 @@
 importScripts("read.js");
 const seen = new Map();
 let cfg = { baseUrl: "", sessionId: "", token: "", deviceId: "",
-            seq: 0, enabled: true };
+            instanceId: "", seq: 0, enabled: true };
 
 async function loadCfg() {
   try {
     const cur = await chrome.storage.local.get(
       { bridge: { baseUrl: "", sessionId: "", token: "", deviceId: "",
-                  seq: 0, enabled: true } });
+                  instanceId: "", seq: 0, enabled: true } });
     cfg = { ...cfg, ...(cur.bridge || {}) };
   } catch (e) { /* chua pairing: chi log local */ }
 }
 async function saveCfg() {
   // Slice 01B: persist session+device de auto-reconnect. Token nam trong
   // chrome.storage.local cua profile (khong log, khong gui di noi khac).
+  // Multi-profile: instance_id do server cap, luu cung device de phan biet
+  // tung ban cai dat Extension (moi Profile 1 instance rieng).
   try {
     await chrome.storage.local.set(
       { bridge: { baseUrl: cfg.baseUrl, sessionId: cfg.sessionId,
                   token: cfg.token || "", deviceId: cfg.deviceId || "",
+                  instanceId: cfg.instanceId || "",
                   seq: cfg.seq, enabled: cfg.enabled !== false } });
   } catch (e) { /* ignore */ }
 }
@@ -44,6 +47,8 @@ async function ensureConnected() {
     if (!out.ok || !out.session_id || !out.token) return false;
     cfg.sessionId = out.session_id;
     cfg.token = out.token;
+    // Multi-profile: server tra instance cua device; cap nhat local.
+    if (out.instance_id) cfg.instanceId = String(out.instance_id);
     cfg.seq = 0;
     await saveCfg();
     console.log("[miro-bridge] reconnected via device (one-click)");
@@ -126,6 +131,8 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     cfg.token = String(msg.token);
     // Slice 01B: luu device_id de reconnect khong can code.
     if (msg.deviceId) cfg.deviceId = String(msg.deviceId);
+    // Multi-profile: instance_id do server cap, phan biet tung Profile.
+    if (msg.instanceId) cfg.instanceId = String(msg.instanceId);
     cfg.enabled = true;
     (async () => {
       try { await saveCfg(); } catch (e) { /* ignore */ }
@@ -158,7 +165,8 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg && msg.type === "miro-status") {
     sendResponse({ paired: !!(cfg.sessionId && cfg.token),
                    enabled: cfg.enabled !== false,
-                   deviceId: cfg.deviceId || "" });
+                   deviceId: cfg.deviceId || "",
+                   instanceId: cfg.instanceId || "" });
     return;
   }
   if (msg && msg.type === "miro-grant" && msg.tabId) {

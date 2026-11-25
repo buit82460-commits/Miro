@@ -54,7 +54,14 @@ def _reset():
     from bridge.server import CHANNEL, GRANTS, REGISTRY, OBSERVATIONS, PENDING, DONE, CANCELLED
     CHANNEL._sessions.clear()
     CHANNEL._pairing.clear()
+    CHANNEL._devices.clear()
+    CHANNEL._policies.clear()
+    CHANNEL._redeem_fails.clear()
     GRANTS._grants.clear()
+    try:
+        GRANTS._used_grant_seq.clear()
+    except AttributeError:
+        pass
     REGISTRY.tabs.clear()
     OBSERVATIONS.clear()
     PENDING.clear()
@@ -78,7 +85,8 @@ def _pair():
     assert c, "khong sinh duoc pairing code"
     r = _post("/redeem", {"code": c})
     assert r.get("ok"), r
-    return r["session_id"], r["token"]
+    assert r.get("instance_id"), r
+    return r["session_id"], r["token"], r["instance_id"]
 
 
 def _grant(sid, tok, tab):
@@ -105,9 +113,11 @@ def _grant(sid, tok, tab):
 def test_slice01_read_returns_request_id_and_inbox():
     srv = _boot()
     try:
-        sid, tok = _pair()
+        sid, tok, inst = _pair()
         _grant(sid, tok, 11)
-        r = _post("/read", {"tabId": 11, "read": "actor-login"}, bkey="test-backend-key-01")
+        r = _post("/read", {"tabId": 11, "read": "actor-login",
+                            "instance": inst},
+                  bkey="test-backend-key-01")
         assert r.get("status") == "AUTHORIZED", r
         assert r.get("request_id"), r
         ib = _post("/inbox", {}, sid, tok)
@@ -123,9 +133,11 @@ def test_slice01_read_returns_request_id_and_inbox():
 def test_slice01_read_result_requires_request_id():
     srv = _boot()
     try:
-        sid, tok = _pair()
+        sid, tok, inst = _pair()
         _grant(sid, tok, 12)
-        r = _post("/read", {"tabId": 12, "read": "actor-login"}, bkey="test-backend-key-01")
+        r = _post("/read", {"tabId": 12, "read": "actor-login",
+                            "instance": inst},
+                  bkey="test-backend-key-01")
         rid = r.get("request_id")
         assert rid, r
         from bridge.server import CHANNEL
