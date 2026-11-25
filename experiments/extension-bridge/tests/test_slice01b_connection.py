@@ -56,6 +56,7 @@ def _reset():
     _srv.CHANNEL._devices.clear()
     _srv.CHANNEL._policies.clear()
     _srv.CHANNEL._redeem_fails.clear()
+    _srv.CHANNEL._link_requests.clear()
     _srv.GRANTS._grants.clear()
     _srv.GRANTS._used_grant_seq.clear()
     _srv.REGISTRY.tabs.clear()
@@ -368,5 +369,85 @@ def test_policy_errors_are_not_revoked():
         assert p.get("revoked") is False, p
         assert p.get("capabilities") == ["read"], p
         print("policy errors are not revoked: PASS")
+    finally:
+        srv.shutdown()
+
+
+def test_link_approve_redeem_once():
+    """One-click Approval: request -> approve (backend key) -> redeem 1 lan.
+    Chua approve -> tu choi; redeem xong -> request het (replay bi tu choi)."""
+    srv = _boot()
+    try:
+        q = _post("/link-request",
+                  {"installation_id": "install-A", "hint": "Chrome ca nhan"})
+        assert q.get("ok") and q.get("request_id") and q.get("secret"), q
+        rid, sec = q["request_id"], q["secret"]
+        # Chua approve: redeem bi tu choi, chua consume.
+        code, out = _post_expect("/link-redeem",
+                                 {"request_id": rid, "secret": sec,
+                                  "installation_id": "install-A"})
+        assert code == 400 and out.get("error") == "LINK_NOT_APPROVED", \
+            (code, out)
+        # Extension KHONG tu approve duoc (thieu backend key).
+        code, out = _post_expect("/link-approve",
+                                 {"request_id": rid,
+                                  "display_name": "Chrome ca nhan"})
+        assert code == 403, (code, out)
+        # User duyet 1 lan tren Miro (backend key).
+        a = _post("/link-approve",
+                  {"request_id": rid, "display_name": "Chrome ca nhan"},
+                  bkey="test-backend-key-01")
+        assert a.get("approved"), a
+        # Redeem thanh cong: co credential + instance rieng + ten hien thi.
+        r = _post("/link-redeem",
+                  {"request_id": rid, "secret": sec,
+                   "installation_id": "install-A"})
+        assert r.get("ok") and r.get("session_id") and r.get("token"), r
+        assert r.get("instance_id", "").startswith("inst-"), r
+        from bridge.server import CHANNEL
+        assert CHANNEL.policy(
+            r["instance_id"]).get("display_name") == "Chrome ca nhan"
+        # Replay bi tu choi (request da consume).
+        code, out = _post_expect("/link-redeem",
+                                 {"request_id": rid, "secret": sec,
+                                  "installation_id": "install-A"})
+        assert code == 400, (code, out)
+        print("link approve redeem once: PASS")
+    finally:
+        srv.shutdown()
+
+
+def test_link_no_autopair_and_binding():
+    """Khong auto-pair: sai secret / sai installation / het han deu tu choi.
+    Approve 2 lan bi tu choi (khong cap credential trung)."""
+    srv = _boot()
+    try:
+        from bridge.server import CHANNEL
+        q = _post("/link-request", {"installation_id": "install-B"})
+        rid, sec = q["request_id"], q["secret"]
+        _post("/link-approve", {"request_id": rid}, bkey="test-backend-key-01")
+        # Approve lan 2 -> tu choi.
+        code, out = _post_expect("/link-approve", {"request_id": rid},
+                                 bkey="test-backend-key-01")
+        assert code == 400 and out.get("error") == "LINK_ALREADY_USED", \
+            (code, out)
+        # Sai secret -> 403 (khong consume, van redeem dung duoc).
+        code, out = _post_expect("/link-redeem",
+                                 {"request_id": rid, "secret": "wrong",
+                                  "installation_id": "install-B"})
+        assert code == 403 and out.get("error") == "LINK_FORBIDDEN", \
+            (code, out)
+        # Sai installation -> 403.
+        code, out = _post_expect("/link-redeem",
+                                 {"request_id": rid, "secret": sec,
+                                  "installation_id": "install-X"})
+        assert code == 403, (code, out)
+        # Het han -> tu choi.
+        CHANNEL._link_requests[rid]["expires_at"] = CHANNEL._clock() - 1
+        code, out = _post_expect("/link-redeem",
+                                 {"request_id": rid, "secret": sec,
+                                  "installation_id": "install-B"})
+        assert code == 400, (code, out)
+        print("link no autopair and binding: PASS")
     finally:
         srv.shutdown()

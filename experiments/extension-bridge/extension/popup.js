@@ -37,6 +37,7 @@ function render(state, detail) {
   const names = {
     NOT_PAIRED: ["Disconnected", "Bam de ket noi Miro"],
     DISCONNECTED: ["Disconnected", "Bam de ket noi Miro"],
+    LINK_WAITING: ["Cho duyet", "Mo Miro de Cho phep ket noi 1 lan"],
     BRIDGE_OFFLINE: ["Bridge offline", "Miro tren may chua chay"],
     CONNECTING: ["Dang ket noi", "..."],
     RECONNECTING: ["Dang ket noi lai", "..."],
@@ -74,6 +75,8 @@ async function refresh() {
                    instanceId: s.instanceId || "Chua co" };
   if (!paired) {
     if (!up) return render("BRIDGE_OFFLINE", detail);
+    // One-click: da gui yeu cau, dang doi user duyet tren Miro.
+    if (s.linkPending) return render("LINK_WAITING", detail);
     return render("NOT_PAIRED", detail);
   }
   if (s.enabled === false) return render("DISCONNECTED", detail);
@@ -159,8 +162,48 @@ el("gear").addEventListener("click", async () => {
   }
 });
 
-// Pair lan dau: gui kem ten goi nho do user dat (nhan hien thi, khong auth).
+// One-click Approval: lan dau bam Ket noi -> extension gui yeu cau,
+// user duyet 1 lan tren Miro, extension tu redeem ngam (khong nhap code).
+// Ten goi nho do user dat, chi la nhan hien thi, khong dung cho auth.
+async function linkTick(st) {
+  for (let i = 0; i < 30; i++) {
+    await new Promise((r) => setTimeout(r, 2000));
+    const r = await bg("miro-link-redeem");
+    if (r && r.ok) {
+      st.textContent = "Da ket noi.";
+      el("pairbox").style.display = "none";
+      refresh();
+      return;
+    }
+    if (!r || (r.error !== "LINK_NOT_APPROVED" &&
+               r.error !== "BRIDGE_UNREACHABLE")) {
+      st.textContent = "FAIL: " + ((r && r.error) || "unknown");
+      refresh();
+      return;
+    }
+    st.textContent = "Dang cho duyet tren Miro... (" + (i + 1) + ")";
+  }
+  st.textContent = "Het han cho duyet. Bam Ket noi de gui lai.";
+  refresh();
+}
+
 el("go").addEventListener("click", async () => {
+  const st = el("st");
+  const disp = el("dispname").value.trim();
+  st.textContent = "...";
+  const q = await bg("miro-link-request", { hint: disp });
+  if (!q || !q.ok) {
+    st.textContent = "FAIL: " + ((q && q.error) || "khong tao duoc yeu cau");
+    return;
+  }
+  el("pairbox").style.display = "none";
+  refresh();
+  st.textContent = "Da gui yeu cau. Mo Miro de Cho phep (1 lan).";
+  linkTick(st);
+});
+
+// Advanced du phong: ket noi bang pairing code khi One-click khong dung duoc.
+el("gocode").addEventListener("click", async () => {
   const st = el("st");
   const code = el("code").value.trim();
   const disp = el("dispname").value.trim();

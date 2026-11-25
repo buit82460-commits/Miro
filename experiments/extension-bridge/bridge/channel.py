@@ -47,6 +47,11 @@ class BridgeChannel:
         # Slice 01B: trusted connection + persistent authorization.
         self._devices = {}   # device_id -> {instance, created_at, revoked}
         self._policies = {}  # instance -> {read_allowed, origins, ...}
+        # One-click Approval: yeu cau lien ket dung 1 lan, co han.
+        # request_id -> {secret_digest, fingerprint, hint, installation_id,
+        #   created_at, expires_at, state, approved_at}.
+        # state: pending|approved|consumed. Secret chi extension tao moi co.
+        self._link_requests = {}
 
     # -- pairing ---------------------------------------------------------
     def issue_pairing_code(self):
@@ -78,16 +83,111 @@ class BridgeChannel:
             self._redeem_fails.append(now)
             return {"ok": False, "error": "PAIRING_INVALID"}
         # Server cap instance rieng cho moi lan pair thanh cong.
+        return self._issue_credentials(str(profile_name or "")[:40])
+
+    # -- One-click Approval (code-free pairing) --------------------------
+    # Extension tao yeu cau lien ket (request_id + secret chi minh biet),
+    # user xac nhan 1 lan tren Miro (backend key), extension doi secret lay
+    # credential. Khong auto-pair: redeem chi thanh cong sau approve.
+    def create_link_request(self, installation_id="", hint=""):
+        """Tao yeu cau lien ket dung 1 lan, co han. Tra secret ve cho
+        extension GIU (server chi luu digest)."""
+        now = self._clock()
+        live = {k: v for k, v in self._link_requests.items()
+                if v.get("expires_at", 0) > now
+                and v.get("state") == "pending"}
+        self._link_requests = {k: v for k, v in self._link_requests.items()
+                               if v.get("expires_at", 0) > now}
+        for k, v in live.items():
+            self._link_requests[k] = v
+        if len(live) >= MAX_PAIRING_OUTSTANDING:
+            return {"ok": False, "error": "LINK_BUSY"}
+        inst = str(installation_id or "")[:64]
+        if not inst:
+            return {"ok": False, "error": "INSTALLATION_REQUIRED"}
+        request_id = "lr-" + secrets.token_hex(8)
+        secret = secrets.token_hex(24)
+        digest = hashlib.sha256(secret.encode()).hexdigest()
+        self._link_requests[request_id] = {
+            "secret_digest": digest,
+            "installation_id": inst,
+            "hint": str(hint or "")[:40],
+            "created_at": now,
+            "expires_at": now + 300,
+            "state": "pending",
+            "approved_at": None,
+            "display_name": "",
+        }
+        return {"ok": True, "request_id": request_id, "secret": secret,
+                "expires_in": 300}
+
+    def list_link_requests(self):
+        """Miro UI: liet ke yeu cau pending (khong lo digest/secret)."""
+        now = self._clock()
+        out = []
+        for rid, v in self._link_requests.items():
+            if v.get("expires_at", 0) <= now:
+                continue
+            if v.get("state") != "pending":
+                continue
+            out.append({"request_id": rid,
+                        "installation_id": v.get("installation_id", ""),
+                        "hint": v.get("hint", ""),
+                        "created_at": v.get("created_at")})
+        return {"ok": True, "pending": out}
+
+    def approve_link_request(self, request_id, display_name=""):
+        """User xac nhan 1 lan tren Miro. Chi doi state pending->approved;
+        credential chi cap o redeem_link_request (secret-bound)."""
+        now = self._clock()
+        v = self._link_requests.get(str(request_id or ""))
+        if v is None or v.get("expires_at", 0) <= now:
+            return {"ok": False, "error": "LINK_UNKNOWN_OR_EXPIRED"}
+        if v.get("state") != "pending":
+            return {"ok": False, "error": "LINK_ALREADY_USED"}
+        v["state"] = "approved"
+        v["approved_at"] = now
+        # Ten goi nho: uu tien ten operator nhap khi duyet; fallback ten
+        # user da go trong extension (hint). Chi la nhan hien thi.
+        v["display_name"] = (str(display_name or "")[:40]
+                             or str(v.get("hint") or "")[:40])
+        return {"ok": True, "approved": True}
+
+    def redeem_link_request(self, request_id, secret, installation_id=""):
+        """Extension doi secret lay credential sau khi user approve.
+        Rang buoc: secret khop digest + installation khop + approved +
+        chua dung + con han. Dung 1 lan (consume)."""
+        now = self._clock()
+        if self._redeem_locked():
+            return {"ok": False, "error": "PAIRING_LOCKED"}
+        v = self._link_requests.get(str(request_id or ""))
+        if v is None or v.get("expires_at", 0) <= now:
+            self._redeem_fails.append(now)
+            return {"ok": False, "error": "LINK_UNKNOWN_OR_EXPIRED"}
+        if v.get("state") != "approved":
+            # Chua approve: khong tinh fail, khong consume, cho tiep.
+            return {"ok": False, "error": "LINK_NOT_APPROVED"}
+        if str(v.get("installation_id") or "") != str(installation_id or ""):
+            self._redeem_fails.append(now)
+            return {"ok": False, "error": "INSTALLATION_MISMATCH"}
+        got = hashlib.sha256(str(secret or "").encode()).hexdigest()
+        if not hmac.compare_digest(str(v.get("secret_digest") or ""), got):
+            self._redeem_fails.append(now)
+            return {"ok": False, "error": "LINK_FORBIDDEN"}
+        # Tieu thu 1 lan: xoa truoc khi cap credential (chong replay).
+        name = str(v.get("display_name") or "")[:40]
+        self._link_requests.pop(str(request_id or ""), None)
+        return self._issue_credentials(name)
+
+    def _issue_credentials(self, name=""):
+        """Cap instance/device/session/policy moi (dung chung cho redeem
+        code va redeem link-request da approve)."""
+        now = self._clock()
         instance_id = "inst-" + secrets.token_hex(4)
         session_id = secrets.token_hex(16)
         token = secrets.token_hex(32)
         digest = hashlib.sha256(token.encode()).hexdigest()
-        # Slice 01B: device link ben vung (one-click reconnect). device_id
-        # on dinh theo trinh duyet (extension sinh + luu local); session van
-        # ngan han, nhung device duoc tin de cap lai session khong can code.
-        # Slate: ten hien thi do user dat khi pair (khong dung cho auth).
-        # Mac dinh lay profile_name neu co; user doi sau qua /rename.
-        name = str(profile_name or "")[:40]
+        name = str(name or "")[:40]
         device_id = "dev-" + secrets.token_hex(8)
         self._devices[device_id] = {
             "instance": instance_id,
@@ -102,8 +202,6 @@ class BridgeChannel:
             "token_digest": digest,
             "device_id": device_id,
         }
-        # Slice 01B: policy mac dinh sau pair thanh cong: read-only TikTok,
-        # cho phep auto-grant. User thu hoi qua /policy (revoke).
         self._policies[instance_id] = {
             "read_allowed": True,
             "revoked": False,

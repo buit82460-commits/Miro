@@ -46,8 +46,6 @@ button.ghost{width:100%;margin:3px 0;background:#2b2f36;border:0;color:#eee;
 <p id="state">...</p>
 <p id="hint"></p>
 <div id="pairbox" style="display:none">
-  <input id="code" placeholder="Pairing code 6 so" maxlength="6"
-    inputmode="numeric">
   <input id="dispname" placeholder="Ten goi nho (vd: Chrome ca nhan)"
     maxlength="40">
   <button class="act" id="go">Ket noi</button>
@@ -69,5 +67,9 @@ button.ghost{width:100%;margin:3px 0;background:#2b2f36;border:0;color:#eee;
   <button class="ghost" id="rename">Doi ten</button>
   <button class="ghost" id="revoke">Thu hoi quyen (giu lien ket)</button>
   <button class="ghost" id="forget">Xoa lien ket (pair lai tu dau)</button>
+  <div class="lbl">Advanced (du phong)</div>
+  <input id="code" placeholder="Pairing code 6 so (khi can)" maxlength="6"
+    inputmode="numeric">
+  <button class="ghost" id="gocode">Ket noi bang code</button>
 </div>
 <script src="popup.js"></script>

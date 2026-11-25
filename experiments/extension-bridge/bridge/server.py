@@ -227,6 +227,51 @@ class Handler(BaseHTTPRequestHandler):
                 if r.get("instance_id"):
                     safe["instance_id"] = r["instance_id"]
             return self._send(200, safe)
+        if path == "/link-request":
+            # One-click Approval: extension tao yeu cau lien ket (dung 1
+            # lan, han 300s). Khong cap credential o day — doi user approve.
+            r = CHANNEL.create_link_request(
+                str(data.get("installation_id") or ""),
+                str(data.get("hint") or ""))
+            code = 200 if r.get("ok") else (
+                429 if r.get("error") == "LINK_BUSY" else 400)
+            return self._send(code, r)
+        if path == "/link-pending":
+            # Miro UI: xem yeu cau cho approve. Can Backend role
+            # (user xac nhan tren Miro, khong phai extension tu duyet).
+            if not _backend_ok(self.headers.get("X-Backend-Key", "")):
+                return self._send(403, {"ok": False,
+                                        "error": "BACKEND_AUTH_REQUIRED"})
+            return self._send(200, CHANNEL.list_link_requests())
+        if path == "/link-approve":
+            # User xac nhan 1 lan tren Miro. Can Backend role.
+            if not _backend_ok(self.headers.get("X-Backend-Key", "")):
+                return self._send(403, {"ok": False,
+                                        "error": "BACKEND_AUTH_REQUIRED"})
+            r = CHANNEL.approve_link_request(
+                str(data.get("request_id") or ""),
+                str(data.get("display_name") or ""))
+            return self._send(200 if r.get("ok") else 400, r)
+        if path == "/link-redeem":
+            # Extension doi secret lay credential sau approve.
+            # Rang buoc: secret + installation khop + da approve + 1 lan.
+            r = CHANNEL.redeem_link_request(
+                str(data.get("request_id") or ""),
+                str(data.get("secret") or ""),
+                str(data.get("installation_id") or ""))
+            safe = {"ok": r["ok"], "error": r.get("error", "")}
+            if r["ok"]:
+                safe["session_id"] = r["session_id"]
+                safe["token"] = r["token"]
+                if r.get("device_id"):
+                    safe["device_id"] = r["device_id"]
+                if r.get("instance_id"):
+                    safe["instance_id"] = r["instance_id"]
+            err = str(r.get("error") or "")
+            code = 200 if r["ok"] else (
+                403 if err in ("LINK_FORBIDDEN", "INSTALLATION_MISMATCH",
+                               "PAIRING_LOCKED") else 400)
+            return self._send(code, safe)
         if path == "/push":
             r = CHANNEL.push_events(sid, tok, data.get("seq"),
                                     data.get("events"))

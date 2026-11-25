@@ -4,17 +4,37 @@
 // thi dung poll; revoke/forget do user chu dong.
 importScripts("read.js");
 const seen = new Map();
+// Bridge mac dinh (loopback spike). User khong can nhap dia chi.
+const BASE_DEFAULT = "http://127.0.0.1:18767";
 let cfg = { baseUrl: "", sessionId: "", token: "", deviceId: "",
-            instanceId: "", displayName: "", seq: 0, enabled: true,
+            instanceId: "", displayName: "", installationId: "",
+            linkRequestId: "", linkSecret: "", seq: 0, enabled: true,
             connecting: false, reconnecting: false };
+
+function ensureInstallationId() {
+  // Installation identity: UUID on dinh moi Profile (storage.local la
+  // per-profile). Server bind installation<->instance, choi reuse.
+  try {
+    if (typeof crypto !== "undefined" && crypto.randomUUID) {
+      if (!cfg.installationId) cfg.installationId = crypto.randomUUID();
+    } else if (!cfg.installationId) {
+      cfg.installationId = "inst-" + Date.now().toString(36) + "-" +
+        Math.floor(Math.random() * 1e9).toString(36);
+    }
+  } catch (e) { /* ignore */ }
+}
 
 async function loadCfg() {
   try {
     const cur = await chrome.storage.local.get(
       { bridge: { baseUrl: "", sessionId: "", token: "", deviceId: "",
-                  instanceId: "", displayName: "",
+                  instanceId: "", displayName: "", installationId: "",
+                  linkRequestId: "", linkSecret: "",
                   seq: 0, enabled: true } });
     cfg = { ...cfg, ...(cur.bridge || {}) };
+    const had = !!cfg.installationId;
+    ensureInstallationId();
+    if (!had) { try { await saveCfg(); } catch (e) { /* ignore */ } }
   } catch (e) { /* chua pairing: chi log local */ }
 }
 async function saveCfg() {
@@ -28,6 +48,9 @@ async function saveCfg() {
                   token: cfg.token || "", deviceId: cfg.deviceId || "",
                   instanceId: cfg.instanceId || "",
                   displayName: cfg.displayName || "",
+                  installationId: cfg.installationId || "",
+                  linkRequestId: cfg.linkRequestId || "",
+                  linkSecret: cfg.linkSecret || "",
                   seq: cfg.seq, enabled: cfg.enabled !== false } });
   } catch (e) { /* ignore */ }
 }
@@ -132,7 +155,8 @@ async function report(event, tab) {
 // Nhan pairing tu popup/options (buoc 3): {baseUrl, sessionId, token}.
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg && msg.type === "miro-pair" && msg.sessionId && msg.token) {
-    cfg.baseUrl = String(msg.baseUrl || "");
+    cfg.baseUrl = String(msg.baseUrl || cfg.baseUrl || BASE_DEFAULT);
+    ensureInstallationId();
     cfg.sessionId = String(msg.sessionId);
     cfg.token = String(msg.token);
     // Slice 01B: luu device_id de reconnect khong can code.
@@ -178,8 +202,82 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
                    reconnecting: !!cfg.reconnecting,
                    deviceId: cfg.deviceId || "",
                    instanceId: cfg.instanceId || "",
-                   displayName: cfg.displayName || "" });
+                   displayName: cfg.displayName || "",
+                   installationId: cfg.installationId || "",
+                   linkPending: !!(cfg.linkRequestId && cfg.linkSecret) });
     return;
+  }
+  // One-click Approval: tao yeu cau lien ket (giua secret o background).
+  if (msg && msg.type === "miro-link-request") {
+    (async () => {
+      try {
+        ensureInstallationId();
+        await saveCfg();
+        const hint = String((msg && msg.hint) || "").slice(0, 40);
+        const res = await fetch((cfg.baseUrl || BASE_DEFAULT) +
+          "/link-request", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            installation_id: cfg.installationId || "",
+            hint: String((msg && msg.hint) || "").slice(0, 40) }),
+        });
+        const out = await res.json().catch(() => ({}));
+        if (res.ok && out.ok && out.request_id && out.secret) {
+          cfg.linkRequestId = String(out.request_id);
+          cfg.linkSecret = String(out.secret);
+          await saveCfg();
+          sendResponse({ ok: true,
+            request_id: cfg.linkRequestId,
+            expires_in: out.expires_in || 300 });
+        } else {
+          sendResponse({ ok: false,
+            error: String((out && out.error) || res.status) });
+        }
+      } catch (e) {
+        sendResponse({ ok: false, error: "BRIDGE_UNREACHABLE" });
+      }
+    })();
+    return true;
+  }
+  // One-click Approval: doi secret lay credential sau khi user approve.
+  if (msg && msg.type === "miro-link-redeem") {
+    (async () => {
+      try {
+        if (!cfg.linkRequestId || !cfg.linkSecret) {
+          sendResponse({ ok: false, error: "LINK_NOT_REQUESTED" });
+          return;
+        }
+        const res = await fetch((cfg.baseUrl || BASE_DEFAULT) +
+          "/link-redeem", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            request_id: cfg.linkRequestId,
+            secret: cfg.linkSecret,
+            installation_id: cfg.installationId || "" }),
+        });
+        const out = await res.json().catch(() => ({}));
+        if (res.ok && out.ok) {
+          cfg.sessionId = String(out.session_id || "");
+          cfg.token = String(out.token || "");
+          if (out.device_id) cfg.deviceId = String(out.device_id);
+          if (out.instance_id) cfg.instanceId = String(out.instance_id);
+          cfg.linkRequestId = "";
+          cfg.linkSecret = "";
+          cfg.seq = 0;
+          cfg.enabled = true;
+          await saveCfg();
+          sendResponse({ ok: true });
+        } else {
+          sendResponse({ ok: false,
+            error: String((out && out.error) || res.status) });
+        }
+      } catch (e) {
+        sendResponse({ ok: false, error: "BRIDGE_UNREACHABLE" });
+      }
+    })();
+    return true;
   }
   // Popup doc policy qua kenh da xac thuc (background giu session).
   // Khong doc duoc != Revoked: tra nguyen loi de popup hien dung.
@@ -308,6 +406,9 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         cfg.token = "";
         cfg.deviceId = "";
         cfg.instanceId = "";
+        // Giu installationId on dinh (per-profile); xoa link-request cu.
+        cfg.linkRequestId = "";
+        cfg.linkSecret = "";
         cfg.seq = 0;
         await saveCfg();
         sendResponse({ ok: true, forgotten: true });
@@ -404,7 +505,35 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 // NOT_ACTIVE_TAB) -> gui exec_error de backend nhan terminal thay vi data gia.
 async function pollInbox() {
   if (cfg.enabled === false) return;
-  if (!cfg.baseUrl) return;
+  if (!cfg.baseUrl) cfg.baseUrl = BASE_DEFAULT;
+  // One-click Approval: doi user duyet tren Miro roi tu redeem ngam.
+  // Khong can mo popup; redeem thanh cong 1 lan roi xoa secret.
+  if ((!cfg.sessionId || !cfg.token) && cfg.linkRequestId && cfg.linkSecret) {
+    try {
+      const res = await fetch(cfg.baseUrl + "/link-redeem", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          request_id: cfg.linkRequestId, secret: cfg.linkSecret,
+          installation_id: cfg.installationId || "" }),
+      });
+      const out = await res.json().catch(() => ({}));
+      if (res.ok && out.ok) {
+        cfg.sessionId = String(out.session_id || "");
+        cfg.token = String(out.token || "");
+        if (out.device_id) cfg.deviceId = String(out.device_id);
+        if (out.instance_id) cfg.instanceId = String(out.instance_id);
+        cfg.linkRequestId = "";
+        cfg.linkSecret = "";
+        cfg.seq = 0;
+        cfg.enabled = true;
+        await saveCfg();
+        console.log("[miro-bridge] link approved, connected (one-click)");
+        return;
+      }
+      // LINK_NOT_APPROVED: cho tiep. Loi han/forbidden: giu, popup hien.
+    } catch (e) { /* bridge chua chay: cho vong sau */ }
+  }
   // Slice 01B: session het han sau restart -> tu reconnect truoc khi poll.
   if (!cfg.sessionId || !cfg.token) {
     await ensureConnected();
