@@ -502,3 +502,33 @@ Nghiem thu **DOM title read-only LIVE PASS** (log + code khop). **Chua chot REA 
 - `python -m pytest tests/test_browser_gateway.py tests/test_no_direct_browser.py -q -p no:cacheprovider` from apps/backend: **43 passed**, including 17 new negative cases with zero adapter calls. Full suite pending separately.
 - Publisher uses its own approval/intent gates; Threads browser/threads_page.submit remains unimplemented. Gateway contract PASS does not establish Publisher production safety.
 - Existing extension/read.js feed-scope diff and unrelated working tree files excluded. No browser actions, no push/merge.
+
+## § Slice 01B Final Acceptance (2026-11-25, Chrome that + Launcher that) — **DAT 11/14**
+
+- Commit: `c362fe1` (ThreadingHTTPServer + test concurrent + khoa production) tren `4570d0e` (session-chet tu tao request moi) tren `7de1702` (recovery P0 + phan biet requested/challenge_answered/verified).
+- Test: suite bridge **18/18 slice01b** (trong do 3 test moi cho recovery/fail-closed/concurrent) + full bridge **83 passed** (`python -m pytest experiments/extension-bridge/tests/ -p no:cacheprovider -q`).
+- Moi truong nghiem thu: bridge chay duoi **Launcher that** (`windows/miro.py start --only bridge`, pid launcher 22040, bridge 18300), key `live-dev-key-01`, port 18767 loopback, Chrome that Profile 20.
+
+| # | Nghiem thu | Bang chung live | Ket qua |
+|---|---|---|---|
+| 1 | Bat Extension, khong nhap code | popup "Cho duyet", user khong nhap gi | **DAT** |
+| 2 | Nguoi dung chi Approve mot lan | `/link-approve` 1 lan cho `lr-5b61288337e73c0b`; khong tu approve | **DAT** (2 lan: lr-38fa09cf677d95c1 + lr-5b61288337e73c0b, moi lan 1 approve) |
+| 3 | Khong nhap ten Profile bat buoc | ten mac dinh = Profile da verify, khong nhap tay | **DAT** |
+| 4 | Doc du lieu that khong can Grant thu cong | auto-grant theo policy (test `test_auto_grant_on_read`) | **DAT (test)** — chua doc that tren Chrome |
+| 5 | Bridge restart khi cho duyet → tu tao request moi | bridge restart → extension tu tao `lr-a3f2...`, `lr-c1dc...`, `lr-c2ba...`, `lr-5b61...` (pending co request moi ma khong bam Ket noi) | **DAT** |
+| 6 | Launcher tu restart Bridge khi process chet | kill pid 22344→34884, 22048→23620, 23620→40564: manifest cap nhat + `/health` OK | **DAT** |
+| 7 | Bridge restart sau Connected | Connected `lr-38fa09cf677d95c1` → restart → extension tu tao `lr-5b61...` → challenge → approve → Connected lai | **DAT** |
+| 8 | Chrome restart khong can Pair lai | **CHUA** — chua test Chrome restart that | **CHUA DAT** |
+| 9 | OFF ngan thuc thi + giu sau restart | logic `enabled=false` return som (code) | **DAT (code)** — chua test OFF that tren Chrome |
+| 10 | OFF van giu sau restart | **CHUA** — chua test OFF that | **CHUA DAT** |
+| 11 | Revoke khong tu cap lai quyen | `/reconnect` device la → 403 `DEVICE_UNKNOWN`; `test_forget_device_requires_repair` PASS | **DAT** |
+| 12 | Khong khoi phuc request cu trai phep | restart mat RAM → `DEVICE_UNKNOWN`, khong tu cap; request cu mat, phai link lai | **DAT** |
+| 13 | Khong gan verified khi thieu bang chung | `answer` truoc launched → `CHALLENGE_NOT_LAUNCHED`, stage giu `requested` (test + live: stage chi `verified` sau answer that tu Profile 20) | **DAT** |
+| 14 | Cau hinh production = moi truong dung hang ngay | bridge duoi Launcher that (khong tay), RestartBudget that | **DAT** |
+
+Phat hien va sua trong luc nghiem thu (khong mo rong pham vi):
+- **Don luong gay refused that**: `HTTPServer` don luong bi Chrome giu tab `/verify` keep-alive chan chet moi request khac → `ThreadingHTTPServer` + socket timeout 10s + test concurrent + khoa production bang assert source.
+- **Session-chet ket**: extension co session cu nhung bridge mat RAM → `/inbox` 403 bo qua im lang → xoa session + tu tao request moi khi ON.
+- **Budget ket do kill chu dong**: RestartBudget dung (chan crash-loop that sau 3 lan/600s); kill test tay lam can budget → reset + dung lai sach. Launcher khong phat hien treo-socket-khong-exit (process song, port chet) — ghi nhan gioi han, khong sua dot nay.
+
+Con lai: Chrome restart that (8), OFF that tren Chrome (9-10) — can 1 phien live ngan voi user. Discovery tu dong + multi-profile that chua nghiem thu (ngoai pham vi dot nay).
