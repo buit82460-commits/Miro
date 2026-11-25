@@ -19,10 +19,11 @@ class Clock:
 def test_e2e():
     ch = BridgeChannel(clock=Clock())
     reg = TabRegistry()
-    # Pairing 1 lan.
+    # Pairing 1 lan (server cap instance rieng).
     code = ch.issue_pairing_code()
     r = ch.redeem(code, "profile20-main")
-    assert r["ok"], r
+    assert r["ok"] and r.get("instance_id"), r
+    inst = r["instance_id"]
     sid, tok = r["session_id"], r["token"]
     # Mo tab TikTok (event that tu log user) -> push seq 1.
     seq = 1
@@ -39,7 +40,7 @@ def test_e2e():
     r = ch.push_events(sid, tok, seq, evs)
     assert r["ok"], r
     assert import_outbox(reg, r["instance"], r["events"]) == 1
-    assert reg.tabs[("profile20-main", 1302900374)].url.endswith(
+    assert reg.tabs[(inst, 1302900374)].url.endswith(
         "@nghecontent9699")
     # Dong tab -> push seq 3 -> registry loai bo.
     seq = 3
@@ -47,7 +48,7 @@ def test_e2e():
                        [{"event": "closed", "tabId": 1302900374}])
     assert r["ok"], r
     assert import_outbox(reg, r["instance"], r["events"]) == 1
-    assert ("profile20-main", 1302900374) not in reg.tabs
+    assert (inst, 1302900374) not in reg.tabs
     # Restart service worker: resync voi full list rong -> khong con tab nao.
     r = ch.resync(sid, tok, 4, [])
     assert r["ok"] and r["live_tab_ids"] == [], r

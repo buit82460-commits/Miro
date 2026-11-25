@@ -18,8 +18,9 @@ class Clock:
 def test_security():
     ch = BridgeChannel(clock=Clock())
     # Pairing code TTL ngan: het han -> INVALID.
+    # (TTL pairing 600s nen +700 de qua han; lock dem trong 60s.)
     code = ch.issue_pairing_code()
-    ch._clock.t += 200
+    ch._clock.t += 700
     r = ch.redeem(code, "profile20-main")
     assert r["error"] == "PAIRING_INVALID", r
     # 5 lan sai -> khoa.

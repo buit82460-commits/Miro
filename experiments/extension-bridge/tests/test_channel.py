@@ -20,12 +20,13 @@ def test_full():
     # 1. Khong session -> tu choi.
     r = ch.push_events("no", "no", 1, [])
     assert r == {"ok": False, "error": "SESSION_UNKNOWN"}, r
-    # 2. Pairing + redeem.
+    # 2. Pairing + redeem (server cap instance_id rieng, khong tin client).
     code = ch.issue_pairing_code()
     bad = ch.redeem("000000", "profile20-main")
     assert bad["error"] == "PAIRING_INVALID", bad
     ok = ch.redeem(code, "profile20-main")
-    assert ok["ok"], ok
+    assert ok["ok"] and ok.get("instance_id"), ok
+    inst = ok["instance_id"]
     sid, tok = ok["session_id"], ok["token"]
     # 3. Token sai -> tu choi, khong lo token that ra log.
     r = ch.push_events(sid, "sai", 1, [])
@@ -55,23 +56,24 @@ def test_full():
     from bridge.importer import import_outbox
     got = import_outbox(reg, r["instance"],
                         [{**e, "tabId": e.get("tabId")} for e in r["events"]])
-    assert got == 1 and reg.tabs[("profile20-main", 11)].url.endswith(
+    assert got == 1 and reg.tabs[(inst, 11)].url.endswith(
         "tiktok.com/"), got
     # 9. Resync: backend biet tab 11 con song, tab 99 -> STALE.
-    reg.apply("opened", "profile20-main", 99, url="https://cu/")
+    reg.apply("opened", inst, 99, url="https://cu/")
     r = ch.resync(sid, tok, 3, [{"tabId": 11}])
     assert r["ok"] and r["live_tab_ids"] == [11], r
     live = set(r["live_tab_ids"])
     stale = [k for k in reg.tabs if k[1] not in live]
-    assert stale == [("profile20-main", 99)], stale
-    # 10. Het han (qua 120s) -> tu choi.
-    ch._clock.t += 200
+    assert stale == [(inst, 99)], stale
+    # 10. Het han (qua SESSION_TTL 3600s) -> tu choi.
+    ch._clock.t += 3700
     r = ch.push_events(sid, tok, 4, evs)
     assert r["error"] == "SESSION_EXPIRED", r
     # 11. Revoke: session moi cung bi xoa.
     code2 = ch.issue_pairing_code()
     ok2 = ch.redeem(code2, "profile20-main")
-    assert ch.revoke("profile20-main") >= 1
+    assert ok2.get("instance_id"), ok2
+    assert ch.revoke(ok2["instance_id"]) >= 1
     r = ch.push_events(ok2["session_id"], ok2["token"], 1, evs)
     assert r["error"] == "SESSION_UNKNOWN", r
     print("channel auth+seq+replay+resync+revoke+expiry: PASS")
