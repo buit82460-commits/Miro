@@ -582,12 +582,14 @@ async function pollInbox() {
       }
       const err = String((out && out.error) || res.status);
       if (err === "LINK_UNKNOWN_OR_EXPIRED") {
-        // Bridge restart mat request: tu tao moi neu van ON.
+        // Bridge restart mat request: thu reconnect bang trusted device
+        // TRUOC (khong approve lai); chi tao link moi khi chua tung pair.
         console.log("[miro-bridge] link request lost (bridge restart),",
-          "re-issuing");
+          "try reconnect first");
         cfg.linkRequestId = "";
         cfg.linkSecret = "";
         await saveCfg();
+        if (await ensureConnected()) return;
         await requestLinkIfNeeded();
         return;
       }
