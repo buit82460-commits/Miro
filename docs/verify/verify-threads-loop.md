@@ -536,7 +536,7 @@ Phat hien va sua trong luc nghiem thu (khong mo rong pham vi):
 - Commit: `668014a` (recovery order: request-mat → reconnect device truoc) tren `865b644` (session-chet → reconnect truoc) tren `ecb8450` (fix persist path ve `C:/Miro/.miro-runtime`) tren `f3d1af3` (persist trusted identity).
 - Test: suite bridge **19/19 slice01b** (them `test_trusted_persist_reconnect_after_restart_no_reapprove`) + full bridge **85 passed** (`python -m pytest experiments/extension-bridge/tests/ -p no:cacheprovider -q`).
 - Moi truong: bridge duoi **Launcher that** (pid bridge 38476 cuoi, health http-200), key `live-dev-key-01`, Chrome that Profile 20 (`81979097-6044-4ad5-9b43-55dfee6ce493`).
-- Request/approve cuoi: `lr-7857d69ee5ae72b3` → challenge `ch-29aa8110b002fb2a` (launched) → verify Profile 20 → approve → pending rong. Device moi `dev-62d46646d6ab8b3e`, instance `inst-d01ea6bd`, mapping verified giu `Profile 20`.
+- Request/approve cuoi: `lr-7857d69ee5ae72b3` → challenge `ch-29aa8110b002fb2a` (launched) → verify Profile 20 → approve → pending rong. Device moi `dev-62d4…` (đã che), instance `inst-d01ea6bd`, mapping verified giu `Profile 20`.
 
 | # | Nghiem thu | Bang chung live | Ket qua |
 |---|---|---|---|
@@ -556,3 +556,18 @@ Gioi han trung thuc (khong danh PASS ngoai pham vi):
 - **Slice 01B CHOT tai day** (khong mo rong them). Tiep theo: Slice 02 bang task thuc te (VD: TikTok Profile 20, KANS 377, 5 video dau).
 
 Con lai: Chrome restart that (8), OFF that tren Chrome (9-10) — can 1 phien live ngan voi user. Discovery tu dong + multi-profile that chua nghiem thu (ngoai pham vi dot nay).
+
+## Slice 02 search TikTok (production chain, Chrome that Profile 20)
+
+- Production chain: message → `TaskService.route_message` → `run_task_message` → Gateway `read_search_via_bridge` → Bridge `/read` (backend-key tao request) → extension claim/execute `search-videos` (record doc lap) → Evidence `rea-eye`. Endpoint user-facing: `POST /tasks/run-message`.
+- Key xoay: key cu (`live-dev-key-01`) da xoay — Launcher tu sinh key moi (`miro-…`, 128-bit), persist `.miro-runtime/bridge-backend-key`, phan phoi ca bridge + BE qua env. Khong paste/setx/hardcode. Test khong dung key that.
+- Live (Chrome that, Bridge + BE duoi Launcher that, extension da reload nhan spec moi):
+  | Level | Message → tab | Ket qua |
+  |---|---|---|
+  | 1B | `tim kiem tiktok 5 video: KANS 377` → tab search KANS 377 | **DAT** — `ok:true, want=5/got=5, partial:false`, provenance `rea-eye` |
+  | 1A | `kiem tra tai khoan tiktok dang mo` → tab video | **DAT** — `ok:true`, provenance `rea-eye` |
+  | 2 | `tim tiktok 3 video: serum ohui` → tab search moi (khong sua code) | **DAT** — `want=3/got=3`, records dung keyword moi |
+  | 3 | `tim tiktok 7 video: kem chong nang` → tab search moi (khong sua code) | **DAT** — `want=7/got=7`, moi message 1 task rieng (fix dedupe `msg-task` chung) |
+- Test: cum Slice 02 + guard **40/40 PASS** (`test_slice02_production_caller` 4 + `test_bridge_search_video` 5 + `test_slice02_negative` 14 + gateway/feed/slice01/guard); full backend **443 passed + 2 skipped + 1 deselected** (deselected `test_videomd_native_regen` pre-existing ngoai pham vi, `media_intel` khong cham); bridge **85/85 PASS**.
+- Sua trong luc nghiem thu (khong mo rong pham vi): thread `url` day du qua `read_search_via_bridge`/`run_browser_search_check`/`run_task_message`; nới check origin so URL day du truoc, `check_observed_binding` van doi URL day du; endpoint tu resolve URL live tu Bridge `/tabs` (fail `TAB_UNKNOWN` khi tab chua quan sat); extension build JSON nguyen ven trong khung 2000/field (bot record tu cuoi, PARTIAL thay vi UNPARSEABLE); router dat `project_id` rieng moi message.
+- Gioi han trung thuc: `device_id` van la bearer (giong Slice 01B); cold-restart persist phia bridge chua chot root-cause (extension tu reconnect tot sau restart lan cuoi).

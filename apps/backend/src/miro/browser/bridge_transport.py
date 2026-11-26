@@ -22,7 +22,7 @@ BRIDGE_BASE = "http://127.0.0.1:18767"
 OBS_TTL_S = 300
 
 READ_SPECS = ("title", "meta", "text-limited", "actor-login",
-              "video-identity", "feed-video")
+              "video-identity", "feed-video", "search-videos")
 SPEC_FIELDS = {
     "title": ("title", "url"),
     "meta": ("title", "url", "description", "h1"),
@@ -33,6 +33,7 @@ SPEC_FIELDS = {
                        "has_video"),
     "feed-video": ("title", "url", "video_url", "aweme_id", "author",
                    "caption_preview", "has_video"),
+    "search-videos": ("title", "url", "records"),
 }
 
 
@@ -243,7 +244,18 @@ async def read_via_bridge(session_id, token, *, instance_id, tab_id,
     if not w.get("ok"):
         return w
     obs = w["observation"]
-    if str(obs.get("live_origin") or "") != str(live_origin or ""):
+    from miro.browser.runtime import (
+        _origin_of as _origin_of, _urls_same_destination as _same_dest)
+    _obs_live = str(obs.get("live_origin") or "")
+    _want = str(url or live_origin or "")
+    if _same_dest(_obs_live, _want):
+        pass
+    elif _want and _origin_of(_want) and _origin_of(_want) == _origin_of(
+            _obs_live):
+        # Caller truyen domain goc thay vi URL day du: chap nhan tam,
+        # nhung check_observed_binding ben duoi van doi URL day du.
+        pass
+    else:
         return {"ok": False, "error": "ORIGIN_MISMATCH"}
     if str(obs.get("instance_id") or "") != str(instance_id or ""):
         return {"ok": False, "error": "OBSERVED_INSTANCE_MISMATCH"}

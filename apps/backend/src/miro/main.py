@@ -41,7 +41,38 @@ app = FastAPI(title="Miro API", version="0.1.0",
 
 _task_store = TaskStore(Path(r"C:\Miro\var\tasks.db"))
 _task_service = TaskService(_task_store, PermissionStore(), FakeRemote())
+
+
+def _init_bridge_wiring() -> dict:
+    """Production wiring Slice 02: nap Bridge config tu trusted runtime.
+
+    Env MIRO_BRIDGE_* uu tien; instance resolve tu trusted file theo
+    Profile 20. Thieu backend_key/session -> wiring INCOMPLETE (fail-closed,
+    khong khoi tao gia). Credential tho chi o app.state.bridge_auth,
+    khong log.
+    """
+    try:
+        from miro.tasks.bridge_config import load_bridge_config
+        loaded = load_bridge_config(profile_directory="Profile 20")
+        auth = loaded.get("auth") or {}
+        _task_service.bridge = {
+            "base": auth.get("base") or "",
+            "instance_id": auth.get("instance_id") or "",
+            "backend_key": auth.get("backend_key") or "",
+            "session_id": auth.get("session_id") or "",
+            "token": auth.get("token") or "",
+        }
+        ok = bool(auth.get("backend_key") and auth.get("instance_id"))
+        return {"ok": ok, "wiring": "bridge_config",
+                "redacted": loaded.get("redacted"),
+                "reason": "" if ok else "BRIDGE_WIRING_INCOMPLETE"}
+    except Exception as exc:
+        return {"ok": False, "wiring": "bridge_config",
+                "reason": "BRIDGE_WIRING_FAILED: " + type(exc).__name__}
+
+
 app.state.task_service = _task_service
+app.state.bridge_wiring = _init_bridge_wiring()
 app.state.run_task = lambda coro: asyncio.ensure_future(coro)
 app.state.research_provider = research_service.NullProvider()
 

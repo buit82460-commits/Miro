@@ -11,6 +11,9 @@ let cfg = { baseUrl: "", sessionId: "", token: "", deviceId: "",
             linkRequestId: "", linkSecret: "", linkVerifiedProfile: "",
             seq: 0, enabled: true,
             connecting: false, reconnecting: false };
+// Cold-restart guard: top-level loadCfg() + onStartup loadCfg() chay song
+// song; pollInbox phai doi load xong (deviceId rong -> tao link thua).
+let cfgLoaded = false;
 
 function ensureInstallationId() {
   // Installation identity: UUID on dinh moi Profile (storage.local la
@@ -34,6 +37,7 @@ async function loadCfg() {
                   linkVerifiedProfile: "",
                   seq: 0, enabled: true } });
     cfg = { ...cfg, ...(cur.bridge || {}) };
+    cfgLoaded = true;
     const had = !!cfg.installationId;
     ensureInstallationId();
     if (!had) { try { await saveCfg(); } catch (e) { /* ignore */ } }
@@ -513,9 +517,15 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
 // Tu tao link-request moi khi ON ma chua co (bridge restart mat request
 // cu, hoac lan dau bat). Khong tu approve, khong tu tao quyen.
+// Cold-restart guard: chua load xong thi khong tao (deviceId co the rong).
 async function requestLinkIfNeeded() {
+  if (!cfgLoaded) return false;
   if (cfg.enabled === false) return false;
   if (cfg.sessionId && cfg.token) return false;
+  if (cfg.deviceId) {
+    // Da tung pair: uu tien reconnect bang device, khong tao link moi.
+    if (await ensureConnected()) return false;
+  }
   if (cfg.linkRequestId && cfg.linkSecret) return false;
   if (!cfg.baseUrl) cfg.baseUrl = BASE_DEFAULT;
   try {

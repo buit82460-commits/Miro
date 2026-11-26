@@ -92,6 +92,70 @@ async def resume(task_id: str, request: Request):
         return _err(exc)
 
 
+@router.post("/run-message", status_code=200)
+async def run_message(body: dict, request: Request):
+    """Slice 02 user-facing production entry: message tu nhien -> TaskService.
+
+    Body: {message, tab_id, live_origin?, limit?}. Miro tu route (actor/search),
+    tu doc Bridge qua Gateway, tu tong hop Evidence. Development Agent chi
+    quan sat log/trace, khong chen giua.
+    """
+    service = get_service(request)
+    msg = str((body or {}).get("message") or "")
+    try:
+        tab_id = int((body or {}).get("tab_id"))
+    except (TypeError, ValueError):
+        return JSONResponse(status_code=400,
+                            content={"ok": False,
+                                     "error": "TAB_INVALID"})
+    live_origin = str((body or {}).get("live_origin") or "")
+    route = service.route_message(msg)
+    if route.get("job_type") not in ("browser_actor_check", "browser_search"):
+        return {"ok": False, "error": "NO_ROUTE_MATCH", "route": route}
+    # Contract: live_origin phai la origin cua URL tab LIVE do Bridge thay
+    # (khong phai domain caller tu khai). Resolve URL day du tu Bridge /tabs
+    # truoc khi goi production chain; khong tin live_origin tho tu caller.
+    try:
+        from miro.tasks.bridge_config import load_bridge_config
+        cfg = (load_bridge_config().get("auth") or {})
+        import urllib.request as _url, json as _js
+        _tabs = _js.loads(_url.urlopen(
+            str(cfg.get("base") or "http://127.0.0.1:18767") + "/tabs",
+            timeout=10).read())
+        live_url = ""
+        for _t in ((_tabs or {}).get("tabs") or []):
+            try:
+                if int((_t or {}).get("tab")) == int(tab_id):
+                    live_url = str((_t or {}).get("url") or "")
+                    break
+            except (TypeError, ValueError):
+                continue
+    except Exception:
+        live_url = ""
+    if not live_url:
+        return {"ok": False, "error": "TAB_UNKNOWN",
+                "route": route,
+                "hint": "tab chua duoc extension quan sat sau reload"}
+    try:
+        _rid = "msg-%s" % __import__("uuid").uuid4().hex[:12]
+        rec = service.submit(TaskSubmitRequest.model_validate({
+            "request_id": _rid,
+            "message": msg[:4000],
+            "videos": [{"project_id": _rid, "title": msg[:100]}]}))
+    except Exception as exc:
+        return JSONResponse(status_code=400,
+                            content={"ok": False,
+                                     "error": "BAD_MESSAGE: " +
+                                     type(exc).__name__})
+    try:
+        out = await service.run_task_message(
+            rec["id"], tab_id=tab_id, live_origin=live_origin,
+            url=live_url)
+    except (TaskConflictError, PermissionError) as exc:
+        return _err(exc)
+    return out
+
+
 @router.post("/{task_id}/approve")
 async def approve(task_id: str, request: Request, item: int = 0, scope: str = "edit",
                   revision: int = 1):

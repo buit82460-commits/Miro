@@ -37,6 +37,37 @@ STATE_DIR = ROOT / ".miro-runtime"
 LOGS_DIR = STATE_DIR / "logs"
 MANIFEST = STATE_DIR / "processes.json"
 CONTROL = STATE_DIR / "control.json"
+BRIDGE_KEY_FILE = STATE_DIR / "bridge-backend-key"
+
+
+def _bridge_backend_key() -> str:
+    """Trusted-parent key management (Slice 02 §8).
+
+    - Env MIRO_BRIDGE_BACKEND_KEY uu tien (van hanh thu cong).
+    - Con lai: doc file local BRIDGE_KEY_FILE; chua co -> sinh moi
+      (secrets, 128-bit), persist xuong dia, chi launcher + service
+      con duoc thua huong qua env. Khong log, khong in ra console.
+    - Xoay key cu: xoa file + restart service (launcher sinh key moi).
+    """
+    env_key = str(os.environ.get("MIRO_BRIDGE_BACKEND_KEY") or "")
+    if env_key:
+        return env_key
+    try:
+        saved = BRIDGE_KEY_FILE.read_text(encoding="utf-8").strip()
+        if len(saved) >= 16:
+            return saved
+    except OSError:
+        pass
+    import secrets as _secrets
+    fresh = "miro-" + _secrets.token_hex(16)
+    try:
+        STATE_DIR.mkdir(parents=True, exist_ok=True)
+        tmp = BRIDGE_KEY_FILE.with_suffix(".tmp")
+        tmp.write_text(fresh, encoding="utf-8")
+        tmp.replace(BRIDGE_KEY_FILE)
+    except OSError:
+        pass
+    return fresh
 
 SERVICES = ("be", "fe", "browser-worker", "media-worker", "node-youtube", "bridge")
 
@@ -244,6 +275,10 @@ def service_command(name: str) -> tuple[list[str], Path, dict] | None:
         if not (app_dir / "src" / "miro" / "main.py").is_file():
             return None
         env["PYTHONPATH"] = str(app_dir / "src") + os.pathsep + env.get("PYTHONPATH", "")
+        # Production wiring: BE nhan backend-key tu launcher (trusted parent),
+        # khong doc truc tiep tu user, khong hardcode. TaskService truyen tiep
+        # vao bridge_transport khi tao production request.
+        env["MIRO_BRIDGE_BACKEND_KEY"] = _bridge_backend_key()
         return (
             [sys.executable, "-m", "uvicorn", "miro.main:app",
              "--host", "127.0.0.1", "--port", str(PORTS["be"])],
@@ -284,12 +319,9 @@ def service_command(name: str) -> tuple[list[str], Path, dict] | None:
         entry = ROOT / "experiments" / "extension-bridge" / "bridge" / "server.py"
         if not entry.is_file():
             return None
-        # Backend role auth: truyen MIRO_BRIDGE_BACKEND_KEY (neu co) cho
-        # bridge process. Khong hard-code key; thieu key -> bridge tu choi
-        # /read (BACKEND_AUTH_REQUIRED), fail-closed.
-        if os.environ.get("MIRO_BRIDGE_BACKEND_KEY"):
-            env["MIRO_BRIDGE_BACKEND_KEY"] = \
-                os.environ["MIRO_BRIDGE_BACKEND_KEY"]
+        # Backend role auth: launcher (trusted parent) cap key cho bridge
+        # process. Khong hard-code key; tu sinh + persist neu chua co.
+        env["MIRO_BRIDGE_BACKEND_KEY"] = _bridge_backend_key()
         return ([sys.executable, str(entry), str(PORTS["bridge"])],
                 entry.parent, env)
     raise ValueError(f"unknown service: {name}")

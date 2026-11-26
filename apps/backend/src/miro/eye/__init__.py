@@ -173,6 +173,79 @@ async def tiktok_profile_record(page) -> dict:
     return {"handle": handle, "name": name, "url": url, "counts": counts}
 
 
+async def tiktok_search_record(page, limit: int = 10) -> dict:
+    """Eye search TikTok (native Page): N video dau trang search.
+
+    Moi record doc lap tu scope DOM rieng (anchor /video/ lam neo):
+    {aweme_id, video_url, author, caption_preview, hashtags, metrics,
+    position}. Khong quan sat duoc -> "" (thieu du lieu, khong suy so 0).
+    KHONG gop innerText toan trang roi suy mapping.
+    """
+    import re
+    page_url = ""
+    with suppress(Exception):
+        page_url = str(page.url or "")
+    records: list[dict] = []
+    seen: set[str] = set()
+    with suppress(Exception):
+        anchors = await page.locator('a[href*="/video/"]').all()
+    for a in (anchors or []):
+        if len(records) >= max(1, limit):
+            break
+        with suppress(Exception):
+            href = (await a.get_attribute("href")) or ""
+            m = re.search(r"/video/(\d+)", href or "")
+            am = re.search(r"/@([^/?]+)", href or "")
+            if not (m and am):
+                continue
+            if not re.match(r"^[\w.\-]{2,24}$", am.group(1) or ""):
+                continue
+            if re.match(r"^\d{10,}$", am.group(1) or ""):
+                continue
+            aweme = m.group(1)
+            if aweme in seen:
+                continue
+            seen.add(aweme)
+            vurl = href if href.startswith("http") else \
+                "https://www.tiktok.com" + (
+                    href if href.startswith("/") else "/" + href)
+            caption = ""
+            with suppress(Exception):
+                scope = a.locator(
+                    'xpath=ancestor-or-self::*[@data-e2e='
+                    '"search-card-container"][1]')
+                if await scope.count() > 0:
+                    caption = (((await scope.first.inner_text())
+                                or "").strip())[:300]
+            tags = re.findall(r"#(\w+)", caption) \
+                if caption else []
+            counts: dict[str, str] = {}
+            with suppress(Exception):
+                card = a.locator(
+                    'xpath=ancestor-or-self::article[1] | '
+                    'ancestor-or-self::div[1]')
+                for key, sel in (("likes", '[data-e2e="like-count"]'),
+                                 ("comments", '[data-e2e="comment-count"]'),
+                                 ("shares", '[data-e2e="share-count"]'),
+                                 ("views", '[data-e2e="video-views"]')):
+                    with suppress(Exception):
+                        loc = card.locator(sel).first
+                        counts[key] = (((await loc.inner_text())
+                                        or "").strip())[:24]
+            records.append({
+                "aweme_id": aweme, "video_url": vurl,
+                "author": "@" + am.group(1),
+                "caption_preview": caption,
+                "hashtags": " ".join("#" + t for t in tags[:8])[:200],
+                "views": counts.get("views", ""),
+                "likes": counts.get("likes", ""),
+                "comments": counts.get("comments", ""),
+                "shares": counts.get("shares", ""),
+                "position": len(records) + 1,
+            })
+    return {"url": page_url, "records": records, "count": len(records)}
+
+
 def evaluate_actor_signals(data):
     """Pure evaluator actor TikTok (dung chung native Page + Bridge).
 
@@ -391,6 +464,7 @@ EYE_COVERAGE = {
                  "tab_state (profile/verify/navigate/read)"],
     "tiktok": ["tiktok_comment_records", "tiktok_video_record",
                "tiktok_feed_video_record (video dau feed homepage)",
+               "tiktok_search_record (N video dau trang search, per-record)",
                "tiktok_profile_record", "tiktok_actor_record (actor-login)",
                "engage_records (like/repost/follow/view + receipt)",
                "composer_state (composer/post_btn/upload)",

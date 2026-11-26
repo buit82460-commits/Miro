@@ -21,7 +21,7 @@ import time
 GRANT_TTL_S = 120
 READ_CAPABILITY = "read"
 READ_SPECS = ("title", "meta", "text-limited", "actor-login",
-              "video-identity", "feed-video")
+              "video-identity", "feed-video", "search-videos")
 ALLOWED_ORIGINS = ("https://www.tiktok.com",)
 
 # Field cho phep theo spec (schema co dinh, cat 2000). actor-login chi doc
@@ -36,6 +36,10 @@ SPEC_FIELDS = {
                        "has_video"),
     "feed-video": ("title", "url", "video_url", "aweme_id", "author",
                    "caption_preview", "has_video"),
+    # Slice 02 search: 1 field JSON (records []), moi record co identity
+    # rieng. Field JSON van cat 2000/field theo clean_observation — thiet ke
+    # record gon de du cho N video dau (thieu -> record null-partial).
+    "search-videos": ("title", "url", "records"),
 }
 
 

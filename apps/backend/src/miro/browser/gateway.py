@@ -485,3 +485,78 @@ async def read_feed_video_via_bridge(session_id: str, token: str, *,
                                    "url": live_origin,
                                    "grant_epoch": obs.get("grant_epoch", 0)}},
             "observation": obs}
+
+
+async def read_search_via_bridge(session_id: str, token: str, *,
+                                 instance_id: str, tab_id: int,
+                                 live_origin: str, grant_epoch=None,
+                                 base: str = "",
+                                 timeout: int = 30,
+                                 url: str | None = None) -> dict:
+    """Production READ N video dau trang search TikTok qua Bridge.
+
+    Spec "search-videos": extension tra field `records` (JSON[]) — moi
+    record co identity rieng (aweme_id/video_url/author/caption/hashtags/
+    metrics/position). Gateway parse + validate per-record (aweme 5-30
+    so, suy aweme tu video_url neu thieu, khong suy tu text gop).
+    Field trong → "" (thieu du lieu, khong suy so 0). Evidence rea-eye.
+    """
+    import json as _json
+    import re
+    from miro.browser.bridge_transport import (
+        BRIDGE_BASE, read_via_bridge as _read_bridge)
+
+    r = await _read_bridge(
+        session_id, token, instance_id=instance_id, tab_id=tab_id,
+        live_origin=live_origin, spec="search-videos",
+        base=base or BRIDGE_BASE, timeout=timeout,
+        grant_epoch=grant_epoch, url=url)
+    if not isinstance(r, dict) or not r.get("ok"):
+        return r if isinstance(r, dict) else {
+            "ok": False, "error": "BRIDGE_READ_FAILED"}
+    obs = r.get("observation") or {}
+    data = obs.get("data") if isinstance(obs.get("data"), dict) else {}
+    try:
+        recs = _json.loads(str(data.get("records") or "[]"))
+    except Exception:
+        return {"ok": False, "error": "SEARCH_RECORDS_UNPARSEABLE"}
+    if not isinstance(recs, list) or not recs:
+        return {"ok": False, "error": "SEARCH_NO_RECORDS"}
+    clean = []
+    for i, rec in enumerate(recs):
+        if not isinstance(rec, dict):
+            return {"ok": False, "error": "SEARCH_RECORD_INVALID"}
+        aweme = str(rec.get("aweme_id") or "")
+        vurl = str(rec.get("video_url") or "")
+        hit = re.search(r"/video/(\d+)", vurl or "")
+        if hit and not aweme:
+            aweme = hit.group(1)
+        if not aweme or not re.match(r"^\d{5,30}$", aweme):
+            return {"ok": False, "error": "SEARCH_IDENTITY_MISSING"}
+        clean.append({
+            "aweme_id": aweme,
+            "video_url": vurl,
+            "author": str(rec.get("author") or ""),
+            "caption_preview": str(rec.get("caption_preview") or "")[:300],
+            "hashtags": str(rec.get("hashtags") or "")[:200],
+            "views": str(rec.get("views") or "")[:24],
+            "likes": str(rec.get("likes") or "")[:24],
+            "comments": str(rec.get("comments") or "")[:24],
+            "shares": str(rec.get("shares") or "")[:24],
+            "position": int(rec.get("position") or (i + 1)),
+        })
+    return {"ok": True,
+            "evidence": {"url": str(data.get("url") or live_origin),
+                         "tab_id": str(tab_id),
+                         "instance_id": str(instance_id),
+                         "records": clean,
+                         "count": len(clean),
+                         "observed_at": obs.get("observed_at") or _now(),
+                         "record": {"observation": data},
+                         "provenance": "rea-eye",
+                         "platform": "tiktok",
+                         "lease": {"instance_id": str(instance_id),
+                                   "tab_id": int(tab_id),
+                                   "url": live_origin,
+                                   "grant_epoch": obs.get("grant_epoch", 0)}},
+            "observation": obs}

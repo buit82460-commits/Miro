@@ -284,12 +284,19 @@ class TaskService:
         "kiem tra tai khoan", "tai khoan nao",
     )
 
+    # Slice 02 search: tu khoa bat ky + so luong bat ky (khong hardcode).
+    BROWSER_SEARCH_PATTERNS = (
+        "tim kiem tiktok", "tim tiktok", "search tiktok",
+        "tong hop video", "thu thap video", "tim video",
+    )
+
     @classmethod
     def route_message(cls, message: str) -> dict:
         """Dinh tuyen message tu nhien -> job. Khong NLP nang, khong Planner.
-        Tra {"job_type": "browser_actor_check", "params": {...}} hoac
+        Tra {"job_type": "browser_actor_check" | "browser_search", ...} hoac
         {"job_type": "unsupported", "reason": ...}.
         """
+        import re
         text = str(message or "").strip().lower()
         if not text:
             return {"job_type": "unsupported", "reason": "EMPTY_MESSAGE"}
@@ -299,6 +306,31 @@ class TaskService:
                     "params": {},
                     "matched": hits[:2],
                     "note": "user-facing task execution, chua phai Planner day du"}
+        shits = [p for p in cls.BROWSER_SEARCH_PATTERNS if p in text]
+        if shits:
+            # Slice 02: keyword + limit suy tu message (generic, khong
+            # hardcode KANS/5). Quote "..." -> keyword; so N video -> limit.
+            kw = ""
+            m = re.search(r'"([^"]{1,100})"', str(message or ""))
+            if m:
+                kw = m.group(1).strip()
+            else:
+                m2 = re.search(
+                    r"(?:tìm|tim|search)\s+(.+?)(?:\s+và|\s+va\b|,|\s*$)",
+                    str(message or ""), re.IGNORECASE)
+                if m2:
+                    kw = m2.group(1).strip()[:100]
+            limit = 5
+            m3 = re.search(r"(\d{1,2})\s*video", text)
+            if m3:
+                try:
+                    limit = min(max(int(m3.group(1)), 1), 12)
+                except (TypeError, ValueError):
+                    pass
+            return {"job_type": "browser_search",
+                    "params": {"keyword": kw, "limit": limit},
+                    "matched": shits[:2],
+                    "note": "slice 02 search, chua phai Planner day du"}
         return {"job_type": "unsupported", "reason": "NO_ROUTE_MATCH"}
 
     async def run_task_message(self, task_id: str, *, tab_id: int,
@@ -313,14 +345,22 @@ class TaskService:
         route = self.route_message((record.get("request") or {}).get(
             "message", ""))
         self._emit(record, "task_routed", {"route": route})
-        if route.get("job_type") != "browser_actor_check":
-            return {"ok": False, "error": "NO_ROUTE_MATCH",
-                    "route": route, "task_id": task_id}
-        out = await self.run_browser_actor_check(
-            task_id, tab_id=tab_id, live_origin=live_origin, url=url,
-            grant_epoch=grant_epoch, timeout=timeout)
-        out["route"] = route
-        return out
+        if route.get("job_type") == "browser_actor_check":
+            out = await self.run_browser_actor_check(
+                task_id, tab_id=tab_id, live_origin=live_origin, url=url,
+                grant_epoch=grant_epoch, timeout=timeout)
+            out["route"] = route
+            return out
+        if route.get("job_type") == "browser_search":
+            out = await self.run_browser_search_check(
+                task_id, tab_id=tab_id, live_origin=live_origin,
+                url=url,
+                grant_epoch=grant_epoch, timeout=timeout,
+                limit=int((route.get("params") or {}).get("limit") or 5))
+            out["route"] = route
+            return out
+        return {"ok": False, "error": "NO_ROUTE_MATCH",
+                "route": route, "task_id": task_id}
 
     # ---- Slice 01 production caller: user task -> Gateway -> Bridge ----
     async def run_browser_actor_check(self, task_id: str, *, tab_id: int,
@@ -402,6 +442,80 @@ class TaskService:
         return {"ok": True, "task_id": task_id,
                 "evidence": r.get("evidence"),
                 "observation": r.get("observation")}
+
+    # ---- Slice 02 production caller: user task -> Gateway -> Bridge ----
+    async def run_browser_search_check(self, task_id: str, *, tab_id: int,
+                                       live_origin: str = "",
+                                       url: str | None = None,
+                                       grant_epoch=None,
+                                       timeout: int = 30,
+                                       limit: int = 5) -> dict:
+        """Actual production call chain Slice 02 (search):
+
+        TaskService.run_browser_search_check(task_id)
+          -> gateway.read_search_via_bridge
+            -> bridge_transport.read_via_bridge (backend-key tao request)
+            -> extension claim/execute search-videos (record/doc lap)
+            -> wait_observation(request_id=...)
+          -> per-record validate (gateway) -> tong hop N video -> Evidence.
+
+        Khong hardcode keyword/limit bai nghiem thu: limit tu route params
+        (route_message). Thieu record -> PARTIAL (tra duoc bao nhieu +
+        ghi ro thieu), khong suy so lieu.
+        """
+        from miro.browser import gateway as _gateway
+
+        record = self.get(task_id)
+        if record.get("status") == TaskStatus.STOP_REQUESTED:
+            return {"ok": False, "error": "TASK_STOP_REQUESTED"}
+        cfg = self.bridge or {}
+        self._emit(record, "browser_search_started",
+                   {"tab_id": tab_id, "url": live_origin or "",
+                    "limit": int(limit or 5)})
+        r = await _gateway.read_search_via_bridge(
+            str(cfg.get("session_id") or ""), str(cfg.get("token") or ""),
+            instance_id=str(cfg.get("instance_id") or "profile20-main"),
+            tab_id=int(tab_id), live_origin=str(live_origin or ""),
+            grant_epoch=grant_epoch, url=url,
+            base=str(cfg.get("base") or ""), timeout=int(timeout or 30))
+        if not isinstance(r, dict) or not r.get("ok"):
+            err = str((r or {}).get("error", "BRIDGE_READ_FAILED")) \
+                if isinstance(r, dict) else "BRIDGE_READ_FAILED"
+            try:
+                record = self.get(task_id)
+                record["error"] = {"code": err,
+                                   "message": "browser search failed"}
+                self._save(record)
+                self._emit(record, "browser_search_failed", {"error": err})
+            except Exception:
+                pass
+            return {"ok": False, "error": err,
+                    "cancelled": err in ("REQUEST_CANCELLED",
+                                         "TASK_STOP_REQUESTED"),
+                    "task_id": task_id}
+        want = max(1, min(int(limit or 5), 12))
+        got = list(((r.get("evidence") or {}).get("records")) or [])
+        items = got[:want]
+        partial = len(items) < want
+        try:
+            record = self.get(task_id)
+            record["evidence"] = r.get("evidence")
+            self._save(record)
+            self._emit(record, "browser_search_completed",
+                       {"got": len(items), "want": want,
+                        "partial": partial})
+        except Exception:
+            pass
+        out = {"ok": True, "task_id": task_id, "partial": partial,
+               "want": want, "got": len(items),
+               "evidence": r.get("evidence"),
+               "observation": r.get("observation"),
+               "items": items}
+        if partial:
+            out["missing"] = (f"chi quan sat duoc {len(items)}/{want} "
+                              "video; phan con lai thieu du lieu, "
+                              "khong suy doan")
+        return out
 
     # ---- stop: requested vs worker-stopped are distinct ----
     def request_stop(self, task_id: str) -> dict:

@@ -147,6 +147,67 @@ const READ_FUNCS = {
       has_video: hasVideo ? "1" : "",
     };
   },
+  // Slice 02 search: N video dau trang search. Moi record doc lap:
+  // {aweme_id, video_url, author, caption_preview, hashtags,
+  //  views, likes, comments, shares, position}. Khong quan sat duoc -> "".
+  // KHONG suy mapping tu innerText gop; moi record tu scope DOM rieng.
+  "search-videos": () => {
+    const url = location.href || "";
+    const isHandle = (h) => /^[\w.\-]{2,24}$/.test(h || "")
+      && !/^\d{10,}$/.test(h || "");
+    const num = (el) => ((el && el.innerText) || "").trim().slice(0, 24);
+    // Scope moi card: anchor /video/ gan nhat lam neo, counts doc trong
+    // scope hep (card/article/div cha), khong doc toan trang.
+    const anchors = [...document.querySelectorAll('a[href*="/video/"]')];
+    const seen = new Set();
+    const recs = [];
+    for (const a of anchors) {
+      if (recs.length >= 12) break;
+      const href = a.getAttribute("href") || "";
+      const m = href.match(/\/video\/(\d+)/);
+      const am = href.match(/\/@([^/?]+)/);
+      if (!m || !am || !isHandle(am[1])) continue;
+      if (seen.has(m[1])) continue;
+      seen.add(m[1]);
+      const vurl = href.startsWith("http") ? href
+        : ("https://www.tiktok.com" + (href.startsWith("/") ? href : "/" + href));
+      const scope = a.closest('[data-e2e="search-card-container"]')
+        || a.closest("article") || a.closest("div") || a;
+      const cap = scope.querySelector(
+        '[data-e2e="search-card-desc"], [data-e2e="video-desc"]');
+      const capText = ((cap || scope || {}).innerText || "").slice(0, 300);
+      const tagHits = [...capText.matchAll(/#([\p{L}\p{N}_-]+)/gu)];
+      const tags = tagHits.slice(0, 8).map((t) => "#" + t[1]);
+      const likeEl = scope.querySelector('[data-e2e="like-count"]');
+      const cmtEl = scope.querySelector('[data-e2e="comment-count"]');
+      const shrEl = scope.querySelector('[data-e2e="share-count"]');
+      const viewEl = scope.querySelector('[data-e2e="video-views"]');
+      recs.push({
+        aweme_id: m[1], video_url: vurl, author: "@" + am[1],
+        caption_preview: capText,
+        hashtags: tags.join(" "),
+        views: viewEl ? num(viewEl) : "",
+        likes: likeEl ? num(likeEl) : "",
+        comments: cmtEl ? num(cmtEl) : "",
+        shares: shrEl ? num(shrEl) : "",
+        position: recs.length + 1,
+      });
+    }
+    // Giu JSON nguyen ven trong khung 2000/field (clean_observation cat
+    // field): bot record tu cuoi cho den khi vua, khong cat chuoi giua
+    // chung. It record hon -> Gateway PARTIAL minh bach, khong JSON do.
+    let out = JSON.stringify(recs);
+    while (out.length > 2000 && recs.length > 1) {
+      recs.pop();
+      recs.forEach((r, i) => { r.position = i + 1; });
+      out = JSON.stringify(recs);
+    }
+    return {
+      title: document.title,
+      url: url,
+      records: out.slice(0, 2000),
+    };
+  },
 };
 
 async function readFixed(tabId, spec) {
