@@ -252,3 +252,25 @@
 ### Kết luận
 
 **P2+W0/W1/P3/W3 DAT** (full tich hop, uncertainty + temp sach + warn khong chan). **Chua push.**
+
+## Slice 04 — Standalone Runtime & Production Frontend (2026-11-26) — DAT
+
+- Uy quyen: full A-Z trong cung task Slice 04 (khong hoi tung buoc), commit KHONG push, khong commit docs/ba-ben/.
+- Entry: `python windows\miro.py start --only be,bridge --no-browser` (Launcher hien co) + `Miro-Standalone.bat`; FE dev qua launcher `--only fe` (rewrite ve BE) hoac `npx next dev --port 3100` + `NEXT_PUBLIC_API_BASE`.
+- Khong tao launcher/framework moi, khong tich hop nguyen agent-desktop/agent-reach/LangGraph/scheduler/cloud; Rule-based TaskService hien tai, KHONG LLM planner (Slice 05).
+
+| # | Nghiem thu | Bang chung | Ket qua |
+|---|---|---|---|
+| 1 | Launcher khoi dong BE+Bridge 1 cham | `windows/miro.py service_command fe` + BE/Bridge http-200 duoi launcher | **DAT (live)** — restart BE giu lai task cu nguyen ven |
+| 2 | Xem Runtime/Bridge/Extension/Profile | `GET /tasks/runtime/status` (wiring redacted, tabs tu Bridge /tabs, khong lo credential) + FE `/runtime` | **DAT** |
+| 3 | Giao nhiem vu capability da nghiem thu qua UI | FE `/tasks-live` → `POST /tasks/run-message` (actor/video/search TikTok) | **DAT (live)** — route `browser_actor_check` dung; `TAB_UNKNOWN` fail-closed khi chua co tab (khong bia ket qua) |
+| 4 | Quan sat tien do/Evidence/ket qua/loi that | FE `/tasks-live/[id]` poll `GET /tasks/{id}` + `/events`, hien evidence + stop | **DAT** |
+| 5 | Chuyen trang khong mat task | BE so huu state (SQLite `var/tasks.db`); `recent` doc lai giong nhau truoc/sau chuyen trang | **DAT (live)** — E2E slice04-live pass |
+| 6 | Dong/mo lai khong lech trang thai | Stop launcher → start lai: task + event cu con nguyen (`recent` tra cung id) | **DAT (live)** |
+| 7 | Manual control trong pham vi ho tro | Stop task qua UI (`POST /tasks/{id}/stop`), khong CDP/khong bypass Gateway/khong media ngoai `media_intel` | **DAT** |
+| 8 | Test | `test_slice04_runtime_ui.py` 3/3 + cum lien quan 37/37 + full BE **449 passed, 2 skipped**; FE `tsc --noEmit` sach; E2E `slice04-runtime` + `slice04-live` pass | **DAT** |
+
+Gioi han trung thuc:
+- E2E fixture cu `threads-milestone` fail o buoc receipt khi BE chay (route batches uu tien BE dry-run that thay vi fallback fixture) — hanh vi co san tu truoc Slice 04 (route do toi khong sua), khong phai regression. Muon chay du E2E fixture thi dung BE tam thoi.
+- Full BE suite lan dau timeout o 63% (khong fail); chay lai nen tron 449 passed.
+- Extension/Chrome that chua noi trong dot nay (tabs `[]`); `run-message` fail-closed `TAB_UNKNOWN` dung thiet ke.
