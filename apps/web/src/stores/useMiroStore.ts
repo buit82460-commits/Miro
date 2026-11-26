@@ -897,6 +897,11 @@ export const useMiroStore = create<MiroStore>()(
         conversations: state.conversations,
         integrations: state.integrations,
       }),
+      skipHydration: true,
     }
   )
 );
+
+if (typeof window !== 'undefined') {
+  void useMiroStore.persist.rehydrate();
+}
