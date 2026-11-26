@@ -107,6 +107,44 @@ def test_neg_navigate_wrong_instance(monkeypatch):
     assert r["error"] == "OBSERVED_INSTANCE_MISMATCH", r
 
 
+def test_neg_navigate_wrong_tab(monkeypatch):
+    # Observation tu tab khac tab duoc lenh: wait_observation loai bo
+    # (fail-closed) -> TIMEOUT, khong bao gio nhan nham observation.
+    monkeypatch.setattr(
+        bt, "BridgeClient",
+        lambda *a, **k: FakeNavClient(
+            _obs_nav("https://www.tiktok.com/search?q=KANS", tab_id=999)))
+    r = _run(gateway.navigate_via_bridge(
+        "", "", instance_id="profile20-main", tab_id=7,
+        url="https://www.tiktok.com/search?q=KANS"))
+    assert r["error"] == "OBSERVATION_TIMEOUT", r
+
+
+def test_neg_navigate_redirect_offsite(monkeypatch):
+    # Redirect ra khoi TikTok giua chung -> tu choi.
+    monkeypatch.setattr(
+        bt, "BridgeClient",
+        lambda *a, **k: FakeNavClient(
+            _obs_nav("https://evil.example/phish")))
+    r = _run(gateway.navigate_via_bridge(
+        "", "", instance_id="profile20-main", tab_id=7,
+        url="https://www.tiktok.com/search?q=KANS"))
+    assert r["error"] == "NAVIGATE_MISMATCH", r
+
+
+def test_neg_navigate_policy_revoked(monkeypatch):
+    # Policy bi thu hoi giua chừng: server tu choi request.
+    class _Revoked(FakeNavClient):
+        def request_navigate(self, tab_id, url, **kw):
+            return {"ok": False, "error": "POLICY_REVOKED"}
+
+    monkeypatch.setattr(bt, "BridgeClient", lambda *a, **k: _Revoked(None))
+    r = _run(gateway.navigate_via_bridge(
+        "", "", instance_id="profile20-main", tab_id=7,
+        url="https://www.tiktok.com/search?q=KANS"))
+    assert r["error"] == "POLICY_REVOKED", r
+
+
 def test_neg_navigate_cancelled(monkeypatch, tmp_path):
     async def fake_nav(*a, **k):
         raise AssertionError("da stop thi khong duoc goi gateway")

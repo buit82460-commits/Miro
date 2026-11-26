@@ -588,3 +588,21 @@ Con lai: Chrome restart that (8), OFF that tren Chrome (9-10) — can 1 phien li
 - Test: `test_slice02b_navigate.py` **11/11 PASS** (6 negative navigate + autonomous + Level 1A route + search_url_for + Act-skip + recover); full backend **454 passed + 2 skipped + 1 failed** (`test_videomd_native_regen` - loi moi truong CLI rea-video thieu flag -o, pre-existing ngoai pham vi, khong regression).
 - Don vi tien te: "k" = nghin VND trong bao cao.
 - Gioi han trung thuc: service worker extension ngu giua chung gay OBSERVATION_TIMEOUT (da co Act-skip + fallback + collect retry); cold-restart persist van la bug rieng chua chot root-cause (pairing lai sau restart sinh device/instance moi).
+
+### Slice 02B closeout (2026-11-26) - 2 diem xac nhan bo sung
+
+1. Full Bridge suite sau thay doi navigation: **85/85 PASS** (`python -m pytest experiments/extension-bridge/tests/ -q -p no:cacheprovider`), gom test guard moi `test_slice02b_navigate_guard.py` (allow TikTok search / deny offsite / deny javascript: / deny control-chars).
+2. Negative coverage doi chieu (BE `test_slice02b_navigate.py` 14 test + bridge guard 4 test):
+   | Dieu kien | Test | Ket qua |
+   |---|---|---|
+   | URL ngoai scope | test_neg_navigate_outside_scope | NAVIGATE_ORIGIN_DENIED |
+   | Scheme la (javascript:) | test_neg_navigate_javascript_scheme + bridge guard | NAVIGATE_ORIGIN_DENIED |
+   | Backend-key sai (quyen het han) | test_neg_navigate_backend_denied + live BADKEY | BACKEND_AUTH_REQUIRED |
+   | Redirect ngoai scope giua chung | test_neg_navigate_mismatch + test_neg_navigate_redirect_offsite | NAVIGATE_MISMATCH |
+   | Sai tab (observation tab khac bi loai, fail-closed) | test_neg_navigate_wrong_tab | OBSERVATION_TIMEOUT (khong nhan nham) |
+   | Sai Profile/instance | test_neg_navigate_wrong_instance | OBSERVED_INSTANCE_MISMATCH |
+   | Policy bi thu hoi giua chung | test_neg_navigate_policy_revoked | POLICY_REVOKED |
+   | Cancellation (STOP_REQUESTED) | test_neg_navigate_cancelled | TASK_STOP_REQUESTED, khong goi gateway |
+   | Khong co managed tab | test_autonomous_no_managed_tab | NO_MANAGED_TAB |
+- Test moi truong `test_videomd_native_regen` fail: CLI `rea-video` khong nhan flag `-o` (pre-existing, ngoai pham vi slice, khong regression).
+- Cold-restart persistence giu lam bug rieng.
