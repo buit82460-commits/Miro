@@ -69,10 +69,12 @@ export const platformSchema = z.object({
 });
 export type PlatformItem = z.infer<typeof platformSchema>;
 
+// Repair Slice 04: BE /platforms tra {version, platforms} (khong giong
+// fixture cu). Giữ type linh hoạt theo BE that.
 export const registrySchema = z.object({
   version: z.number(),
   platforms: z.array(platformSchema),
-});
+}).passthrough();
 export type Registry = z.infer<typeof registrySchema>;
 
 export const platformUpsertSchema = z.object({

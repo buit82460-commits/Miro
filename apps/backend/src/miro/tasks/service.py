@@ -297,7 +297,12 @@ class TaskService:
         "video dang mo", "video hien tai", "video hien tai",
         "thong tin video", "metadata video", "doc video",
         "video nay", "video dang xem",
+        "phan tich video", "phân tích video", "analyze video",
     )
+
+    # Repair Slice 04: URL video TikTok nhan dang truc tiep, khong phu
+    # thuoc message co chua cu phap tieng Viet hay khong.
+    TIKTOK_VIDEO_URL_RE = r"tiktok\.com/.{0,80}?/video/(\d{5,})"
 
     @classmethod
     def route_message(cls, message: str) -> dict:
@@ -315,6 +320,17 @@ class TaskService:
                     "params": {},
                     "matched": hits[:2],
                     "note": "user-facing task execution, chua phai Planner day du"}
+        # Repair Slice 04: message chua URL video TikTok -> route video
+        # truoc khi xet keywords, khong bat nguoi dung biet cu phap.
+        murl = re.search(cls.TIKTOK_VIDEO_URL_RE, str(message or ""),
+                         re.IGNORECASE)
+        if murl:
+            return {"job_type": "browser_video",
+                    "params": {"video_url": murl.group(0)
+                               if murl.group(0).startswith("http")
+                               else "https://www." + murl.group(0).lstrip("/")},
+                    "matched": ["tiktok_video_url"],
+                    "note": "repair slice 04: nhan dang URL video truc tiep"}
         vhits = [p for p in cls.BROWSER_VIDEO_PATTERNS if p in text]
         if vhits:
             return {"job_type": "browser_video",
@@ -372,12 +388,24 @@ class TaskService:
                 task_id, tab_id=tab_id, live_origin=live_origin, url=url,
                 grant_epoch=grant_epoch, timeout=timeout)
             out["route"] = route
+            self._finalize_browser_task(task_id, out)
             return out
         if route.get("job_type") == "browser_video":
+            # Repair Slice 04 (Manual Control cho phan tich video):
+            # neu message chua URL TikTok cu the nhung khong co tab LIVE
+            # (tab_id<=0) -> chay research/video truc tiep thay vi doi
+            # Bridge TAB_UNKNOWN. Khong hardcode URL; URL tu route params.
+            _vurl = str((route.get("params") or {}).get("video_url") or "")
+            if _vurl and int(tab_id or 0) <= 0:
+                out = await self.run_research_video_check(task_id, _vurl)
+                out["route"] = route
+                self._finalize_browser_task(task_id, out)
+                return out
             out = await self.run_browser_video_check(
                 task_id, tab_id=tab_id, live_origin=live_origin, url=url,
                 grant_epoch=grant_epoch, timeout=timeout)
             out["route"] = route
+            self._finalize_browser_task(task_id, out)
             return out
         if route.get("job_type") == "browser_search":
             out = await self.run_browser_search_check(
@@ -386,9 +414,46 @@ class TaskService:
                 grant_epoch=grant_epoch, timeout=timeout,
                 limit=int((route.get("params") or {}).get("limit") or 5))
             out["route"] = route
+            self._finalize_browser_task(task_id, out)
             return out
+        try:
+            record = self.get(task_id)
+            record["status"] = TaskStatus.NEEDS_ATTENTION
+            record["error"] = {"code": "NO_ROUTE_MATCH",
+                               "message": "message khong khop capability browser hien co"}
+            self._save(record)
+            self._emit(record, "task_blocked", {"code": "NO_ROUTE_MATCH"})
+        except Exception:
+            pass
         return {"ok": False, "error": "NO_ROUTE_MATCH",
                 "route": route, "task_id": task_id}
+
+    def _finalize_browser_task(self, task_id: str, out: dict) -> None:
+        """Repair Slice 04: task co ket qua phai chot trang thai that.
+
+        Truoc day status giu `queued` mai ngay ca khi da co error
+        (OBSERVATION_TIMEOUT...) hoac da co evidence -> UI hien sai.
+        ok -> COMPLETED; fail -> NEEDS_ATTENTION (giu error).
+        """
+        try:
+            rec = self.get(task_id)
+            if rec.get("status") == TaskStatus.STOP_REQUESTED:
+                return
+            if isinstance(out, dict) and out.get("ok"):
+                rec["status"] = TaskStatus.COMPLETED
+                self._save(rec)
+                self._emit(rec, "task_completed", {})
+            else:
+                err = str((out or {}).get("error", "UNKNOWN")
+                          if isinstance(out, dict) else "UNKNOWN")
+                rec["status"] = TaskStatus.NEEDS_ATTENTION
+                if not rec.get("error"):
+                    rec["error"] = {"code": err,
+                                    "message": "browser task failed"}
+                self._save(rec)
+                self._emit(rec, "task_blocked", {"code": err})
+        except Exception:
+            pass
 
     # ---- Slice 01 production caller: user task -> Gateway -> Bridge ----
     async def run_browser_actor_check(self, task_id: str, *, tab_id: int,
@@ -616,6 +681,75 @@ class TaskService:
         return {"ok": True, "task_id": task_id,
                 "evidence": r.get("evidence"),
                 "observation": r.get("observation")}
+
+    async def run_research_video_check(self, task_id: str,
+                                       video_url: str) -> dict:
+        """Repair Slice 04: phan tich video TikTok qua research provider.
+
+        Dung khi co URL cu the nhung khong co tab LIVE. Provider mac dinh
+        (MediaIntelProvider) tai + phan tich + tra dict nhe. Loi -> tra
+        metadata_only (khong gia ket qua frames).
+        """
+        from miro.research import service as _rs
+        record = self.get(task_id)
+        if record.get("status") == TaskStatus.STOP_REQUESTED:
+            return {"ok": False, "error": "TASK_STOP_REQUESTED",
+                    "task_id": task_id}
+        self._emit(record, "research_video_started", {"url": video_url})
+        try:
+            import miro.main as _main
+            provider = getattr(_main.app.state, "research_provider", None) \
+                or _rs.NullProvider()
+        except Exception:
+            provider = _rs.NullProvider()
+        try:
+            # Repair Slice 04: yt-dlp/media_intel la blocking IO nang ->
+            # chay trong thread de khong treo event loop cua BE.
+            import asyncio as _aio
+            res = await _aio.to_thread(_rs.analyze_video, provider,
+                                       video_url, True)
+            items = list(res.items or [])
+            detail = dict(items[0]) if items else {}
+            err = str(detail.get("error") or "")
+            evidence = {
+                "video_url": video_url,
+                "metadata": detail.get("metadata") or {},
+                "frames_analyzed": bool(detail.get("frames_analyzed")),
+                "evidence_level": res.evidence,
+                "summary": res.summary,
+                "sources": list(res.sources or []),
+                "provider": type(provider).__name__,
+            }
+            record = self.get(task_id)
+            record["evidence"] = evidence
+            self._save(record)
+            if err or not detail:
+                code = err.split(":")[0] if err else "VIDEO_ANALYZE_FAILED"
+                record = self.get(task_id)
+                if not record.get("error"):
+                    record["error"] = {"code": code[:60],
+                                       "message": err[:200]
+                                       or "research video failed"}
+                self._save(record)
+                self._emit(record, "research_video_failed",
+                             {"error": code[:60]})
+                return {"ok": False, "error": code[:60],
+                        "evidence": evidence, "task_id": task_id}
+            self._emit(record, "research_video_completed",
+                         {"evidence_level": res.evidence})
+            return {"ok": True, "task_id": task_id, "evidence": evidence}
+        except Exception as exc:  # noqa: BLE001
+            code = type(exc).__name__
+            try:
+                record = self.get(task_id)
+                record["error"] = {"code": code,
+                                   "message": str(exc)[:200]}
+                self._save(record)
+                self._emit(record, "research_video_failed",
+                             {"error": code})
+            except Exception:
+                pass
+            return {"ok": False, "error": code, "task_id": task_id}
 
     # ---- Slice 02B autonomous search: Observe->Decide->Act->Verify ----
     @staticmethod

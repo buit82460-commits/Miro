@@ -183,6 +183,30 @@ async def run_message(body: dict, request: Request):
             return out
         except (TaskConflictError, PermissionError) as exc:
             return _err(exc)
+    # Repair Slice 04: browser_video co URL cu the nhung khong co tab LIVE
+    # -> chay research/video truc tiep, khong doi Bridge TAB_UNKNOWN.
+    if route.get("job_type") == "browser_video" and _tab_raw <= 0:
+        _vurl = str(((route.get("params") or {}).get("video_url")) or "")
+        if _vurl:
+            try:
+                _rid = "msg-%s" % __import__("uuid").uuid4().hex[:12]
+                rec = service.submit(TaskSubmitRequest.model_validate({
+                    "request_id": _rid,
+                    "message": msg[:4000],
+                    "videos": [{"project_id": _rid, "title": msg[:100]}]}))
+            except Exception as exc:
+                return JSONResponse(status_code=400,
+                                    content={"ok": False,
+                                             "error": "BAD_MESSAGE: " +
+                                             type(exc).__name__})
+            try:
+                out = await service.run_research_video_check(
+                    rec["id"], _vurl)
+                out["route"] = route
+                service._finalize_browser_task(rec["id"], out)
+                return out
+            except (TaskConflictError, PermissionError) as exc:
+                return _err(exc)
     # Contract: live_origin phai la origin cua URL tab LIVE do Bridge thay
     # (khong phai domain caller tu khai). Resolve URL day du tu Bridge /tabs
     # truoc khi goi production chain; khong tin live_origin tho tu caller.

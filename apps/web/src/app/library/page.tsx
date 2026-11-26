@@ -9,9 +9,13 @@ export default function LibraryPage() {
   return (
     <MiroNav>
       <h1 data-testid="library-title">Thư viện</h1>
-      <p>Video trong kho — mở Editor để chỉnh rồi đưa đi xuất bản.</p>
+      <p>Video trong kho — BE chưa có route /library production (giữ chỗ, không giả dữ liệu).</p>
       {isLoading ? <p>Đang tải thư viện…</p> : null}
-      {isError ? <p style={{ color: "#B52E2E" }}>Chưa nối được BE.</p> : null}
+      {isError ? (
+        <p style={{ color: "#B52E2E" }}>
+          Thư viện chưa khả dụng trên BE production (404/405 là đúng — không dùng fixture giả).
+        </p>
+      ) : null}
       <div data-testid="library-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(240px,1fr))", gap: 12 }}>
         {(data ?? []).map((p) => {
           const id = String(p.id);

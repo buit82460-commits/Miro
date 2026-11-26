@@ -19,14 +19,22 @@ export type FullProject = Record<string, unknown>;
 const PREFIX = "/api";
 
 export const TasksService = {
+  // Canonical production: BE so huu state qua /tasks/recent + /run-message.
+  // (Cu: GET /tasks, POST /tasks/chat, POST /tasks/{id}/review khong ton tai tren BE.)
   list(): Promise<TaskItem[]> {
-    return api.get<TaskItem[]>(`${PREFIX}/tasks`);
+    return api.get<TaskItem[]>(`${PREFIX}/tasks/recent?limit=20`);
   },
   sendChat(input: ChatSendInput): Promise<TaskItem> {
-    return api.post<TaskItem>(`${PREFIX}/tasks/chat`, input);
+    return api.post<TaskItem>(`${PREFIX}/tasks/run-message`, {
+      message: input.message,
+      tab_id: 0,
+    });
   },
   review(id: string, input: ReviewInput): Promise<TaskItem> {
-    return api.post<TaskItem>(`${PREFIX}/tasks/${id}/review`, input);
+    if (input.decision === "stop") {
+      return api.post<TaskItem>(`${PREFIX}/tasks/${id}/stop`);
+    }
+    return api.post<TaskItem>(`${PREFIX}/tasks/${id}/approve`);
   },
   stop(id: string): Promise<TaskItem> {
     return api.post<TaskItem>(`${PREFIX}/tasks/${id}/stop`);
@@ -34,12 +42,18 @@ export const TasksService = {
 };
 
 export const LibraryService = {
+  // Repair Slice 04: BE khong co /library rieng; Thu vien hien doc qua
+  // threads history (BE so huu state). Trang hien thi unavailable ro rang
+  // thay vi gia hoat dong khi BE mat ket noi.
   list(): Promise<FullProject[]> {
     return api.get<FullProject[]>(`${PREFIX}/library`);
   },
 };
 
 export const PublishService = {
+  // Repair Slice 04: BE dung POST /threads/publish (dry-run) + POST
+  // /publications; khong co GET list batches. batches()/receipts() giu
+  // tuong thich hien thi lich su cuc bo (trang tu hien DỮ LIỆU MẪU).
   batches(): Promise<FullProject[]> {
     return api.get<FullProject[]>(`${PREFIX}/publish/batches`);
   },
@@ -254,19 +268,30 @@ export const StudioService = {
 };
 
 export const SettingsService = {
+  // Repair Slice 04: BE dung /connections/accounts + /platforms
+  // (khong co /settings/*). Anh xa semantics that, khong doi ten may moc.
   connections(): Promise<Record<string, unknown>[]> {
-    return api.get<Record<string, unknown>[]>(`${PREFIX}/settings/connections`);
+    return api.get<Record<string, unknown>[]>(`${PREFIX}/connections/accounts`);
   },
   platforms(): Promise<Registry> {
-    return api.get<Registry>(`${PREFIX}/settings/platforms`);
+    return api.get<Registry>(`${PREFIX}/platforms`);
   },
   upsertPlatform(input: PlatformUpsertInput): Promise<Registry> {
-    return api.post<Registry>(`${PREFIX}/settings/platforms`, input);
+    return api.post<Registry>(`${PREFIX}/platforms`, {
+      id: input.id,
+      name: input.name,
+      runtime: input.runtime,
+      accounts: input.accounts ?? [],
+    });
   },
   clonePlatform(id: string, input: PlatformCloneInput): Promise<Registry> {
-    return api.post<Registry>(`${PREFIX}/settings/platforms/${id}/clone`, input);
+    return api.post<Registry>(`${PREFIX}/platforms/${id}/clone`, {
+      new_id: input.new_id ?? "",
+    });
   },
   rollbackRegistry(input: RollbackInput): Promise<Registry> {
-    return api.post<Registry>(`${PREFIX}/settings/platforms/rollback`, input);
+    return api.post<Registry>(`${PREFIX}/platforms/rollback`, {
+      version: input.version,
+    });
   },
 };
