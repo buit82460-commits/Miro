@@ -293,6 +293,11 @@ def service_command(name: str) -> tuple[list[str], Path, dict] | None:
         if not node or not npm or not (web_dir / "node_modules").is_dir():
             return None
         env["PORT"] = str(PORTS["fe"])
+        # Standalone production UI (Slice 04): FE proxy /api/tasks/* sang BE
+        # that qua rewrite. Ton trong env co san; mac dinh tro ve BE launcher.
+        env["NEXT_PUBLIC_API_BASE"] = os.environ.get(
+            "NEXT_PUBLIC_API_BASE",
+            f"http://127.0.0.1:{PORTS['be']}")
         return ([npm, "run", "dev", "--", "-p", str(PORTS["fe"])], web_dir, env)
     if name == "browser-worker":
         entry = ROOT / "workers" / "browser" / "server.py"

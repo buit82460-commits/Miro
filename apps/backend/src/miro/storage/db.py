@@ -96,5 +96,16 @@ class TaskStore:
                  "timestamp": r["timestamp"], "type": r["type"],
                  "data": json.loads(r["data_json"])} for r in rows]
 
+    def recent(self, limit: int = 20) -> list[dict]:
+        """Task moi nhat de UI doc lap liet ke (read-only, khong doi state)."""
+        try:
+            n = max(1, min(int(limit), 100))
+        except (TypeError, ValueError):
+            n = 20
+        rows = self._db.execute(
+            "SELECT record_json FROM tasks ORDER BY created_at DESC LIMIT ?",
+            (n,)).fetchall()
+        return [json.loads(r["record_json"]) for r in rows]
+
     def close(self) -> None:
         self._db.close()

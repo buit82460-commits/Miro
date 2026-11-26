@@ -9,7 +9,9 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   async rewrites() {
     if (!apiBase) return [];
-    return [{ source: "/api/:path*", destination: `${apiBase}/:path*` }];
+    // beforeFiles: uu tien hon route noi bo /api/* (fixture),
+    // de trang live noi BE that qua cung prefix /api.
+    return { beforeFiles: [{ source: "/api/:path*", destination: `${apiBase}/:path*` }] };
   },
 };
 

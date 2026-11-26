@@ -6,6 +6,8 @@ import type { ReactNode } from "react";
 
 const LINKS = [
   { href: "/", label: "Công việc" },
+  { href: "/tasks-live", label: "Giao việc (live)" },
+  { href: "/runtime", label: "Runtime" },
   { href: "/library", label: "Thư viện" },
   { href: "/publish", label: "Xuất bản" },
   { href: "/editor", label: "Editor" },

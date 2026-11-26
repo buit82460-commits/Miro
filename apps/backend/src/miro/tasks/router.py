@@ -33,6 +33,48 @@ async def submit(payload: TaskSubmitRequest, request: Request):
         return _err(exc)
 
 
+@router.get("/recent")
+async def recent(request: Request, limit: int = 20):
+    """UI doc lap: liet ke task moi nhat (read-only, BE so huu state)."""
+    service = get_service(request)
+    try:
+        return service.store.recent(limit)
+    except TaskConflictError as exc:
+        return _err(exc)
+
+
+@router.get("/runtime/status")
+async def runtime_status(request: Request):
+    """UI doc lap: trang thai runtime + bridge wiring (redacted, khong lo key).
+
+    Tabs quan sat duoc doc tu Bridge /tabs (endpoint mo, read-only).
+    Credential tho khong bao gio xuat hien trong response.
+    """
+    service = get_service(request)
+    wiring = getattr(request.app.state, "bridge_wiring", None) or {}
+    tabs: list = []
+    tabs_error = ""
+    try:
+        from miro.tasks.bridge_config import load_bridge_config
+        cfg = (load_bridge_config().get("auth") or {})
+        base = str(cfg.get("base") or "http://127.0.0.1:18767")
+        import json as _js
+        import urllib.request as _url
+        raw = _url.urlopen(base + "/tabs", timeout=5).read()
+        tabs = ((_js.loads(raw) or {}).get("tabs") or [])
+    except Exception as exc:
+        tabs_error = type(exc).__name__
+    return {
+        "be": {"status": "ok"},
+        "wiring": {"ok": bool(wiring.get("ok")),
+                   "wiring": wiring.get("wiring", ""),
+                   "reason": wiring.get("reason", "")},
+        "bridge": {"tabs": tabs, "count": len(tabs),
+                   "error": tabs_error},
+        "tasks": {"count": len(service.store.recent(100))},
+    }
+
+
 @router.get("/{task_id}")
 async def get_task(task_id: str, request: Request):
     try:
