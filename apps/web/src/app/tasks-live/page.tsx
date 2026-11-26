@@ -52,7 +52,7 @@ export default function TasksLivePage() {
         Nhiem vu capability da nghiem thu (actor/video/search TikTok) qua{" "}
         <code>POST /tasks/run-message</code>. BE so huu state; chuyen trang khong mat task.
       </p>
-      <div style={{ display: "flex", gap: 8, maxWidth: 720, marginBottom: 8 }}>
+      <div style={{ display: "flex", gap: 8, maxWidth: 720, marginBottom: 8 }} suppressHydrationWarning>
         <input
           data-testid="live-input"
           value={message}
@@ -67,7 +67,7 @@ export default function TasksLivePage() {
 
       <h2 style={{ marginTop: 16 }}>Phân tích video (Manual Control)</h2>
       <p>Dán URL video TikTok — Miro tự phân tích, không cần tab hay cú pháp kỹ thuật.</p>
-      <div style={{ display: "flex", gap: 8, maxWidth: 720, marginBottom: 8 }}>
+      <div style={{ display: "flex", gap: 8, maxWidth: 720, marginBottom: 8 }} suppressHydrationWarning>
         <input
           data-testid="live-video-url"
           value={videoUrl}
@@ -83,7 +83,7 @@ export default function TasksLivePage() {
           {run.isPending ? "Đang phân tích..." : "Phân tích video"}
         </button>
       </div>
-      <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+      <div style={{ display: "flex", gap: 8, marginBottom: 8 }} suppressHydrationWarning>
         {SAMPLES.map((s) => (
           <button key={s.label} data-testid={`live-sample-${s.label}`} onClick={() => send(s.message)} disabled={run.isPending}>
             {s.label}

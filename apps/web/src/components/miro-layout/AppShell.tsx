@@ -78,7 +78,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   }, [setCommandPaletteOpen]);
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-[var(--color-canvas)] text-[var(--color-text-primary)]">
+    <div className="flex h-screen w-screen overflow-hidden bg-[var(--color-canvas)] text-[var(--color-text-primary)]" suppressHydrationWarning>
       {/* Desktop Sidebar */}
       <div className="hidden lg:flex h-full shrink-0">
         <GlobalSidebar />

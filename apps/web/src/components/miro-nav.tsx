@@ -17,12 +17,13 @@ const LINKS = [
 export default function MiroNav({ children }: { children: ReactNode }) {
   const path = usePathname();
   return (
-    <div style={{ display: "flex", minHeight: "100vh" }}>
+    <div style={{ display: "flex", minHeight: "100vh" }} suppressHydrationWarning>
       <aside
         data-testid="miro-sidebar"
         style={{ width: 220, borderRight: "1px solid #ddd", padding: 16, background: "#fff" }}
+        suppressHydrationWarning
       >
-        <div style={{ fontWeight: 800, fontSize: 20, marginBottom: 16 }}>Miro</div>
+        <div style={{ fontWeight: 800, fontSize: 20, marginBottom: 16 }} suppressHydrationWarning>Miro</div>
         <nav style={{ display: "flex", flexDirection: "column", gap: 4 }}>
           {LINKS.map((l) => (
             <Link
@@ -43,7 +44,7 @@ export default function MiroNav({ children }: { children: ReactNode }) {
           ))}
         </nav>
       </aside>
-      <main style={{ flex: 1, padding: 24, maxWidth: 1200 }}>{children}</main>
+      <main style={{ flex: 1, padding: 24, maxWidth: 1200 }} suppressHydrationWarning>{children}</main>
     </div>
   );
 }
