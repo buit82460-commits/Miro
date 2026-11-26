@@ -22,7 +22,7 @@ BRIDGE_BASE = "http://127.0.0.1:18767"
 OBS_TTL_S = 300
 
 READ_SPECS = ("title", "meta", "text-limited", "actor-login",
-              "video-identity", "feed-video", "search-videos")
+              "video-identity", "feed-video", "search-videos", "navigate")
 SPEC_FIELDS = {
     "title": ("title", "url"),
     "meta": ("title", "url", "description", "h1"),
@@ -34,7 +34,11 @@ SPEC_FIELDS = {
     "feed-video": ("title", "url", "video_url", "aweme_id", "author",
                    "caption_preview", "has_video"),
     "search-videos": ("title", "url", "records"),
+    # Slice 02B navigate: observation xac nhan URL sau dieu huong.
+    "navigate": ("title", "url"),
 }
+
+NAVIGATE_URL_PREFIXES = ("https://www.tiktok.com/",)
 
 
 def _post(base, path, body, session_id="", token="", timeout=10,
@@ -90,6 +94,22 @@ class BridgeClient:
             return {"ok": False, "error": "TAB_INVALID"}
         return _post(self.base, "/read",
                      {"tabId": tab_id, "read": spec, "instance": instance,
+                      "timeout_s": timeout_s, "task_id": task_id},
+                     "", "", self.timeout, self.backend_key)
+
+    def request_navigate(self, tab_id, url, *, instance="profile20-main",
+                           timeout_s=30, task_id=""):
+        # Slice 02B BACKEND ROLE: tao production navigate request, auth =
+        # backend key. URL phai trong allowlist TikTok (server check lai).
+        u = str(url or "")[:500]
+        if not u.startswith(NAVIGATE_URL_PREFIXES):
+            return {"ok": False, "error": "NAVIGATE_ORIGIN_DENIED"}
+        try:
+            tab_id = int(tab_id)
+        except (TypeError, ValueError):
+            return {"ok": False, "error": "TAB_INVALID"}
+        return _post(self.base, "/navigate",
+                     {"tabId": tab_id, "url": u, "instance": instance,
                       "timeout_s": timeout_s, "task_id": task_id},
                      "", "", self.timeout, self.backend_key)
 
@@ -210,6 +230,68 @@ def wait_observation(client, *, tab_id, spec, timeout=30,
                 return {"ok": True, "observation": c}
         time.sleep(1)
     return {"ok": False, "error": "OBSERVATION_TIMEOUT"}
+
+
+async def navigate_via_bridge(session_id, token, *, instance_id, tab_id,
+                              url, base=BRIDGE_BASE,
+                              timeout=30, backend_key="", task_id="",
+                              is_cancelled=None):
+    """Production NAVIGATE qua Bridge: request -> extension tabs.update ->
+    doi observation navigate -> validate URL khop target.
+
+    Tra {"ok": True, "observation"} hoac {"ok": False, "error"}.
+    Credential separation nhu read_via_bridge. URL chi trong allowlist
+    TikTok (server validate lai lan nua).
+    """
+    from miro.browser.runtime import (
+        _origin_of as _origin_of, _urls_same_destination as _same_dest)
+
+    target = str(url or "")[:500]
+    if not target.startswith(NAVIGATE_URL_PREFIXES):
+        return {"ok": False, "error": "NAVIGATE_ORIGIN_DENIED"}
+    client = BridgeClient(base, session_id, token,
+                          backend_key=backend_key)
+    req = client.request_navigate(tab_id, target, instance=instance_id,
+                                  timeout_s=timeout, task_id=task_id)
+    if not isinstance(req, dict) or not req.get("ok"):
+        err = (req or {}).get("error", "NAVIGATE_REQUEST_DENIED") \
+            if isinstance(req, dict) else "NAVIGATE_REQUEST_DENIED"
+        if not ((req or {}).get("status") == "AUTHORIZED"
+                or (req or {}).get("ok")):
+            return {"ok": False, "error": str(err)}
+    rid = str((req or {}).get("request_id") or "")
+    w = wait_observation(client, tab_id=tab_id, spec="navigate",
+                         timeout=timeout, request_id=rid,
+                         is_cancelled=is_cancelled)
+    if not w.get("ok"):
+        return w
+    obs = w["observation"]
+    got = str((obs.get("data") or {}).get("url")
+              or obs.get("live_origin") or "")
+    if not _same_dest(got, target):
+        # So khop query q (search) thay vi URL tuyet doi giong nhau.
+        try:
+            from urllib.parse import (urlparse as _up,
+                                      parse_qsl as _pqs)
+            _t, _g = _up(target), _up(got)
+            _same = (_t.netloc == _g.netloc
+                     and _t.path.rstrip("/") == _g.path.rstrip("/"))
+            if _same:
+                _tq = dict(_pqs(_t.query, keep_blank_values=True))
+                _gq = dict(_pqs(_g.query, keep_blank_values=True))
+                _same = str(_tq.get("q", "")) == str(_gq.get("q", ""))
+            if not _same:
+                return {"ok": False, "error": "NAVIGATE_MISMATCH"}
+        except Exception:
+            return {"ok": False, "error": "NAVIGATE_MISMATCH"}
+    if str(obs.get("instance_id") or "") != str(instance_id or ""):
+        return {"ok": False, "error": "OBSERVED_INSTANCE_MISMATCH"}
+    try:
+        if int(obs.get("tab_id")) != int(tab_id):
+            return {"ok": False, "error": "OBSERVED_TAB_MISMATCH"}
+    except (TypeError, ValueError):
+        return {"ok": False, "error": "OBSERVED_TAB_MISMATCH"}
+    return {"ok": True, "observation": obs}
 
 
 async def read_via_bridge(session_id, token, *, instance_id, tab_id,

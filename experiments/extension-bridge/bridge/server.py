@@ -509,6 +509,62 @@ class Handler(BaseHTTPRequestHandler):
                                     "request_id": request_id,
                                     "deadline_in": timeout_s,
                                     "auto_grant": bool(auto_granted)})
+        if path == "/navigate":
+            # Slice 02B BACKEND ROLE: dieu huong tab den URL hop le.
+            # Auth = X-Backend-Key. Extension session/token KHONG duoc tao
+            # navigate. URL phai qua validate_navigate_url (origin allowlist).
+            # Execution: extension chrome.tabs.update + observe lai URL moi.
+            from bridge.grants import validate_navigate_url as _val_nav
+            if not _backend_ok(self.headers.get("X-Backend-Key", "")):
+                return self._send(403, {"ok": False,
+                                        "error": "BACKEND_AUTH_REQUIRED"})
+            nav = _val_nav(data.get("url"))
+            if not nav["ok"]:
+                return self._send(403, nav)
+            try:
+                tab_id = int(data.get("tabId"))
+            except (TypeError, ValueError):
+                return self._send(400, {"ok": False, "error": "TAB_INVALID"})
+            inst = str(data.get("instance") or "")
+            if not inst:
+                return self._send(400, {"ok": False,
+                                        "error": "INSTANCE_REQUIRED"})
+            rec = REGISTRY.tabs.get((inst, tab_id))
+            if rec is None:
+                return self._send(404, {"ok": False, "error": "TAB_UNKNOWN"})
+            pol = CHANNEL.policy(inst)
+            if not pol.get("read_allowed") or pol.get("revoked"):
+                return self._send(403, {"ok": False,
+                                        "error": "POLICY_REVOKED"})
+            try:
+                timeout_s = float(data.get("timeout_s") or 30.0)
+            except (TypeError, ValueError):
+                timeout_s = 30.0
+            timeout_s = min(max(timeout_s, 5.0), 60.0)
+            import secrets as _secrets_nv
+            import time as _time_nv
+            now = _time_nv.time()
+            _cleanup_pending(now)
+            if len(PENDING) >= MAX_PENDING:
+                oldest = min(PENDING,
+                             key=lambda k: float(PENDING[k].get("created_at",
+                                                                0)))
+                PENDING.pop(oldest, None)
+            request_id = _secrets_nv.token_hex(8)
+            PENDING[request_id] = {
+                "instance": inst, "tab_id": tab_id,
+                "spec": "navigate", "url": nav["url"],
+                "created_at": now, "deadline": now + timeout_s,
+                "timeout_s": timeout_s,
+                "task_id": str(data.get("task_id") or ""),
+                "state": "queued", "claimed_by": "",
+                "claimed_at": 0.0, "cancelled": False,
+            }
+            return self._send(200, {"ok": True, "navigate": nav["url"],
+                                    "tabId": tab_id,
+                                    "status": "AUTHORIZED",
+                                    "request_id": request_id,
+                                    "deadline_in": timeout_s})
         # ---- Slice 01B: one-click connection & persistent auth ----
         if path == "/reconnect":
             # Trusted reconnect: device da link xin session moi, khong code.
@@ -640,6 +696,7 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(200, {"ok": True, "request_id": rid,
                                     "tabId": pend["tab_id"],
                                     "spec": pend["spec"],
+                                    "url": str(pend.get("url") or ""),
                                     "claim_token": claim_token})
         if path == "/inbox":
             # Extension poll lenh doc cho (dispatch server -> extension).
@@ -652,6 +709,7 @@ class Handler(BaseHTTPRequestHandler):
             _cleanup_pending(now)
             mine = [{"request_id": k, "tabId": v["tab_id"],
                      "spec": v["spec"],
+                     "url": str(v.get("url") or ""),
                      "deadline_in": max(0.0, float(v.get("deadline", 0))
                                         - now)}
                     for k, v in PENDING.items()
@@ -668,7 +726,12 @@ class Handler(BaseHTTPRequestHandler):
             s, err = CHANNEL._auth(sid, tok)
             if s is None:
                 return self._send(403, {"ok": False, "error": err})
-            spec = validate_read_spec(data.get("read"))
+            is_nav_rr = str(data.get("read") or "") == "navigate" or \
+                str(data.get("spec") or "") == "navigate"
+            if is_nav_rr:
+                spec = {"ok": True, "spec": "navigate"}
+            else:
+                spec = validate_read_spec(data.get("read"))
             if not spec["ok"]:
                 return self._send(403, spec)
             try:
@@ -697,6 +760,11 @@ class Handler(BaseHTTPRequestHandler):
                 if rseq <= int(str(s.get("last_seq") or 0)):
                     return self._send(403, {"ok": False,
                                             "error": "SEQ_REPLAY"})
+                if spec["spec"] == "navigate":
+                    # Navigate khong co manual path: bat buoc production
+                    # request_id do backend tao (fail-closed).
+                    return self._send(403, {"ok": False,
+                                            "error": "REQUEST_ID_MISMATCH"})
                 payload = data.get("data")
                 if not isinstance(payload, dict):
                     return self._send(400, {"ok": False,
@@ -762,6 +830,71 @@ class Handler(BaseHTTPRequestHandler):
             if _ct and str(data.get("claim_token") or "") != _ct:
                 return self._send(409, {"ok": False,
                                         "error": "CLAIM_STALE"})
+            if spec["spec"] == "navigate":
+                # Slice 02B: navigate lam doi URL nen KHONG check grant
+                # (grant gan voi origin cu). Thay vao do: policy phai con
+                # hieu luc + live_origin sau navigate phai cung destination
+                # voi URL backend yeu cau (extension bao cao that).
+                if rseq <= int(str(s.get("last_seq") or 0)):
+                    return self._send(403, {"ok": False,
+                                            "error": "SEQ_REPLAY"})
+                pol = CHANNEL.policy(s["instance"])
+                if not pol.get("read_allowed") or pol.get("revoked"):
+                    return self._send(403, {"ok": False,
+                                            "error": "POLICY_REVOKED"})
+                target = str(pend.get("url") or "")
+                if not target or not str(live_origin or "").startswith(
+                        "https://www.tiktok.com"):
+                    return self._send(403, {"ok": False,
+                                            "error": "NAVIGATE_MISMATCH"})
+                try:
+                    from urllib.parse import (urlparse as _up,
+                                              parse_qsl as _pqs,
+                                              urlencode as _ue)
+                    _t, _l = _up(target), _up(str(live_origin or ""))
+                    if _t.netloc != _l.netloc or \
+                            _t.path.rstrip("/") != _l.path.rstrip("/"):
+                        return self._send(403, {"ok": False,
+                                                "error": "NAVIGATE_MISMATCH"})
+                    _tq = dict(_pqs(_t.query, keep_blank_values=True))
+                    _lq = dict(_pqs(_l.query, keep_blank_values=True))
+                    if str(_tq.get("q", "")) != str(_lq.get("q", "")):
+                        return self._send(403, {"ok": False,
+                                                "error": "NAVIGATE_MISMATCH"})
+                except Exception:
+                    return self._send(403, {"ok": False,
+                                            "error": "NAVIGATE_MISMATCH"})
+                exec_err = str(data.get("exec_error") or "")
+                if exec_err:
+                    s["last_seq"] = rseq
+                    PENDING.pop(rid, None)
+                    DONE[rid] = now
+                    _cleanup_pending(now)
+                    return self._send(200, {"ok": True, "stored": False,
+                                            "exec_error": exec_err,
+                                            "terminal": True})
+                payload = data.get("data")
+                if not isinstance(payload, dict):
+                    return self._send(400, {"ok": False,
+                                            "error": "BAD_RESULT"})
+                s["last_seq"] = rseq
+                PENDING.pop(rid, None)
+                DONE[rid] = now
+                import time as _time_nv
+                OBSERVATIONS[(s["instance"], tab_id, rseq)] = {
+                    "spec": "navigate",
+                    "live_origin": str(live_origin or ""),
+                    "grant_seq": GRANTS.epoch(s["instance"], tab_id),
+                    "request_id": rid,
+                    "task_id": str(pend.get("task_id") or ""),
+                    "data": {"url": str(payload.get("url")
+                                        or live_origin or "")[:2000],
+                             "title": str(payload.get("title") or "")[:2000]},
+                    "untrusted": True,
+                    "observed_at": _time_nv.time(),
+                }
+                return self._send(200, {"ok": True, "stored": True,
+                                        "untrusted": True})
             # Grant bi thu hoi giua claim va execution -> tu choi execution,
             # giu request de backend timeout/huy dung contract.
             gg = GRANTS.check(pend.get("instance"), pend.get("tab_id"),

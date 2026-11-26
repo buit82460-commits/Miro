@@ -110,8 +110,37 @@ async def run_message(body: dict, request: Request):
                                      "error": "TAB_INVALID"})
     live_origin = str((body or {}).get("live_origin") or "")
     route = service.route_message(msg)
-    if route.get("job_type") not in ("browser_actor_check", "browser_search"):
+    if route.get("job_type") not in ("browser_actor_check", "browser_search",
+                                     "browser_video"):
         return {"ok": False, "error": "NO_ROUTE_MATCH", "route": route}
+    # Slice 02B autonomous: neu caller khong chi tab hop le (tab_id<=0),
+    # Miro tu observe/decide/act/verify (khong doi Coding Agent chuan bi).
+    # Quyet tam: Keyword tu route params; khong hardcode KANS 377.
+    try:
+        _tab_raw = int((body or {}).get("tab_id") or 0)
+    except (TypeError, ValueError):
+        _tab_raw = 0
+    if route.get("job_type") == "browser_search" and _tab_raw <= 0:
+        try:
+            _rid = "msg-%s" % __import__("uuid").uuid4().hex[:12]
+            rec = service.submit(TaskSubmitRequest.model_validate({
+                "request_id": _rid,
+                "message": msg[:4000],
+                "videos": [{"project_id": _rid, "title": msg[:100]}]}))
+        except Exception as exc:
+            return JSONResponse(status_code=400,
+                                content={"ok": False,
+                                         "error": "BAD_MESSAGE: " +
+                                         type(exc).__name__})
+        try:
+            kw = str(((route.get("params") or {}).get("keyword")) or "")
+            lim = int(((route.get("params") or {}).get("limit")) or 5)
+            out = await service.run_browser_autonomous_search(
+                rec["id"], keyword=kw, limit=lim)
+            out["route"] = route
+            return out
+        except (TaskConflictError, PermissionError) as exc:
+            return _err(exc)
     # Contract: live_origin phai la origin cua URL tab LIVE do Bridge thay
     # (khong phai domain caller tu khai). Resolve URL day du tu Bridge /tabs
     # truoc khi goi production chain; khong tin live_origin tho tu caller.

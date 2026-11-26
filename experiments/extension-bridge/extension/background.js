@@ -662,13 +662,55 @@ async function pollInbox() {
     const claimBody = await claim.json().catch(() => ({}));
     const claimToken = (claimBody && claimBody.claim_token) || "";
     if (!claimToken) continue; // khong co fencing token: khong execute
-    // 2. Execute: doc FIXED func, kem live_origin de server check grant.
+    // 2. Execute: navigate -> chrome.tabs.update + doi URL moi;
+    //    read FIXED func, kem live_origin de server check grant.
     let data = null;
     let execError = "";
-    try {
-      data = await readFixed(job.tabId, job.spec);
-    } catch (e) {
-      execError = String(e && e.message || e).slice(0, 200);
+    if (job.spec === "navigate") {
+      // Slice 02B: dieu huong chi trong TikTok (defense in depth, server
+      // da validate URL khi tao request). Doi URL moi truoc khi report.
+      const target = String((claimBody && claimBody.url) || job.url || "");
+      if (!target.startsWith("https://www.tiktok.com/")) {
+        execError = "NAVIGATE_ORIGIN_DENIED";
+      } else {
+        try {
+          await chrome.tabs.update(job.tabId, { url: target });
+        } catch (e) {
+          execError = String(e && e.message || e).slice(0, 200) || "TAB_GONE";
+        }
+        if (!execError) {
+          const t0 = Date.now();
+          let live = "";
+          try {
+            while (Date.now() - t0 < 20000) {
+              const t = await chrome.tabs.get(job.tabId).catch(() => null);
+              if (!t) break;
+              live = t.url || "";
+              try {
+                const tu = new URL(target);
+                const lu = new URL(live);
+                if (lu.hostname === tu.hostname &&
+                    lu.pathname.replace(/\/$/, "") ===
+                      tu.pathname.replace(/\/$/, "") &&
+                    lu.searchParams.get("q") === tu.searchParams.get("q")) {
+                  data = { url: live, title: t.title || "" };
+                  break;
+                }
+              } catch (e) { /* url chua parse duoc: doi tiep */ }
+              await new Promise((r) => setTimeout(r, 500));
+            }
+          } catch (e) {
+            execError = String(e && e.message || e).slice(0, 200);
+          }
+          if (!data && !execError) execError = "NAVIGATE_TIMEOUT";
+        }
+      }
+    } else {
+      try {
+        data = await readFixed(job.tabId, job.spec);
+      } catch (e) {
+        execError = String(e && e.message || e).slice(0, 200);
+      }
     }
     let liveUrl = "";
     try {

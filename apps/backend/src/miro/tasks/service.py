@@ -290,6 +290,15 @@ class TaskService:
         "tong hop video", "thu thap video", "tim video",
     )
 
+    # Slice 02B Level 1A: doc metadata video TikTok dang mo (video-identity).
+    # Khong dung actor-login thay the. Check TRUOC search de khong nham
+    # voi "tim video" (tim kiem); pattern o day la doc video hien tai.
+    BROWSER_VIDEO_PATTERNS = (
+        "video dang mo", "video hien tai", "video hien tai",
+        "thong tin video", "metadata video", "doc video",
+        "video nay", "video dang xem",
+    )
+
     @classmethod
     def route_message(cls, message: str) -> dict:
         """Dinh tuyen message tu nhien -> job. Khong NLP nang, khong Planner.
@@ -306,20 +315,33 @@ class TaskService:
                     "params": {},
                     "matched": hits[:2],
                     "note": "user-facing task execution, chua phai Planner day du"}
+        vhits = [p for p in cls.BROWSER_VIDEO_PATTERNS if p in text]
+        if vhits:
+            return {"job_type": "browser_video",
+                    "params": {},
+                    "matched": vhits[:2],
+                    "note": "slice 02B level 1A video metadata, khong actor-login"}
         shits = [p for p in cls.BROWSER_SEARCH_PATTERNS if p in text]
         if shits:
             # Slice 02: keyword + limit suy tu message (generic, khong
             # hardcode KANS/5). Quote "..." -> keyword; so N video -> limit.
+            # Pattern "tim kiem tiktok <KW> tong hop N video": KW nam giua
+            # ten platform va cum "tong hop/thu thap N video".
             kw = ""
             m = re.search(r'"([^"]{1,100})"', str(message or ""))
             if m:
                 kw = m.group(1).strip()
             else:
                 m2 = re.search(
-                    r"(?:tìm|tim|search)\s+(.+?)(?:\s+và|\s+va\b|,|\s*$)",
+                    r"(?:tìm kiếm|tim kiem|tim|tìm|search)\s+"
+                    r"(?:tiktok\s+)?(.+?)(?:\s+tổng hợp|\s+tong hop|"
+                    r"\s+thu thập|\s+thu thap|\s+và|\s+va\b|,|\s*$)",
                     str(message or ""), re.IGNORECASE)
                 if m2:
                     kw = m2.group(1).strip()[:100]
+                    # Cat bo tien to platform con sot ("tiktok ...").
+                    kw = re.sub(r"^(?:tiktok)\s+", "", kw,
+                                flags=re.IGNORECASE)
             limit = 5
             m3 = re.search(r"(\d{1,2})\s*video", text)
             if m3:
@@ -347,6 +369,12 @@ class TaskService:
         self._emit(record, "task_routed", {"route": route})
         if route.get("job_type") == "browser_actor_check":
             out = await self.run_browser_actor_check(
+                task_id, tab_id=tab_id, live_origin=live_origin, url=url,
+                grant_epoch=grant_epoch, timeout=timeout)
+            out["route"] = route
+            return out
+        if route.get("job_type") == "browser_video":
+            out = await self.run_browser_video_check(
                 task_id, tab_id=tab_id, live_origin=live_origin, url=url,
                 grant_epoch=grant_epoch, timeout=timeout)
             out["route"] = route
@@ -469,6 +497,14 @@ class TaskService:
         if record.get("status") == TaskStatus.STOP_REQUESTED:
             return {"ok": False, "error": "TASK_STOP_REQUESTED"}
         cfg = self.bridge or {}
+
+        def _is_cancelled():
+            try:
+                st = self.get(task_id).get("status")
+            except Exception:
+                return True
+            return st == TaskStatus.STOP_REQUESTED
+
         self._emit(record, "browser_search_started",
                    {"tab_id": tab_id, "url": live_origin or "",
                     "limit": int(limit or 5)})
@@ -477,7 +513,9 @@ class TaskService:
             instance_id=str(cfg.get("instance_id") or "profile20-main"),
             tab_id=int(tab_id), live_origin=str(live_origin or ""),
             grant_epoch=grant_epoch, url=url,
-            base=str(cfg.get("base") or ""), timeout=int(timeout or 30))
+            base=str(cfg.get("base") or ""), timeout=int(timeout or 30),
+            backend_key=str(cfg.get("backend_key") or ""),
+            task_id=str(task_id), is_cancelled=_is_cancelled)
         if not isinstance(r, dict) or not r.get("ok"):
             err = str((r or {}).get("error", "BRIDGE_READ_FAILED")) \
                 if isinstance(r, dict) else "BRIDGE_READ_FAILED"
@@ -516,6 +554,285 @@ class TaskService:
                               "video; phan con lai thieu du lieu, "
                               "khong suy doan")
         return out
+
+    # ---- Slice 02B Level 1A: video metadata dang mo (video-identity) ----
+    async def run_browser_video_check(self, task_id: str, *, tab_id: int,
+                                      live_origin: str = "",
+                                      url: str | None = None,
+                                      grant_epoch=None,
+                                      timeout: int = 30) -> dict:
+        """Level 1A dung nghia: doc metadata video TikTok dang mo.
+
+        video-identity / feed-video, khong dung actor-login thay the.
+        """
+        from miro.browser import gateway as _gateway
+
+        record = self.get(task_id)
+        if record.get("status") == TaskStatus.STOP_REQUESTED:
+            return {"ok": False, "error": "TASK_STOP_REQUESTED"}
+        cfg = self.bridge or {}
+
+        def _is_cancelled():
+            try:
+                st = self.get(task_id).get("status")
+            except Exception:
+                return True
+            return st == TaskStatus.STOP_REQUESTED
+
+        self._emit(record, "browser_video_started",
+                   {"tab_id": tab_id, "url": url or live_origin or ""})
+        r = await _gateway.read_video_via_bridge(
+            str(cfg.get("session_id") or ""), str(cfg.get("token") or ""),
+            instance_id=str(cfg.get("instance_id") or "profile20-main"),
+            tab_id=int(tab_id), live_origin=str(live_origin or ""),
+            url=url, grant_epoch=grant_epoch,
+            base=str(cfg.get("base") or ""), timeout=int(timeout or 30),
+            backend_key=str(cfg.get("backend_key") or ""),
+            task_id=str(task_id), is_cancelled=_is_cancelled)
+        if not isinstance(r, dict) or not r.get("ok"):
+            err = str((r or {}).get("error", "BRIDGE_READ_FAILED")) \
+                if isinstance(r, dict) else "BRIDGE_READ_FAILED"
+            try:
+                record = self.get(task_id)
+                record["error"] = {"code": err,
+                                   "message": "browser video check failed"}
+                self._save(record)
+                self._emit(record, "browser_video_failed", {"error": err})
+            except Exception:
+                pass
+            return {"ok": False, "error": err,
+                    "cancelled": err in ("REQUEST_CANCELLED",
+                                         "TASK_STOP_REQUESTED"),
+                    "task_id": task_id}
+        try:
+            record = self.get(task_id)
+            record["evidence"] = r.get("evidence")
+            self._save(record)
+            self._emit(record, "browser_video_completed",
+                       {"aweme_id": str(((r.get("evidence") or {})
+                                         .get("aweme_id") or ""))})
+        except Exception:
+            pass
+        return {"ok": True, "task_id": task_id,
+                "evidence": r.get("evidence"),
+                "observation": r.get("observation")}
+
+    # ---- Slice 02B autonomous search: Observe->Decide->Act->Verify ----
+    @staticmethod
+    def search_url_for(keyword: str) -> str:
+        """URL tim kiem TikTok hop le cho keyword (generic, khong hardcode).
+        Encode de tranh ky tu dieu khien; khong nhan URL ngoai TikTok."""
+        import urllib.parse as _up
+        kw = str(keyword or "").strip()[:100]
+        if not kw:
+            return ""
+        return ("https://www.tiktok.com/search?q=" +
+                _up.quote(kw, safe=""))
+
+    async def run_browser_autonomous_search(
+            self, task_id: str, *, keyword: str, limit: int = 5,
+            timeout: int = 30, tab_id: int = 0) -> dict:
+        """Miro tu thuc hien nhiem vu tim kiem qua production entry.
+
+        Observe: liet ke tab kha dung tu Bridge /tabs cho instance dang
+        quan ly (profile binding). Decide: chon tab TikTok neu co, neu
+        khong thi chon tab bat ky cung instance (khong tu tao tab ngoai
+        extension). Act: navigate den search URL qua Gateway (backend-key
+        tao request, extension tabs.update thuc thi). Verify: quan sat lai
+        URL moi + REA-MAT search-videos -> Evidence. Lap lai doc neu can.
+        """
+        import json as _json
+        import urllib.request as _url
+
+        from miro.browser import gateway as _gateway
+
+        record = self.get(task_id)
+        if record.get("status") == TaskStatus.STOP_REQUESTED:
+            return {"ok": False, "error": "TASK_STOP_REQUESTED"}
+        cfg = self.bridge or {}
+        base = str(cfg.get("base") or "http://127.0.0.1:18767")
+        inst = str(cfg.get("instance_id") or "profile20-main")
+
+        def _is_cancelled():
+            try:
+                st = self.get(task_id).get("status")
+            except Exception:
+                return True
+            return st == TaskStatus.STOP_REQUESTED
+
+        self._emit(record, "browser_observe_started",
+                   {"keyword": keyword, "limit": int(limit or 5)})
+        # Observe: tab kha dung cung instance (profile binding).
+        try:
+            _tabs = _json.loads(_url.urlopen(
+                base + "/tabs", timeout=10).read())
+            _all = ((_tabs or {}).get("tabs") or [])
+        except Exception as exc:
+            err = "BROWSER_UNAVAILABLE: " + type(exc).__name__
+            self._emit(record, "browser_observe_failed", {"error": err})
+            return {"ok": False, "error": err, "task_id": task_id}
+        mine = [t for t in _all
+                if str((t or {}).get("browser") or "") == inst]
+        if not mine:
+            err = "NO_MANAGED_TAB"
+            self._emit(record, "browser_observe_failed", {"error": err})
+            return {"ok": False, "error": err, "task_id": task_id,
+                    "hint": "extension Profile 20 chua ket noi"}
+        # Decide: goi y tab tu caller neu hop le, neu khong thi chon tab
+        # TikTok dau tien, cuoi cung la tab bat ky cung instance.
+        chosen = 0
+        try:
+            if int(tab_id or 0):
+                for t in mine:
+                    try:
+                        if int((t or {}).get("tab")) == int(tab_id):
+                            chosen = int(tab_id)
+                            break
+                    except (TypeError, ValueError):
+                        continue
+        except (TypeError, ValueError):
+            chosen = 0
+        if not chosen:
+            for t in mine:
+                u = str((t or {}).get("url") or "")
+                if "tiktok.com" in u:
+                    try:
+                        chosen = int((t or {}).get("tab"))
+                        break
+                    except (TypeError, ValueError):
+                        continue
+        if not chosen:
+            try:
+                chosen = int((mine[0] or {}).get("tab"))
+            except (TypeError, ValueError):
+                chosen = 0
+        if not chosen:
+            err = "NO_MANAGED_TAB"
+            self._emit(record, "browser_observe_failed", {"error": err})
+            return {"ok": False, "error": err, "task_id": task_id}
+        target = self.search_url_for(keyword)
+        if not target:
+            return {"ok": False, "error": "EMPTY_KEYWORD",
+                    "task_id": task_id}
+        self._emit(record, "browser_decide_completed",
+                   {"tab_id": chosen, "target": target})
+        if _is_cancelled():
+            return {"ok": False, "error": "TASK_STOP_REQUESTED",
+                    "cancelled": True, "task_id": task_id}
+        async def _collect(_nav_url: str) -> dict:
+            _out = None
+            for attempt in range(3):
+                if _is_cancelled():
+                    return {"ok": False, "error": "TASK_STOP_REQUESTED",
+                            "cancelled": True, "task_id": task_id}
+                _out = await self.run_browser_search_check(
+                    task_id, tab_id=int(chosen),
+                    live_origin="https://www.tiktok.com",
+                    url=_nav_url, timeout=int(timeout or 30),
+                    limit=int(limit or 5))
+                if not isinstance(_out, dict):
+                    break
+                if _out.get("ok") or _out.get("error") not in (
+                        "SEARCH_NO_RECORDS", "SEARCH_RECORDS_UNPARSEABLE",
+                        "OBSERVATION_TIMEOUT"):
+                    break
+                try:
+                    _rec = self.get(task_id)
+                    self._emit(_rec, "browser_collect_retry",
+                               {"attempt": attempt + 1,
+                                "error": _out.get("error")})
+                except Exception:
+                    pass
+            if isinstance(_out, dict):
+                _out["autonomous"] = True
+                _out["chosen_tab"] = int(chosen)
+                _out["navigated_url"] = _nav_url
+            return _out
+
+        # Act: navigate qua Gateway (authorization + backend key), tru khi
+        # tab da dung san destination (like-for-like: trang thu cong van
+        # doc duoc, tranh tabs.update thua gay OBSERVATION_TIMEOUT khi
+        # worker ngu). Kiem tra URL live qua Gateway read title, khong
+        # dung /tabs registry lam evidence (co the stale).
+        try:
+            _sess = str(cfg.get("session_id") or "")
+            _tok = str(cfg.get("token") or "")
+            _bk = str(cfg.get("backend_key") or "")
+            _cur = await _gateway.read_current_url_via_bridge(
+                _sess, _tok, instance_id=inst, tab_id=int(chosen),
+                live_origin="https://www.tiktok.com",
+                base=base, timeout=20, backend_key=_bk,
+                task_id=str(task_id), is_cancelled=_is_cancelled)
+            from miro.browser.runtime import (
+                _urls_same_destination as _same_dest2)
+            _live_url = str(((_cur.get("observation") or {}).get("data")
+                             or {}).get("url") or "")
+            if bool((_cur or {}).get("ok")) and _live_url and \
+                    _same_dest2(_live_url, target):
+                self._emit(record, "browser_act_skipped",
+                           {"tab_id": chosen, "url": _live_url,
+                            "reason": "ALREADY_AT_DESTINATION"})
+                self._emit(record, "browser_verify_completed",
+                           {"tab_id": chosen, "url": _live_url})
+                return await _collect(_live_url)
+        except Exception:
+            pass
+        self._emit(record, "browser_act_started",
+                   {"tab_id": chosen, "target": target})
+        nav = await _gateway.navigate_via_bridge(
+            str(cfg.get("session_id") or ""), str(cfg.get("token") or ""),
+            instance_id=inst, tab_id=int(chosen), url=target,
+            base=base, timeout=int(timeout or 30),
+            backend_key=str(cfg.get("backend_key") or ""),
+            task_id=str(task_id), is_cancelled=_is_cancelled)
+        if not isinstance(nav, dict) or not nav.get("ok"):
+            err = str((nav or {}).get("error", "BRIDGE_NAVIGATE_FAILED")) \
+                if isinstance(nav, dict) else "BRIDGE_NAVIGATE_FAILED"
+            if err == "OBSERVATION_TIMEOUT":
+                # Worker ngu khong gui observation, nhung tabs.update co the
+                # da doi URL that: verify lai URL live roi tiep tuc thay vi
+                # fail. Giong nut "thay nhung chua co bien lai": nhin lai.
+                try:
+                    _v = await _gateway.read_current_url_via_bridge(
+                        str(cfg.get("session_id") or ""),
+                        str(cfg.get("token") or ""),
+                        instance_id=inst, tab_id=int(chosen),
+                        live_origin="https://www.tiktok.com",
+                        base=base, timeout=25,
+                        backend_key=str(cfg.get("backend_key") or ""),
+                        task_id=str(task_id),
+                        is_cancelled=_is_cancelled)
+                    from miro.browser.runtime import (
+                        _urls_same_destination as _same_dest3)
+                    _vu = str(((_v.get("observation") or {}).get("data")
+                               or {}).get("url") or "")
+                    if bool((_v or {}).get("ok")) and _vu and \
+                            _same_dest3(_vu, target):
+                        self._emit(record, "browser_act_recovered",
+                                   {"tab_id": chosen, "url": _vu,
+                                    "reason": "NAVIGATE_OBS_LOST_URL_OK"})
+                        self._emit(record, "browser_verify_completed",
+                                   {"tab_id": chosen, "url": _vu})
+                        return await _collect(_vu)
+                except Exception:
+                    pass
+            try:
+                record = self.get(task_id)
+                record["error"] = {"code": err,
+                                   "message": "browser navigate failed"}
+                self._save(record)
+                self._emit(record, "browser_act_failed", {"error": err})
+            except Exception:
+                pass
+            return {"ok": False, "error": err,
+                    "cancelled": err in ("REQUEST_CANCELLED",
+                                         "TASK_STOP_REQUESTED"),
+                    "task_id": task_id}
+        nav_url = str(((nav.get("evidence") or {}).get("url")) or target)
+        self._emit(record, "browser_verify_completed",
+                   {"tab_id": chosen, "url": nav_url})
+        # Collect: REA-MAT search-videos tren trang vua navigate.
+        return await _collect(nav_url)
 
     # ---- stop: requested vs worker-stopped are distinct ----
     def request_stop(self, task_id: str) -> dict:

@@ -342,7 +342,7 @@ async def read_actor_via_bridge(session_id: str, token: str, *,
         live_origin=live_origin, spec="actor-login",
         base=base or BRIDGE_BASE, timeout=timeout,
         grant_epoch=grant_epoch, url=url, backend_key=backend_key,
-        task_id=task_id)
+        task_id=task_id, is_cancelled=is_cancelled)
     if not isinstance(r, dict) or not r.get("ok"):
         return r if isinstance(r, dict) else {
             "ok": False, "error": "BRIDGE_READ_FAILED"}
@@ -375,7 +375,10 @@ async def read_video_via_bridge(session_id: str, token: str, *,
                                 live_origin: str, url: str | None = None,
                                 grant_epoch=None, base: str = "",
                                 timeout: int = 30,
-                                expected_aweme: str = "") -> dict:
+                                expected_aweme: str = "",
+                                backend_key: str = "",
+                                task_id: str = "",
+                                is_cancelled=None) -> dict:
     """Production READ video-identity qua Bridge (không CDP/không Page).
 
     Validate: aweme_id tu URL that khop expected (neu task yeu cau);
@@ -390,7 +393,9 @@ async def read_video_via_bridge(session_id: str, token: str, *,
         session_id, token, instance_id=instance_id, tab_id=tab_id,
         live_origin=live_origin, spec="video-identity",
         base=base or BRIDGE_BASE, timeout=timeout,
-        grant_epoch=grant_epoch, url=url)
+        grant_epoch=grant_epoch, url=url,
+        backend_key=backend_key, task_id=task_id,
+        is_cancelled=is_cancelled)
     if not isinstance(r, dict) or not r.get("ok"):
         return r if isinstance(r, dict) else {
             "ok": False, "error": "BRIDGE_READ_FAILED"}
@@ -435,7 +440,10 @@ async def read_feed_video_via_bridge(session_id: str, token: str, *,
                                      instance_id: str, tab_id: int,
                                      live_origin: str, grant_epoch=None,
                                      base: str = "",
-                                     timeout: int = 30) -> dict:
+                                     timeout: int = 30,
+                                     backend_key: str = "",
+                                     task_id: str = "",
+                                     is_cancelled=None) -> dict:
     """Production READ video dau feed TikTok qua Bridge (trang chu).
 
     Spec "feed-video": mo anchor /video/ that dau tien trong DOM (feed
@@ -451,7 +459,9 @@ async def read_feed_video_via_bridge(session_id: str, token: str, *,
         session_id, token, instance_id=instance_id, tab_id=tab_id,
         live_origin=live_origin, spec="feed-video",
         base=base or BRIDGE_BASE, timeout=timeout,
-        grant_epoch=grant_epoch, url=live_origin)
+        grant_epoch=grant_epoch, url=live_origin,
+        backend_key=backend_key, task_id=task_id,
+        is_cancelled=is_cancelled)
     if not isinstance(r, dict) or not r.get("ok"):
         return r if isinstance(r, dict) else {
             "ok": False, "error": "BRIDGE_READ_FAILED"}
@@ -492,7 +502,10 @@ async def read_search_via_bridge(session_id: str, token: str, *,
                                  live_origin: str, grant_epoch=None,
                                  base: str = "",
                                  timeout: int = 30,
-                                 url: str | None = None) -> dict:
+                                 url: str | None = None,
+                                 backend_key: str = "",
+                                 task_id: str = "",
+                                 is_cancelled=None) -> dict:
     """Production READ N video dau trang search TikTok qua Bridge.
 
     Spec "search-videos": extension tra field `records` (JSON[]) — moi
@@ -510,7 +523,9 @@ async def read_search_via_bridge(session_id: str, token: str, *,
         session_id, token, instance_id=instance_id, tab_id=tab_id,
         live_origin=live_origin, spec="search-videos",
         base=base or BRIDGE_BASE, timeout=timeout,
-        grant_epoch=grant_epoch, url=url)
+        grant_epoch=grant_epoch, url=url,
+        backend_key=backend_key, task_id=task_id,
+        is_cancelled=is_cancelled)
     if not isinstance(r, dict) or not r.get("ok"):
         return r if isinstance(r, dict) else {
             "ok": False, "error": "BRIDGE_READ_FAILED"}
@@ -558,5 +573,85 @@ async def read_search_via_bridge(session_id: str, token: str, *,
                          "lease": {"instance_id": str(instance_id),
                                    "tab_id": int(tab_id),
                                    "url": live_origin,
+                                   "grant_epoch": obs.get("grant_epoch", 0)}},
+            "observation": obs}
+
+
+async def read_current_url_via_bridge(session_id: str, token: str, *,
+                                      instance_id: str, tab_id: int,
+                                      live_origin: str,
+                                      base: str = "", timeout: int = 20,
+                                      backend_key: str = "",
+                                      task_id: str = "",
+                                      is_cancelled=None) -> dict:
+    """Doc URL live hien tai cua tab qua Bridge (spec title).
+
+    Dung cho Act-skip: tab da dung san destination thi khong tabs.update
+    thua. Khong CDP, khong Page. Request tao bang backend key; extension
+    gui result bang session/token (credential separation).
+    """
+    from miro.browser.bridge_transport import (
+        BRIDGE_BASE, read_via_bridge as _read_bridge)
+
+    r = await _read_bridge(
+        session_id, token, instance_id=instance_id, tab_id=tab_id,
+        live_origin=live_origin, spec="title",
+        base=base or BRIDGE_BASE, timeout=timeout,
+        backend_key=backend_key, task_id=task_id,
+        is_cancelled=is_cancelled)
+    if not isinstance(r, dict) or not r.get("ok"):
+        return r if isinstance(r, dict) else {
+            "ok": False, "error": "BRIDGE_READ_FAILED"}
+    obs = r.get("observation") or {}
+    data = obs.get("data") if isinstance(obs.get("data"), dict) else {}
+    return {"ok": True,
+            "evidence": {"url": str(data.get("url") or live_origin or ""),
+                         "tab_id": str(tab_id),
+                         "instance_id": str(instance_id),
+                         "observed_at": obs.get("observed_at") or _now(),
+                         "record": {"observation": data},
+                         "provenance": "rea-eye",
+                         "platform": "tiktok"},
+            "observation": obs}
+
+
+async def navigate_via_bridge(session_id: str, token: str, *,
+                              instance_id: str, tab_id: int, url: str,
+                              base: str = "", timeout: int = 30,
+                              backend_key: str = "",
+                              task_id: str = "",
+                              is_cancelled=None) -> dict:
+    """Production NAVIGATE qua Bridge — diem vao duy nhat cho Miro tu
+    dieu huong (Slice 02B). Khong CDP, khong Page truc tiep.
+
+    Authorization toi thieu:
+    - URL chi trong allowlist TikTok (transport + server validate lai).
+    - Backend role tao request (backend key), extension role thuc thi.
+    - Sau navigate: verify observation khop target, khong tin blind.
+    """
+    from miro.browser.bridge_transport import (
+        BRIDGE_BASE, navigate_via_bridge as _nav)
+
+    r = await _nav(
+        session_id, token, instance_id=instance_id, tab_id=tab_id,
+        url=url, base=base or BRIDGE_BASE, timeout=timeout,
+        backend_key=backend_key, task_id=task_id,
+        is_cancelled=is_cancelled)
+    if not isinstance(r, dict) or not r.get("ok"):
+        return r if isinstance(r, dict) else {
+            "ok": False, "error": "BRIDGE_NAVIGATE_FAILED"}
+    obs = r.get("observation") or {}
+    data = obs.get("data") if isinstance(obs.get("data"), dict) else {}
+    return {"ok": True,
+            "evidence": {"url": str(data.get("url") or url or ""),
+                         "tab_id": str(tab_id),
+                         "instance_id": str(instance_id),
+                         "observed_at": obs.get("observed_at") or _now(),
+                         "record": {"observation": data},
+                         "provenance": "rea-eye",
+                         "platform": "tiktok",
+                         "lease": {"instance_id": str(instance_id),
+                                   "tab_id": int(tab_id),
+                                   "url": str(data.get("url") or url or ""),
                                    "grant_epoch": obs.get("grant_epoch", 0)}},
             "observation": obs}

@@ -571,3 +571,20 @@ Con lai: Chrome restart that (8), OFF that tren Chrome (9-10) — can 1 phien li
 - Test: cum Slice 02 + guard **40/40 PASS** (`test_slice02_production_caller` 4 + `test_bridge_search_video` 5 + `test_slice02_negative` 14 + gateway/feed/slice01/guard); full backend **443 passed + 2 skipped + 1 deselected** (deselected `test_videomd_native_regen` pre-existing ngoai pham vi, `media_intel` khong cham); bridge **85/85 PASS**.
 - Sua trong luc nghiem thu (khong mo rong pham vi): thread `url` day du qua `read_search_via_bridge`/`run_browser_search_check`/`run_task_message`; nới check origin so URL day du truoc, `check_observed_binding` van doi URL day du; endpoint tu resolve URL live tu Bridge `/tabs` (fail `TAB_UNKNOWN` khi tab chua quan sat); extension build JSON nguyen ven trong khung 2000/field (bot record tu cuoi, PARTIAL thay vi UNPARSEABLE); router dat `project_id` rieng moi message.
 - Gioi han trung thuc: `device_id` van la bearer (giong Slice 01B); cold-restart persist phia bridge chua chot root-cause (extension tu reconnect tot sau restart lan cuoi).
+
+## Slice 02B: Miro tu tim kiem TikTok A-Z (autonomous Observe-Decide-Act-Verify) - ACCEPTED (2026-11-26)
+
+- Production entry: `POST /tasks/run-message` + `tab_id<=0` -> `run_browser_autonomous_search` (Observe tabs / Decide tab TikTok / Act navigate qua Gateway / Verify URL + REA-MAT collect). Khong CDP/Playwright, khong chuan bi tab bang chrome.exe/urllib cho nhiem vu.
+- Navigate qua Bridge/extension: backend-key tao `POST /navigate` -> extension `chrome.tabs.update` + observe lai URL (validate query q khop target). Origin allowlist `https://www.tiktok.com/`, server + client double-check.
+- Live (Chrome that Profile 20, Bridge pid 34928 + BE duoi Launcher that):
+  | Level | Message + tab | Ket qua |
+  |---|---|---|
+  | 1A | `doc video dang mo nay` + tab 1302903705 (video @matmoithattha) | **DAT** - ok True, route browser_video, evidence rea-eye, aweme_id 7693231097555078420 dung video dang mo |
+  | 2b | `tim kiem tiktok giay the thao tong hop 4 video` + tab_id 0 | **DAT** - ok True, want/got 4/4, navigated ...q=giay the thao |
+  | 3 | `tim kiem tiktok kem chong nang tong hop 7 video` + tab_id 0 | **DAT** - ok True, want/got 7/7, navigated ...q=kem chong nang |
+  | 2 (KANS 377) | phien truoc | **DAT** - want/got 5/5, navigated ...q=KANS 377 |
+- Sua trong luc nghiem thu (khong mo rong pham vi, khong doi code giua nhiem vu): Act-skip khi tab da o dung destination (verify qua Gateway read title, khong dung /tabs registry lam evidence); fallback verify-lai-URL khi navigate OBSERVATION_TIMEOUT nhung tabs.update that da doi URL (worker ngu khong gui observation); collect retry toi da 3 lan (trang search can thoi gian render); parse keyword cat tien to platform thua ("kiem tiktok KANS..." -> "KANS...").
+- Negative live: reconnect device cu `dev-b9d1bd5acb7643ed` -> **403 DEVICE_UNKNOWN** (da thu hoi; trusted chi con `dev-d1b7e3cd55de923f`); navigate sai backend-key -> BACKEND_AUTH_REQUIRED; navigate URL ngoai scope -> NAVIGATE_ORIGIN_DENIED.
+- Test: `test_slice02b_navigate.py` **11/11 PASS** (6 negative navigate + autonomous + Level 1A route + search_url_for + Act-skip + recover); full backend **454 passed + 2 skipped + 1 failed** (`test_videomd_native_regen` - loi moi truong CLI rea-video thieu flag -o, pre-existing ngoai pham vi, khong regression).
+- Don vi tien te: "k" = nghin VND trong bao cao.
+- Gioi han trung thuc: service worker extension ngu giua chung gay OBSERVATION_TIMEOUT (da co Act-skip + fallback + collect retry); cold-restart persist van la bug rieng chua chot root-cause (pairing lai sau restart sinh device/instance moi).

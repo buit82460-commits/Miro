@@ -20,9 +20,13 @@ import time
 
 GRANT_TTL_S = 120
 READ_CAPABILITY = "read"
+NAVIGATE_CAPABILITY = "navigate"
 READ_SPECS = ("title", "meta", "text-limited", "actor-login",
               "video-identity", "feed-video", "search-videos")
 ALLOWED_ORIGINS = ("https://www.tiktok.com",)
+# Slice 02B navigate: chi duoc dieu huong trong origin da policy cho phep
+# (TikTok). Khong mo URL ngoai allowlist, khong nhan JS/scheme la.
+NAVIGATE_PATH_PREFIXES = ("https://www.tiktok.com/",)
 
 # Field cho phep theo spec (schema co dinh, cat 2000). actor-login chi doc
 # tin hieu login co cau truc, KHONG caption/comment/text tu do.
@@ -40,6 +44,9 @@ SPEC_FIELDS = {
     # rieng. Field JSON van cat 2000/field theo clean_observation — thiet ke
     # record gon de du cho N video dau (thieu -> record null-partial).
     "search-videos": ("title", "url", "records"),
+    # Slice 02B navigate: observation xac nhan URL sau dieu huong (backend
+    # so khop voi URL yeu cau truoc khi chap nhan).
+    "navigate": ("title", "url"),
 }
 
 
@@ -172,3 +179,17 @@ def validate_read_spec(spec):
     if str(spec or "") in READ_SPECS:
         return {"ok": True, "spec": str(spec)}
     return {"ok": False, "error": "READ_SPEC_DENIED"}
+
+
+def validate_navigate_url(url):
+    """Slice 02B: navigate chi trong origin policy cho phep (TikTok search).
+
+    Khong nhan scheme la (javascript:/data:/file:), khong nhan host ngoai
+    allowlist, khong nhan path chua ky tu dieu khien. Tra URL chuan hoa.
+    """
+    u = str(url or "").strip()[:500]
+    if not u.startswith(NAVIGATE_PATH_PREFIXES):
+        return {"ok": False, "error": "NAVIGATE_ORIGIN_DENIED"}
+    if any(c in u for c in (" ", "\n", "\r", "\t", "<", ">", '"', "\\")):
+        return {"ok": False, "error": "NAVIGATE_URL_INVALID"}
+    return {"ok": True, "url": u}
