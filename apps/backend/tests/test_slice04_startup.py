@@ -5,13 +5,17 @@
 - FE port mac dinh ban -> dung port tu do ke tiep trong range hep.
 - service fe giai quyet duoc tren Windows (npm run dev).
 """
+import importlib.util
 import sys
 from pathlib import Path
 from unittest.mock import patch
 
-sys.path.insert(0, "C:/Miro/windows")
-
-import miro as launcher
+_LAUNCHER_PATH = Path("C:/Miro/windows/miro.py")
+_spec = importlib.util.spec_from_file_location("miro_launcher", _LAUNCHER_PATH)
+assert _spec is not None and _spec.loader is not None
+launcher = importlib.util.module_from_spec(_spec)
+sys.modules["miro_launcher"] = launcher
+_spec.loader.exec_module(launcher)
 
 
 def test_fe_service_resolves_npm_dev():
