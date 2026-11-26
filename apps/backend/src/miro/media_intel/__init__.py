@@ -572,17 +572,18 @@ def survey_native(video_path: str | Path, out_dir: str | Path,
 
 def videomd_native(video_path: str | Path, out_dir: str | Path,
                    timeout: int = 900) -> dict:
-    """C1: goi VIDEO.md that (regen tu breakdown goc) cho Agent doc."""
+    """C1: goi VIDEO.md that (regen tu breakdown goc) cho Agent doc.
+
+    videomd nhan decompose out_dir (chua breakdown.json), regen VIDEO.md
+    tai cho — khong co flag -o."""
     result = analyze_native(video_path, out_dir, timeout=timeout)
-    bd_path = result.get("breakdown_path")
-    proc = _run_native_cli(
-        ["videomd", str(bd_path), "-o", str(Path(out_dir) / "vm-regen")],
-        timeout=timeout)
+    proc = _run_native_cli(["videomd", str(Path(out_dir))],
+                           timeout=timeout)
     return {"provenance": PROVENANCE, "provider": PROVIDER_NATIVE,
             "tool": TOOL, "file_sha256": result["file_sha256"],
             "observed_at": result["observed_at"],
             "engine": result.get("engine"),
-            "breakdown_path": bd_path,
+            "breakdown_path": result.get("breakdown_path"),
             "videomd_path": result.get("videomd_path"),
             "regen_stdout": (proc.stdout or "")[:500],
             "evidence": result.get("evidence"),

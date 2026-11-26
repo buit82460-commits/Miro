@@ -606,3 +606,14 @@ Con lai: Chrome restart that (8), OFF that tren Chrome (9-10) — can 1 phien li
    | Khong co managed tab | test_autonomous_no_managed_tab | NO_MANAGED_TAB |
 - Test moi truong `test_videomd_native_regen` fail: CLI `rea-video` khong nhan flag `-o` (pre-existing, ngoai pham vi slice, khong regression).
 - Cold-restart persistence giu lam bug rieng.
+
+### Slice 03 (2026-11-26) - Media Intelligence qua production entry
+
+- Fix `videomd_native` (apps/backend/src/miro/media_intel/__init__.py): goi `videomd <out_dir>` regen tai cho, thay vi `videomd <bd> -o <out>` (CLI videomd khong co flag -o). C1 **4/4 PASS** (161s), gom `test_videomd_native_regen`.
+- Noi `MediaIntelProvider` vao production (main.py): POST /research/video tra metadata_only dung qua BE.
+- 5 video KANS 377 xac dinh (metadata that qua yt-dlp, JS challenge tu solve bang native Python): 7701310812727692596 (74s, audio-only), 7711654770578083093 (106s, co hinh), 7712158622872079636 (35s, co hinh), 7712160154942246165 (18s, audio-only), 7712159530481618228 (25s, audio-only). Gioi han la per-video format availability, khong phai bot-block toan cuc.
+- Tai that: lvl1/src.mp4 13.78MB (video 2) + v3/src.mp4 2.57MB (video 3) + 3 mp3 audio.
+- Decompose that qua media_intel adapter: video 2 -> multimodal_analyzed, 19 shots, 106s, voice 68.7% female; video 3 -> multimodal_analyzed, 13 shots, 35.5s, voice 38% + music 56% 139.7BPM. Probe 3 audio: duration + sha256. STT BLOCKED (sherpa chua cai, can approval).
+- Level 1 (local video qua production entry): DAT. Level 2 (search+metadata): DAT (metadata_only). Level 3 (5 video KANS 377): PARTIAL - 2 co hinh full pipeline, 3 audio-only dung audio/probe (khong bia transcript/hinh). Level 4 (hook/phan canh/chuyen dong/SP): PARTIAL - storyboard + shots + audio that cho 2 video hinh (brand: BLACK FRIDAY + full combo TONER/SERUM/CREAM + SGS + Jackson Wang; reviewer: selfie mat moc noi truc tiep); 3 video audio chi phan tich tieng. Level 5 (generalization): BLOCKED - cho du 2 mau hinh de rut pattern brand-vs-reviewer, can them video hinh moi khang dinh.
+- Bridge regression: 89 passed. BE regression full ket o ~47% (co dau hieu test live treo); thay bang tap chon loc media+research: 30 passed (native/p0/p1/p2/research/media-provider/no_direct_media).
+- Metadata+Keyframes chi la fallback, chua chot kien truc.

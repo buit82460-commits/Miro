@@ -75,6 +75,11 @@ app.state.task_service = _task_service
 app.state.bridge_wiring = _init_bridge_wiring()
 app.state.run_task = lambda coro: asyncio.ensure_future(coro)
 app.state.research_provider = research_service.NullProvider()
+try:
+    from miro.research.media_provider import MediaIntelProvider
+    app.state.research_provider = MediaIntelProvider()
+except Exception:
+    pass
 
 app.include_router(health.router)
 app.include_router(tasks_router)
