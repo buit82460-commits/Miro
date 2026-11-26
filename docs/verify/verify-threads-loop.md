@@ -616,7 +616,14 @@ Con lai: Chrome restart that (8), OFF that tren Chrome (9-10) — can 1 phien li
 - Decompose that qua media_intel adapter: video 2 -> multimodal_analyzed, 19 shots, 106s, voice 68.7% female; video 3 -> multimodal_analyzed, 13 shots, 35.5s, voice 38% + music 56% 139.7BPM. So sanh truc tiep tu 2 breakdown: V2 conf 0.574 / V3 conf 0.322, lang zh/zh (can VLM hoac STT de khang dinh loi thoai). `compare_videos_native` chay doc lap (decompose lai ca 2): evidence multimodal_analyzed, 2/2 ok (19 vs 13 shots), same_verdict=false. Probe 3 audio: duration + sha256. STT BLOCKED (sherpa chua cai, can approval).
 - Level 1 (local video qua production entry): DAT. Level 2 (search+metadata): DAT (metadata_only). Level 3 (5 video KANS 377): PARTIAL - 2 co hinh full pipeline, 3 audio-only dung audio/probe (khong bia transcript/hinh). Level 4 (hook/phan canh/chuyen dong/SP): PARTIAL - storyboard + shots + audio that cho 2 video hinh (brand: BLACK FRIDAY + full combo TONER/SERUM/CREAM + SGS + Jackson Wang; reviewer: selfie mat moc noi truc tiep); 3 video audio chi phan tich tieng. Level 5 (generalization): BLOCKED - cho du 2 mau hinh de rut pattern brand-vs-reviewer, can them video hinh moi khang dinh.
 - Bridge regression: 89 passed. BE full: **454 passed + 2 skipped** (22:50, chay --ignore C1) + C1 rieng 4/4 PASS → toan BE **458 passed, 2 skipped**. Tap chon loc media+research chay truoc: 30 passed (native/p0/p1/p2/research/media-provider/no_direct_media).
-- Metadata+Keyframes chi la fallback, chua chot kien truc.
+### Slice 04 hoan thien startup (2026-11-27) - one-click launch
+
+- HEAD truoc: ec94b0e (BE+Bridge) + 67e2f2c (verify-foundation). Pham vi: chi windows/miro.py + Miro-Standalone.bat + test startup + docs/STANDALONE.md.
+- Launcher: idempotency (manifest con song -> tu choi, khong sinh process trung); FE port mac dinh ban -> port tu do ke tiep (3101-3150), khong doat port app khac; BE/Bridge port ban -> fail-closed; manifest ghi port that; wait_ready + mo UI theo port that; mo /runtime thay vi /docs.
+- BAT: len ca be,bridge,fe, tu mo UI.
+- Nghiem thu that: stop sach (manifest xoa) -> start one-click tu trang thai tat: be+bridge+fe duoi 1 launcher, health http-200; FE->BE wiring OK (28 tasks); giao viec qua UI (browser_actor_check); start chong bi tu choi; /api/tasks/chat tra 405 tu BE (rewrite thang fixture, khong fallback am tham); stop dung quy trinh.
+- Regression tai HEAD moi: startup 3 passed; bridge 89 passed; typecheck PASS; e2e live 1 passed; BE full dang chay (den 48%+ van tien trien, se bo sung so lieu khi xong).
+- Gioi han: FE van npm run dev (chua production build); L3/L4/L5 + STT/VLM + cold-restart pairing giu PARTIAL/BLOCKED.
 
 ### Slice 04 (2026-11-26) - Standalone Runtime & Frontend Integration
 

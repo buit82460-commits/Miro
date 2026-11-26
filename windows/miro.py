@@ -292,7 +292,17 @@ def service_command(name: str) -> tuple[list[str], Path, dict] | None:
         npm = shutil.which("npm")
         if not node or not npm or not (web_dir / "node_modules").is_dir():
             return None
-        env["PORT"] = str(PORTS["fe"])
+        fe_port = PORTS["fe"]
+        if _port_in_use(fe_port):
+            free = _free_port(fe_port + 1, fe_port + 50)
+            if free is None:
+                print(f"Port {fe_port} (fe) is busy — close the old instance or set MIRO_FE_PORT.",
+                      file=sys.stderr)
+                raise RuntimeError(f"FE_PORT_BUSY:{fe_port}")
+            print(f"Port {fe_port} (fe) is busy — using free port {free} instead.")
+            fe_port = free
+        env["PORT"] = str(fe_port)
+        env["MIRO_FE_ACTUAL_PORT"] = str(fe_port)
         # Standalone production UI (Slice 04): FE proxy /api/tasks/* sang BE
         # that qua rewrite. Ton trong env co san; mac dinh tro ve BE launcher.
         env["NEXT_PUBLIC_API_BASE"] = os.environ.get(
@@ -347,17 +357,34 @@ def wait_ready(url: str, proc: subprocess.Popen, seconds: int = 90) -> None:
     raise RuntimeError(f"service startup timed out: {url}")
 
 
+def _free_port(start: int, end: int) -> int | None:
+    """Tim port trong con so huu cua Launcher (FE), khong doat port app khac.
+
+    Chi goi khi port mac dinh ban; quet range hep ngay sau mac dinh.
+    """
+    for port in range(start, end + 1):
+        if not _port_in_use(port):
+            return port
+    return None
+
+
 def _port_in_use(port: int) -> bool:
     with socket.socket() as sock:
         return sock.connect_ex(("127.0.0.1", port)) == 0
 
 
 def _write_manifest(specs: list, processes: list) -> None:
+    ports = {}
+    for spec, proc in zip(specs, processes):
+        name = spec[0]
+        extra = spec[3] if len(spec) > 3 else {}
+        actual = extra.get("MIRO_FE_ACTUAL_PORT")
+        ports[name] = int(actual) if name == "fe" and actual else PORTS[name]
     MANIFEST.write_text(json.dumps({
         "root": str(ROOT),
         "launcher": os.getpid(),
         "services": {spec[0]: proc.pid for spec, proc in zip(specs, processes)},
-        "ports": {spec[0]: PORTS[spec[0]] for spec in specs},
+        "ports": ports,
     }, indent=2), encoding="utf-8")
 
 
@@ -366,6 +393,17 @@ def cmd_start(only: list[str] | None = None, open_browser: bool = True) -> int:
     if not deps_ok:
         print("Missing required dependencies — install fastapi/uvicorn first.", file=sys.stderr)
         return 1
+    # Idempotency: manifest con song -> tu choi start chong (khong sinh process trung).
+    if MANIFEST.exists():
+        try:
+            rec = json.loads(MANIFEST.read_text(encoding="utf-8"))
+            if rec.get("root") == str(ROOT) and _pid_alive(int(rec.get("launcher") or 0)):
+                print(f"Launcher already running (pid {rec.get('launcher')}) — use stop first.",
+                      file=sys.stderr)
+                return 1
+        except (OSError, ValueError):
+            pass
+        print("Stale manifest found (launcher dead) — checking ports before start.")
     wanted = only or list(SERVICES)
     specs: list[tuple] = []
     for name in wanted:
@@ -402,14 +440,16 @@ def cmd_start(only: list[str] | None = None, open_browser: bool = True) -> int:
                                               stdout=log, stderr=subprocess.STDOUT,
                                               creationflags=flags))
         _write_manifest(specs, processes)
+        manifest_ports = (json.loads(MANIFEST.read_text(encoding="utf-8")).get("ports") or {})
         for (name, _cmd, _cwd, _extra), proc in zip(specs, processes):
-            wait_ready(f"http://127.0.0.1:{PORTS[name]}{HEALTH_PATHS[name]}", proc)
-            print(f"  [up] {name} -> http://127.0.0.1:{PORTS[name]}")
+            wait_ready(f"http://127.0.0.1:{manifest_ports.get(name, PORTS[name])}{HEALTH_PATHS[name]}", proc)
+            print(f"  [up] {name} -> http://127.0.0.1:{manifest_ports.get(name, PORTS[name])}")
         names = [s[0] for s in specs]
         print(f"Miro up ({', '.join(names)}). Ctrl+C to stop all.", flush=True)
-        if open_browser and "be" in names:
+        if open_browser and "fe" in names:
             import webbrowser
-            webbrowser.open(f"http://127.0.0.1:{PORTS['be']}/docs")
+            fe_port = (json.loads(MANIFEST.read_text(encoding="utf-8")).get("ports") or {}).get("fe", PORTS["fe"])
+            webbrowser.open(f"http://127.0.0.1:{fe_port}/runtime")
         while True:
             if CONTROL.exists():
                 try:
