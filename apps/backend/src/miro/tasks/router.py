@@ -154,7 +154,23 @@ async def run_message(body: dict, request: Request):
     route = service.route_message(msg)
     if route.get("job_type") not in ("browser_actor_check", "browser_search",
                                      "browser_video"):
-        return {"ok": False, "error": "NO_ROUTE_MATCH", "route": route}
+        # Repair: message khong route duoc cung tao task + chot NEEDS_ATTENTION
+        # (BE so huu state; UI hien that thay vi mat hut).
+        try:
+            _rid = "msg-%s" % __import__("uuid").uuid4().hex[:12]
+            _rec = service.submit(TaskSubmitRequest.model_validate({
+                "request_id": _rid,
+                "message": msg[:4000],
+                "videos": [{"project_id": _rid, "title": msg[:100]}]}))
+        except Exception as exc:
+            return JSONResponse(status_code=400,
+                                content={"ok": False,
+                                         "error": "BAD_MESSAGE: " +
+                                         type(exc).__name__})
+        _out = {"ok": False, "error": "NO_ROUTE_MATCH",
+                "route": route, "task_id": _rec["id"]}
+        service._finalize_browser_task(_rec["id"], _out)
+        return _out
     # Slice 02B autonomous: neu caller khong chi tab hop le (tab_id<=0),
     # Miro tu observe/decide/act/verify (khong doi Coding Agent chuan bi).
     # Quyet tam: Keyword tu route params; khong hardcode KANS 377.
@@ -180,6 +196,9 @@ async def run_message(body: dict, request: Request):
             out = await service.run_browser_autonomous_search(
                 rec["id"], keyword=kw, limit=lim)
             out["route"] = route
+            # Repair: chot trang thai that cho task search tu dong
+            # (NO_MANAGED_TAB... cung phai NEEDS_ATTENTION, khong kept queued).
+            service._finalize_browser_task(rec["id"], out)
             return out
         except (TaskConflictError, PermissionError) as exc:
             return _err(exc)
@@ -228,9 +247,24 @@ async def run_message(body: dict, request: Request):
     except Exception:
         live_url = ""
     if not live_url:
-        return {"ok": False, "error": "TAB_UNKNOWN",
-                "route": route,
+        # Repair: TAB_UNKNOWN cung tao task + chot NEEDS_ATTENTION
+        # (khong de caller nhan dict khong task_id roi UI mat dau vet).
+        try:
+            _rid = "msg-%s" % __import__("uuid").uuid4().hex[:12]
+            _rec = service.submit(TaskSubmitRequest.model_validate({
+                "request_id": _rid,
+                "message": msg[:4000],
+                "videos": [{"project_id": _rid, "title": msg[:100]}]}))
+        except Exception as exc:
+            return JSONResponse(status_code=400,
+                                content={"ok": False,
+                                         "error": "BAD_MESSAGE: " +
+                                         type(exc).__name__})
+        _out = {"ok": False, "error": "TAB_UNKNOWN",
+                "route": route, "task_id": _rec["id"],
                 "hint": "tab chua duoc extension quan sat sau reload"}
+        service._finalize_browser_task(_rec["id"], _out)
+        return _out
     try:
         _rid = "msg-%s" % __import__("uuid").uuid4().hex[:12]
         rec = service.submit(TaskSubmitRequest.model_validate({

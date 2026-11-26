@@ -42,3 +42,33 @@ def test_no_route_match_finalizes_needs_attention(tmp_path):
     assert stored["status"] == "needs_attention", stored
     assert stored["error"]["code"] == "NO_ROUTE_MATCH", stored
     print("no-route finalizes: PASS")
+
+
+def _submit(svc, rid, msg):
+    return svc.submit(TaskSubmitRequest.model_validate(
+        {"request_id": rid, "message": msg,
+         "videos": [{"project_id": rid, "title": msg[:100]}]}))
+
+
+def test_finalize_browser_fail_closes_task(tmp_path):
+    # Repair: NO_MANAGED_TAB / TAB_UNKNOWN cung phai NEEDS_ATTENTION,
+    # khong de task ket queued mai (UI hien sai).
+    svc = _svc(str(tmp_path))
+    for rid, code in (("req-fin-1", "NO_MANAGED_TAB"),
+                      ("req-fin-2", "TAB_UNKNOWN")):
+        rec = _submit(svc, rid, "tim kiem tiktok KANS 377")
+        out = {"ok": False, "error": code, "task_id": rec["id"]}
+        svc._finalize_browser_task(rec["id"], out)
+        stored = svc.get(rec["id"])
+        assert stored["status"] == "needs_attention", stored
+        assert stored["error"]["code"] == code, stored
+    print("finalize-fail closes: PASS")
+
+
+def test_finalize_browser_ok_completes(tmp_path):
+    svc = _svc(str(tmp_path))
+    rec = _submit(svc, "req-fin-3", "tim kiem tiktok KANS 377")
+    svc._finalize_browser_task(rec["id"], {"ok": True,
+                                           "task_id": rec["id"]})
+    assert svc.get(rec["id"])["status"] == "completed"
+    print("finalize-ok completes: PASS")
