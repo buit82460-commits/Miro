@@ -274,3 +274,38 @@ Gioi han trung thuc:
 - E2E fixture cu `threads-milestone` fail o buoc receipt khi BE chay (route batches uu tien BE dry-run that thay vi fallback fixture) — hanh vi co san tu truoc Slice 04 (route do toi khong sua), khong phai regression. Muon chay du E2E fixture thi dung BE tam thoi.
 - Full BE suite lan dau timeout o 63% (khong fail); chay lai nen tron 449 passed.
 - Extension/Chrome that chua noi trong dot nay (tabs `[]`); `run-message` fail-closed `TAB_UNKNOWN` dung thiet ke.
+
+## Agent C — Baseline inventory + worktree map (2026-11-27, branch ui/port-prototype-v2, HEAD a94c1e2)
+
+- Staged: 0 file. Unstaged (modified, chua commit): 50 file. Untracked: 52 entries.
+- Nhom unstaged: (a) Port prototype FE M1-M4: 43 file `apps/web/src/features/*` + components/hooks/lib/services/stores/i18n/e2e (diff -4741/+3014, chu yeu thu gon mock pages); (b) Slice 04 repair: `apps/backend/src/miro/tasks/router.py` (+13: them `GET /tasks` compat alias cua `GET /tasks/recent`, read-only); (c) e2e + api routes dieu chinh nho theo port.
+- Nhom untracked: `prototype/` (nguon Vite goc de port); `apps/web/src/app/api/{connections,platforms,publications,renders,research,schedule,studio,tasks/[id]/*,tasks/recent,run-message,runtime,threads}/` + `apps/web/src/app/prototype/` + `apps/web/src/app/settings/connections/` (routes moi cua dot port); `apps/web/src/{components/miro-shared/RuntimeBridgeBanner,hooks/data/useConnections,lib/{be-proxy,be,poll,threads},lib/services/{connections,platforms}.service}.ts` + `tsconfig.tsbuildinfo`; `docs/{foundation/slice05-architecture-proposal.md,integration/MIRO-BACKEND-API-CONTRACT.md,verify/frontend-product-acceptance-audit.md,ba-ben/...}`; `repos/`, `skills-lock.json`, tool dirs (`.agents/.claude/.playwright-mcp/.taste-skill`); RAC CAN DON: 2 file `.txt` ten tieng Viet + 4 file `bly*.png` (asset ngoai, chua phan loai — chua add).
+- Worktree map: Agent A (Slice 04 repair) lam TAI `C:/Miro` (working tree hien tai, chua commit — KHONG checkout/switch khi chua stash). Agent B (Slice 05 P0-P1) lam TAI `C:/Miro-slice05` (branch `slice05/p0-p1`, detached tai a94c1e2, status sach). Cam ca hai ben sua `main.py`, `FE services`, `TaskService` tren cung tree — B chi code trong worktree cua minh, merge sau qua review.
+- Canonical doc `docs/foundation/slice05-architecture-proposal.md` (528 dong, REVISION 2 + FINAL REVIEW APPROVAL reviewer 1): KHONG sua kien truc; doc qua read-tool UTF-8 binh thuong (mojibake chi la artifact `Get-Content` PowerShell, khong phai loi file) — khong mo review moi.
+- Trang thai trung thuc: FE moi (AppShell) van MOCK ONLY; FE cu PARTIAL; BUG-11 (bridge cuop QA tab) CONFIRMED sau restart, chua fix; `/workspace` Completion Gate CHUA DAT (mock + mojibake source). Khong danh DONE bat ky muc nao theo ke hoach.
+## Agent C — Runtime map + baseline MOCK ONLY (2026-11-27 ~17:00, không commit code người khác)
+
+### 1. Hai worktree
+
+| Bên | Path | Branch | HEAD | Status |
+|---|---|---|---|---|
+| Slice04 + FE unmock | `C:/Miro` | `ui/port-prototype-v2` | `a94c1e2` | 50 modified unstaged + 52 untracked (đang làm, KHÔNG đụng) |
+| Slice05 P0-P1 | `C:/Miro-slice05` | `slice05/p0-p1` | `10d0e84` | **sạch** (0 modified) |
+
+### 2. Runtime map (tất cả process đang chạy đều thuộc `C:/Miro` — slice05 CHƯA có runtime)
+
+| Thành phần | PID | Lệnh / CWD | Port / URL | DB |
+|---|---|---|---|---|
+| BE uvicorn | 31488 (con của 21088 `windows/miro.py start --only be,bridge`) | `C:/Miro`, powershell 17760 ← opencode server 2784 | `127.0.0.1:8770` | `C:\Miro\var\tasks.db` (+`threads-*.db`, `conversations.db`, `lease.db`) — hardcode tuyệt đối trong `main.py:42`, `app.py:22` |
+| Extension bridge | 36796 `experiments/extension-bridge/bridge/server.py` | `C:/Miro` | `127.0.0.1:18767` | — |
+| FE Next dev | 27676 `next dev --port 3100` (CWD `C:/Miro/apps/web`, qua npm 30612 ← powershell 14472 ← opencode server) | FE `C:/Miro` | `0.0.0.0:3100` → FE `http://localhost:3100`, trỏ BE 8770 | — |
+| Port 3000 | 34352 | `D:\BAI-HOC\kltls-fe` (dự án ngoài, không liên quan) | bỏ qua | — |
+
+Cô lập: FE 3100 ↔ BE 8770 ↔ bridge 18767 là một cụm duy nhất của `C:/Miro`. **CẢNH BÁO**: `C:/Miro-slice05/apps/backend/src/miro/main.py:43` vẫn hardcode `C:\Miro\var\tasks.db` — nếu khởi BE từ worktree slice05 sẽ DÙNG CHUNG DB production. Chưa khởi nên chưa sao; khi chạy slice05 phải sửa path hoặc set `db_path` riêng TRƯỚC khi start.
+
+### 3. Báo cáo "14 trang MOCK ONLY" của Agent D thuộc baseline nào
+
+- Báo cáo = `docs/verify/frontend-product-acceptance-audit.md`, ngày 2026-11-26, đo tại commit **`73de3f4`** (UI port 14 trang, 100% `useMiroStore`/`launchTaskFromInstruction`).
+- Worktree `C:/Miro` HIỆN TẠI đã chứa unmock FE-M1→M4 (unstaged, sau `73de3f4` → `a94c1e2` + diff hiện tại): `TasksPage` dùng `useBeTasks` + `RuntimeService`, `OverviewPage` dùng `useBeTasks`, `BrowserPage` dùng `useRuntimeStatus`; `miro.service.ts` chuẩn hóa qua `ConnectionsService/PlatformsService` (đọc BE, `[]`/502 thay vì seed). Các trang còn lại (media/research/schedules/workflows/projects/knowledge/...) vẫn `useMiroStore` mock.
+- Kết luận: **MOCK ONLY thuộc baseline `73de3f4`, KHÔNG mô tả đúng worktree hiện tại** (đã unmock một phần). Cấm dùng audit đó để revert/ghi đè diff unmock. Slice05 (`10d0e84`) chỉ thêm conversations P0-P1 + `AiWorkspacePage` +28 dòng, không liên quan MOCK ONLY.
+- Checkpoint đề xuất: CP-A = commit riêng diff unmock FE hiện tại sau khi regression (tên gợi ý `ui/unmock-m1-m4-partial`); CP-B = slice05 P0-P1 giữ nguyên branch, chưa merge cho tới khi DB path cô lập xong. Blocker duy nhất: hardcode `C:\Miro\var\tasks.db` hai bên (mục 2).
