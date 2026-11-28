@@ -1,0 +1,205 @@
+- generic [ref=f8e2]:
+  - complementary "Primary navigation" [ref=f8e4]:
+    - generic [ref=f8e5]:
+      - generic [ref=f8e6]:
+        - button [ref=f8e7] [cursor=pointer]:
+          - generic "miro." [ref=f8e8]:
+            - text: miro
+            - generic [ref=f8e9]: .
+        - button "Thu gọn thanh điều hướng" [ref=f8e10] [cursor=pointer]
+      - generic [ref=f8e13]:
+        - generic [ref=f8e14]: Personal Operations
+        - generic [ref=f8e15]: LOCAL
+      - generic [ref=f8e16]:
+        - button "Bảng lệnh" [ref=f8e17] [cursor=pointer]:
+          - generic [ref=f8e18]: Tìm kiếm nhanh...
+          - generic [ref=f8e23]: ⌘K
+        - button "Hội thoại mới" [ref=f8e24] [cursor=pointer]
+    - navigation "Workspace sections" [ref=f8e27]:
+      - generic [ref=f8e28]:
+        - button "WORKSPACE" [ref=f8e29] [cursor=pointer]
+        - list [ref=f8e33]:
+          - listitem [ref=f8e34]:
+            - link "Tổng quan" [ref=f8e35] [cursor=pointer]:
+              - /url: /overview
+          - listitem [ref=f8e42]:
+            - link "AI Workspace" [ref=f8e43] [cursor=pointer]:
+              - /url: /workspace
+          - listitem [ref=f8e47]:
+            - link "Tác vụ" [ref=f8e48] [cursor=pointer]:
+              - /url: /tasks
+          - listitem [ref=f8e53]:
+            - link "Dự án" [ref=f8e54] [cursor=pointer]:
+              - /url: /projects
+      - generic [ref=f8e58]:
+        - button "TỰ ĐỘNG HÓA" [ref=f8e59] [cursor=pointer]
+        - list [ref=f8e63]:
+          - listitem [ref=f8e64]:
+            - link "Lịch trình" [ref=f8e65] [cursor=pointer]:
+              - /url: /schedules
+          - listitem [ref=f8e71]:
+            - link "Workflows" [ref=f8e72] [cursor=pointer]:
+              - /url: /workflows
+      - generic [ref=f8e78]:
+        - button "CÔNG CỤ" [ref=f8e79] [cursor=pointer]
+        - list [ref=f8e83]:
+          - listitem [ref=f8e84]:
+            - link "Trình duyệt" [ref=f8e85] [cursor=pointer]:
+              - /url: /browser
+          - listitem [ref=f8e90]:
+            - link "Nghiên cứu" [ref=f8e91] [cursor=pointer]:
+              - /url: /research
+          - listitem [ref=f8e96]:
+            - link "Media Studio" [ref=f8e97] [cursor=pointer]:
+              - /url: /media
+          - listitem [ref=f8e101]:
+            - link "Xuất bản" [ref=f8e102] [cursor=pointer]:
+              - /url: /publishing
+          - listitem [ref=f8e108]:
+            - link "Tri thức" [ref=f8e109] [cursor=pointer]:
+              - /url: /knowledge
+      - generic [ref=f8e113]:
+        - button "HỆ THỐNG" [ref=f8e114] [cursor=pointer]
+        - list [ref=f8e118]:
+          - listitem [ref=f8e119]:
+            - link "Hoạt động" [ref=f8e120] [cursor=pointer]:
+              - /url: /activity
+          - listitem [ref=f8e124]:
+            - link "Tích hợp" [ref=f8e125] [cursor=pointer]:
+              - /url: /integrations
+          - listitem [ref=f8e129]:
+            - link "Cài đặt" [ref=f8e130] [cursor=pointer]:
+              - /url: /settings
+    - generic [ref=f8e135]:
+      - generic [ref=f8e136]:
+        - generic [ref=f8e137]: Miro Runtime · Mô phỏng
+        - generic [ref=f8e138]: OK
+      - generic [ref=f8e139]:
+        - generic [ref=f8e140]:
+          - generic [ref=f8e141]: OP
+          - generic [ref=f8e142]:
+            - paragraph [ref=f8e143]: Operator
+            - paragraph [ref=f8e144]: Asia/Bangkok
+        - button "Switch theme" [ref=f8e146] [cursor=pointer]
+  - generic [ref=f8e149]:
+    - banner [ref=f8e150]:
+      - navigation "Breadcrumb" [ref=f8e152]:
+        - generic [ref=f8e153]: Xuất bản
+      - generic [ref=f8e154]:
+        - generic "Mọi tác vụ, trình duyệt và xuất bản đều được mô phỏng cục bộ. Không kết nối tài khoản thật." [ref=f8e155]: Chế độ Mô phỏng
+        - button "Giám sát tác vụ" [ref=f8e156] [cursor=pointer]:
+          - generic [ref=f8e159]: "0"
+          - generic [ref=f8e160]: đang chạy
+        - button "Cần xử lý" [ref=f8e161] [cursor=pointer]:
+          - generic [ref=f8e164]: "2"
+        - button "Thông báo" [ref=f8e165] [cursor=pointer]
+        - button "Trợ lý AI ngữ cảnh" [ref=f8e170] [cursor=pointer]:
+          - generic [ref=f8e173]: Miro AI
+    - main [ref=f8e174]:
+      - generic [ref=f8e175]:
+        - generic [ref=f8e176]:
+          - generic [ref=f8e177]:
+            - heading "Xuất bản" [level=1] [ref=f8e178]
+            - paragraph [ref=f8e179]: Chuẩn bị nội dung đa nền tảng và kiểm duyệt an toàn. Mọi thao tác đăng đều được mô phỏng cục bộ.
+          - button "Tạo bài xuất bản" [ref=f8e180] [cursor=pointer]
+        - generic [ref=f8e183]:
+          - tablist [ref=f8e184]:
+            - tab "Tất cả 4" [selected] [ref=f8e185] [cursor=pointer]:
+              - generic [ref=f8e186]: Tất cả
+              - generic [ref=f8e187]: "4"
+            - tab "Bản nháp" [ref=f8e188] [cursor=pointer]
+            - tab "Hàng đợi & Chờ duyệt" [ref=f8e190] [cursor=pointer]
+            - tab "Lịch sử" [ref=f8e192] [cursor=pointer]
+          - combobox "Filter platform" [ref=f8e194]:
+            - option "Tất cả nền tảng" [selected]
+            - option "TikTok"
+            - option "Facebook"
+            - option "Instagram"
+            - option "YouTube"
+            - option "Threads"
+        - generic [ref=f8e195]:
+          - generic [ref=f8e196]:
+            - button "TikTok waiting_approval Review 14 ngày KANS 377 — Phiên bản ngắn 42s 01:26 27-11" [ref=f8e197] [cursor=pointer]:
+              - generic [ref=f8e198]:
+                - generic [ref=f8e199]: TikTok
+                - generic [ref=f8e200]: waiting_approval
+              - paragraph [ref=f8e202]: Review 14 ngày KANS 377 — Phiên bản ngắn 42s
+              - paragraph [ref=f8e203]: 01:26 27-11
+            - button "Instagram queued Lookbook Thu Đông — 2 set đồ công sở tối giản 16:26 27-11" [ref=f8e204] [cursor=pointer]:
+              - generic [ref=f8e205]:
+                - generic [ref=f8e206]: Instagram
+                - generic [ref=f8e207]: queued
+              - paragraph [ref=f8e209]: Lookbook Thu Đông — 2 set đồ công sở tối giản
+              - paragraph [ref=f8e210]: 16:26 27-11
+            - button "YouTube draft Giải đáp nhanh 3 câu hỏi về KANS 377 14:26 28-11" [ref=f8e211] [cursor=pointer]:
+              - generic [ref=f8e212]:
+                - generic [ref=f8e213]: YouTube
+                - generic [ref=f8e214]: draft
+              - paragraph [ref=f8e216]: Giải đáp nhanh 3 câu hỏi về KANS 377
+              - paragraph [ref=f8e217]: 14:26 28-11
+            - button "Threads published Checklist quay video review dưới ánh sáng tự nhiên 16:26 26-11" [ref=f8e218] [cursor=pointer]:
+              - generic [ref=f8e219]:
+                - generic [ref=f8e220]: Threads
+                - generic [ref=f8e221]: published
+              - paragraph [ref=f8e223]: Checklist quay video review dưới ánh sáng tự nhiên
+              - paragraph [ref=f8e224]: 16:26 26-11
+          - generic [ref=f8e225]:
+            - generic [ref=f8e226]:
+              - heading "Trình soạn xuất bản" [level=2] [ref=f8e227]
+              - generic [ref=f8e228]: Simulated Only
+            - generic [ref=f8e230]:
+              - paragraph [ref=f8e231]:
+                - generic [ref=f8e234]: Đang chờ phê duyệt xuất bản
+              - generic [ref=f8e235]:
+                - button "Phê duyệt" [ref=f8e236] [cursor=pointer]
+                - button "Từ chối" [ref=f8e237] [cursor=pointer]
+            - generic [ref=f8e238]:
+              - generic [ref=f8e239]: Tiêu đề nội bộ
+              - textbox "Tiêu đề nội bộ" [ref=f8e240]: Review 14 ngày KANS 377 — Phiên bản ngắn 42s
+            - generic [ref=f8e241]:
+              - generic [ref=f8e242]:
+                - generic [ref=f8e243]: Nền tảng
+                - combobox "Nền tảng" [ref=f8e244]:
+                  - option "TikTok" [selected]
+                  - option "Facebook"
+                  - option "Instagram"
+                  - option "YouTube"
+                  - option "Threads"
+              - generic [ref=f8e245]:
+                - generic [ref=f8e246]: Tài khoản mẫu
+                - textbox "Tài khoản mẫu" [ref=f8e247]: "@miro.demo.beauty"
+            - generic [ref=f8e248]:
+              - generic [ref=f8e249]: Tư liệu Media đính kèm
+              - combobox "Tư liệu Media đính kèm" [ref=f8e250]:
+                - option "Bài viết văn bản"
+                - option "Product Review 01 (42s)" [selected]
+                - option "KANS 377 Unboxing Clip (28s)"
+                - option "Fashion Lookbook Reel 04 (35s)"
+                - option "KANS 377 Voiceover Draft.wav (40s)"
+            - generic [ref=f8e251]:
+              - generic [ref=f8e252]: Caption
+              - textbox "Caption" [ref=f8e253]: "Tóm tắt 3 điểm thực tế sau 14 ngày dùng KANS 377 vào buổi tối: kết cấu thấm nhanh, dễ phối kem chống nắng và lưu ý cho da nhạy cảm."
+            - generic [ref=f8e254]:
+              - generic [ref=f8e255]: Hashtags (cách nhau bằng dấu cách)
+              - textbox "Hashtags (cách nhau bằng dấu cách)" [ref=f8e256]: "#KANS377 #skincarenotes #reviewthucte"
+            - generic [ref=f8e257]:
+              - button "Đưa vào hàng đợi" [ref=f8e258] [cursor=pointer]
+              - button "Gửi phê duyệt & Xuất bản (Mô phỏng)" [ref=f8e259] [cursor=pointer]
+          - generic [ref=f8e264]:
+            - generic [ref=f8e265]:
+              - heading "Xem trước · TikTok" [level=3] [ref=f8e266]
+              - generic [ref=f8e267]: Mock Preview
+            - generic [ref=f8e268]:
+              - generic [ref=f8e269]:
+                - generic [ref=f8e270]: "@miro.demo.beauty"
+                - generic [ref=f8e271]: TikTok
+              - generic [ref=f8e272]:
+                - generic [ref=f8e273]: Product Review 01 (0:42)
+                - generic [ref=f8e274]:
+                  - paragraph [ref=f8e275]: "Tóm tắt 3 điểm thực tế sau 14 ngày dùng KANS 377 vào buổi tối: kết cấu thấm nhanh, dễ phối kem chống nắng và lưu ý cho da nhạy cảm."
+                  - paragraph [ref=f8e276]: "#KANS377 #skincarenotes #reviewthucte"
+            - generic [ref=f8e277]:
+              - paragraph [ref=f8e278]: Kiểm tra hợp lệ
+              - paragraph [ref=f8e279]:
+                - generic [ref=f8e283]: Đạt điều kiện xuất bản mô phỏng.
+  - region "Notifications alt+T"

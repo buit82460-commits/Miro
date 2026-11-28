@@ -1,0 +1,49 @@
+- generic [ref=f3e1]:
+  - generic [ref=f3e2]:
+    - complementary [ref=f3e3]:
+      - generic [ref=f3e4]: Miro
+      - navigation [ref=f3e5]:
+        - link "Công việc" [ref=f3e6] [cursor=pointer]:
+          - /url: /
+        - link "Giao việc (live)" [ref=f3e7] [cursor=pointer]:
+          - /url: /tasks-live
+        - link "Runtime" [ref=f3e8] [cursor=pointer]:
+          - /url: /runtime
+        - link "Thư viện" [ref=f3e9] [cursor=pointer]:
+          - /url: /library
+        - link "Xuất bản" [ref=f3e10] [cursor=pointer]:
+          - /url: /publish
+        - link "Editor" [ref=f3e11] [cursor=pointer]:
+          - /url: /editor
+        - link "Cài đặt & kết nối" [ref=f3e12] [cursor=pointer]:
+          - /url: /settings
+    - main [ref=f3e13]:
+      - heading "Xuất bản" [level=1] [ref=f3e14]
+      - paragraph [ref=f3e15]:
+        - text: DỮ LIỆU MẪU — chưa đăng thật. Batch Threads gọi BE
+        - code [ref=f3e16]: POST /threads/publish
+        - text: ở chế độ dry-run (không post thật); chỉ khi BE không reachable mới dùng receipt mẫu (có gắn nhãn mẫu).
+      - paragraph [ref=f3e17]: Batch theo video × platform × account. Receipt bên dưới dùng để đối soát.
+      - generic [ref=f3e18]:
+        - generic [ref=f3e19]:
+          - text: Video
+          - combobox "Video" [ref=f3e20]
+        - generic [ref=f3e21]:
+          - text: Platform
+          - combobox "Platform" [ref=f3e22]:
+            - option "threads" [selected]
+            - option "facebook"
+            - option "tiktok"
+            - option "youtube"
+            - option "instagram"
+        - generic [ref=f3e23]:
+          - text: Tài khoản
+          - textbox "Tài khoản" [ref=f3e24]:
+            - /placeholder: "@miro.demo"
+            - text: "@miro.demo"
+        - button "Đăng / lên lịch" [ref=f3e25]
+      - heading "Batch đã gửi" [level=2] [ref=f3e26]
+      - list
+      - heading "Receipt / đối soát" [level=2] [ref=f3e27]
+      - list
+  - alert [ref=f3e28]

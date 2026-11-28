@@ -12,6 +12,12 @@ const LINKS = [
   { href: "/publish", label: "Xuất bản" },
   { href: "/editor", label: "Editor" },
   { href: "/settings", label: "Cài đặt & kết nối" },
+  { href: "/settings/connections", label: "Kết nối" },
+  { href: "/settings/platforms", label: "Nền tảng" },
+  // BUG-03: link chéo sang shell mới (AppShell) — 2 nav không còn cô lập.
+  { href: "/workspace", label: "AI Workspace (mới)" },
+  { href: "/tasks", label: "Tác vụ (mới)" },
+  { href: "/overview", label: "Tổng quan (mới)" },
 ];
 
 export default function MiroNav({ children }: { children: ReactNode }) {

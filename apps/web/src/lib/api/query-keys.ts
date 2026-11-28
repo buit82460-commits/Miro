@@ -11,5 +11,8 @@ export const QUERY_KEYS = {
   projects: ["projects"] as const,
   projectDetail: (id: string) => [...QUERY_KEYS.projects, "detail", id] as const,
   connections: ["settings", "connections"] as const,
+  connectionDetail: (id: string) => [...QUERY_KEYS.connections, "detail", id] as const,
+  connectionDefault: (platform: string) => [...QUERY_KEYS.connections, "default", platform] as const,
   platforms: ["settings", "platforms"] as const,
+  platformsHistory: () => [...QUERY_KEYS.platforms, "history"] as const,
 } as const;

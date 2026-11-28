@@ -120,3 +120,52 @@ export const rollbackSchema = z.object({
   version: z.coerce.number().int().min(1, "Nhập version cần rollback về"),
 });
 export type RollbackInput = z.infer<typeof rollbackSchema>;
+
+// Connections — CONN-01..10 (§04 contract).
+// credential_ref CHỈ tham chiếu (vault:/ref:/env:/keychain:/oauth:/secret:),
+// không plaintext (BE từ chối CREDENTIAL_PLAINTEXT_DENIED).
+export const accountCreateSchema = z.object({
+  platform: z.string().min(1, "Chọn platform").max(60),
+  account_id: z.string().min(1, "Nhập account id").max(160),
+  display_name: z.string().max(160).default(""),
+  credential_ref: z
+    .string()
+    .min(1, "Nhập tham chiếu credential (vault:/ref:/env:/keychain:/oauth:/secret:)")
+    .max(400)
+    .refine(
+      (v) =>
+        ["vault:", "ref:", "env:", "keychain:", "oauth:", "secret:"].some((p) =>
+          v.trim().toLowerCase().startsWith(p),
+        ),
+      "Chỉ nhận tham chiếu (vault:/ref:/env:/keychain:/oauth:/secret:), không lưu secret thật",
+    ),
+  profile_binding_id: z.string().max(160).default(""),
+  browser_instance_id: z.string().max(160).default(""),
+});
+export type AccountCreateInput = z.infer<typeof accountCreateSchema>;
+
+// Bằng chứng từ tab thật đang mở (provider đọc observed identity trên tab).
+export const verifyEvidenceSchema = z.object({
+  tab_id: z.string().min(1, "Nhập tab_id của tab đang mở"),
+  platform_id: z.string().min(1, "Chọn platform"),
+  profile_binding_id: z.string().max(160).default(""),
+  observed_account_id: z.string().min(1, "Nhập observed account đọc từ tab"),
+  target_id: z.string().max(160).default(""),
+  browser_instance_id: z.string().max(160).default(""),
+  window_id: z.string().max(160).default(""),
+  observed_account_id_after: z.string().max(160).default(""),
+  profile_path: z.string().max(500).default(""),
+  profile_path_after: z.string().max(500).default(""),
+});
+export type VerifyEvidenceInput = z.infer<typeof verifyEvidenceSchema>;
+
+export const capabilityPatchSchema = z
+  .object({
+    status: z.string().max(40).optional(),
+    runtime: z.string().max(200).optional(),
+    input: z.string().max(120).optional(),
+    output: z.string().max(120).optional(),
+    evidence: z.string().max(500).optional(),
+  })
+  .refine((v) => Object.values(v).some((x) => x !== undefined), "Nhập ít nhất 1 field");
+export type CapabilityPatchInput = z.infer<typeof capabilityPatchSchema>;

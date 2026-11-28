@@ -1,0 +1,126 @@
+- generic [ref=f15e2]:
+  - complementary "Primary navigation" [ref=f15e4]:
+    - generic [ref=f15e5]:
+      - generic [ref=f15e6]:
+        - button [ref=f15e7] [cursor=pointer]:
+          - generic "miro." [ref=f15e8]:
+            - text: miro
+            - generic [ref=f15e9]: .
+        - button "Thu gọn thanh điều hướng" [ref=f15e10] [cursor=pointer]
+      - generic [ref=f15e13]:
+        - generic [ref=f15e14]: Personal Operations
+        - generic [ref=f15e15]: LOCAL
+      - generic [ref=f15e16]:
+        - button "Bảng lệnh" [ref=f15e17] [cursor=pointer]:
+          - generic [ref=f15e18]: Tìm kiếm nhanh...
+          - generic [ref=f15e23]: ⌘K
+        - button "Hội thoại mới" [ref=f15e24] [cursor=pointer]
+    - navigation "Workspace sections" [ref=f15e27]:
+      - generic [ref=f15e28]:
+        - button "WORKSPACE" [ref=f15e29] [cursor=pointer]
+        - list [ref=f15e33]:
+          - listitem [ref=f15e34]:
+            - link "Tổng quan" [ref=f15e35] [cursor=pointer]:
+              - /url: /overview
+          - listitem [ref=f15e42]:
+            - link "AI Workspace" [ref=f15e43] [cursor=pointer]:
+              - /url: /workspace
+          - listitem [ref=f15e47]:
+            - link "Tác vụ" [ref=f15e48] [cursor=pointer]:
+              - /url: /tasks
+          - listitem [ref=f15e53]:
+            - link "Dự án" [ref=f15e54] [cursor=pointer]:
+              - /url: /projects
+      - generic [ref=f15e58]:
+        - button "TỰ ĐỘNG HÓA" [ref=f15e59] [cursor=pointer]
+        - list [ref=f15e63]:
+          - listitem [ref=f15e64]:
+            - link "Lịch trình" [ref=f15e65] [cursor=pointer]:
+              - /url: /schedules
+          - listitem [ref=f15e71]:
+            - link "Workflows" [ref=f15e72] [cursor=pointer]:
+              - /url: /workflows
+      - generic [ref=f15e79]:
+        - button "CÔNG CỤ" [ref=f15e80] [cursor=pointer]
+        - list [ref=f15e84]:
+          - listitem [ref=f15e85]:
+            - link "Trình duyệt" [ref=f15e86] [cursor=pointer]:
+              - /url: /browser
+          - listitem [ref=f15e91]:
+            - link "Nghiên cứu" [ref=f15e92] [cursor=pointer]:
+              - /url: /research
+          - listitem [ref=f15e97]:
+            - link "Media Studio" [ref=f15e98] [cursor=pointer]:
+              - /url: /media
+          - listitem [ref=f15e102]:
+            - link "Xuất bản" [ref=f15e103] [cursor=pointer]:
+              - /url: /publishing
+          - listitem [ref=f15e108]:
+            - link "Tri thức" [ref=f15e109] [cursor=pointer]:
+              - /url: /knowledge
+      - generic [ref=f15e113]:
+        - button "HỆ THỐNG" [ref=f15e114] [cursor=pointer]
+        - list [ref=f15e118]:
+          - listitem [ref=f15e119]:
+            - link "Hoạt động" [ref=f15e120] [cursor=pointer]:
+              - /url: /activity
+          - listitem [ref=f15e124]:
+            - link "Tích hợp" [ref=f15e125] [cursor=pointer]:
+              - /url: /integrations
+          - listitem [ref=f15e129]:
+            - link "Cài đặt" [ref=f15e130] [cursor=pointer]:
+              - /url: /settings
+    - generic [ref=f15e135]:
+      - generic [ref=f15e136]:
+        - generic [ref=f15e137]: Miro Runtime · Mô phỏng
+        - generic [ref=f15e138]: OK
+      - generic [ref=f15e139]:
+        - generic [ref=f15e140]:
+          - generic [ref=f15e141]: OP
+          - generic [ref=f15e142]:
+            - paragraph [ref=f15e143]: Operator
+            - paragraph [ref=f15e144]: Asia/Bangkok
+        - button "Switch theme" [ref=f15e146] [cursor=pointer]
+  - generic [ref=f15e149]:
+    - banner [ref=f15e150]:
+      - navigation "Breadcrumb" [ref=f15e152]:
+        - generic [ref=f15e153]: Workflows
+      - generic [ref=f15e154]:
+        - generic "Mọi tác vụ, trình duyệt và xuất bản đều được mô phỏng cục bộ. Không kết nối tài khoản thật." [ref=f15e155]: Chế độ Mô phỏng
+        - button "Giám sát tác vụ" [ref=f15e156] [cursor=pointer]:
+          - generic [ref=f15e159]: "0"
+          - generic [ref=f15e160]: đang chạy
+        - button "Cần xử lý" [ref=f15e161] [cursor=pointer]:
+          - generic [ref=f15e164]: "2"
+        - button "Thông báo" [ref=f15e165] [cursor=pointer]
+        - button "Trợ lý AI ngữ cảnh" [ref=f15e170] [cursor=pointer]:
+          - generic [ref=f15e173]: Miro AI
+    - main [ref=f15e174]:
+      - generic [ref=f15e176]:
+        - generic [ref=f15e177]:
+          - generic [ref=f15e178]:
+            - heading "Workflows" [level=1] [ref=f15e179]
+            - paragraph [ref=f15e180]: Thiết kế và mô phỏng các luồng tự động hóa đa bước kết nối trình duyệt, AI, media và phê duyệt thủ công.
+          - button "Tạo Workflow" [ref=f15e181] [cursor=pointer]
+        - generic [ref=f15e184]:
+          - generic [ref=f15e185]:
+            - generic [ref=f15e186]:
+              - generic [ref=f15e187]:
+                - heading "KANS 377 TikTok Discovery & Brief" [level=2] [ref=f15e193]
+                - switch "Toggle KANS 377 TikTok Discovery & Brief" [checked] [ref=f15e194] [cursor=pointer]
+              - paragraph [ref=f15e196]: Tự động thu thập video mẫu theo lịch, lọc nội dung có lượt tương tác cao, tóm tắt góc tiếp cận và gửi yêu cầu duyệt xuất bản.
+              - paragraph [ref=f15e197]: "6 nodes · 5 connections · Last: completed"
+            - generic [ref=f15e198]:
+              - button "Mở trình dựng canvas" [ref=f15e199] [cursor=pointer]
+              - button "Chạy mô phỏng" [ref=f15e200] [cursor=pointer]
+          - generic [ref=f15e204]:
+            - generic [ref=f15e205]:
+              - generic [ref=f15e206]:
+                - heading "Phân tích Video Media Studio -> Xuất bản" [level=2] [ref=f15e212]
+                - switch "Toggle Phân tích Video Media Studio -> Xuất bản" [ref=f15e213] [cursor=pointer]
+              - paragraph [ref=f15e215]: Tách phân cảnh video sản phẩm, trích xuất thoại mô phỏng và tạo bản nháp caption TikTok.
+              - paragraph [ref=f15e216]: "3 nodes · 2 connections · Last: completed"
+            - generic [ref=f15e217]:
+              - button "Mở trình dựng canvas" [ref=f15e218] [cursor=pointer]
+              - button "Chạy mô phỏng" [ref=f15e219] [cursor=pointer]
+  - region "Notifications alt+T"

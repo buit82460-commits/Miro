@@ -1,0 +1,253 @@
+- generic [ref=f1e2]:
+  - complementary "Primary navigation" [ref=f1e4]:
+    - generic [ref=f1e5]:
+      - generic [ref=f1e6]:
+        - button [ref=f1e7] [cursor=pointer]:
+          - generic "miro." [ref=f1e8]:
+            - text: miro
+            - generic [ref=f1e9]: .
+        - button "Thu gọn thanh điều hướng" [ref=f1e10] [cursor=pointer]
+      - generic [ref=f1e13]:
+        - generic [ref=f1e14]: Personal Operations
+        - generic [ref=f1e15]: LOCAL
+      - generic [ref=f1e16]:
+        - button "Bảng lệnh" [ref=f1e17] [cursor=pointer]:
+          - generic [ref=f1e18]: Tìm kiếm nhanh...
+          - generic [ref=f1e23]: ⌘K
+        - button "Hội thoại mới" [ref=f1e24] [cursor=pointer]
+    - navigation "Workspace sections" [ref=f1e27]:
+      - generic [ref=f1e28]:
+        - button "WORKSPACE" [ref=f1e29] [cursor=pointer]
+        - list [ref=f1e33]:
+          - listitem [ref=f1e34]:
+            - link "Tổng quan" [ref=f1e35] [cursor=pointer]:
+              - /url: /overview
+          - listitem [ref=f1e43]:
+            - link "AI Workspace" [ref=f1e44] [cursor=pointer]:
+              - /url: /workspace
+          - listitem [ref=f1e48]:
+            - link "Tác vụ" [ref=f1e49] [cursor=pointer]:
+              - /url: /tasks
+          - listitem [ref=f1e54]:
+            - link "Dự án" [ref=f1e55] [cursor=pointer]:
+              - /url: /projects
+      - generic [ref=f1e59]:
+        - button "TỰ ĐỘNG HÓA" [ref=f1e60] [cursor=pointer]
+        - list [ref=f1e64]:
+          - listitem [ref=f1e65]:
+            - link "Lịch trình" [ref=f1e66] [cursor=pointer]:
+              - /url: /schedules
+          - listitem [ref=f1e72]:
+            - link "Workflows" [ref=f1e73] [cursor=pointer]:
+              - /url: /workflows
+      - generic [ref=f1e79]:
+        - button "CÔNG CỤ" [ref=f1e80] [cursor=pointer]
+        - list [ref=f1e84]:
+          - listitem [ref=f1e85]:
+            - link "Trình duyệt" [ref=f1e86] [cursor=pointer]:
+              - /url: /browser
+          - listitem [ref=f1e91]:
+            - link "Nghiên cứu" [ref=f1e92] [cursor=pointer]:
+              - /url: /research
+          - listitem [ref=f1e97]:
+            - link "Media Studio" [ref=f1e98] [cursor=pointer]:
+              - /url: /media
+          - listitem [ref=f1e102]:
+            - link "Xuất bản" [ref=f1e103] [cursor=pointer]:
+              - /url: /publishing
+          - listitem [ref=f1e108]:
+            - link "Tri thức" [ref=f1e109] [cursor=pointer]:
+              - /url: /knowledge
+      - generic [ref=f1e113]:
+        - button "HỆ THỐNG" [ref=f1e114] [cursor=pointer]
+        - list [ref=f1e118]:
+          - listitem [ref=f1e119]:
+            - link "Hoạt động" [ref=f1e120] [cursor=pointer]:
+              - /url: /activity
+          - listitem [ref=f1e124]:
+            - link "Tích hợp" [ref=f1e125] [cursor=pointer]:
+              - /url: /integrations
+          - listitem [ref=f1e129]:
+            - link "Cài đặt" [ref=f1e130] [cursor=pointer]:
+              - /url: /settings
+    - generic [ref=f1e135]:
+      - generic [ref=f1e136]:
+        - generic [ref=f1e137]: Miro Runtime · Mô phỏng
+        - generic [ref=f1e138]: OK
+      - generic [ref=f1e139]:
+        - generic [ref=f1e140]:
+          - generic [ref=f1e141]: OP
+          - generic [ref=f1e142]:
+            - paragraph [ref=f1e143]: Operator
+            - paragraph [ref=f1e144]: Asia/Bangkok
+        - button "Switch theme" [ref=f1e146] [cursor=pointer]
+  - generic [ref=f1e149]:
+    - banner [ref=f1e150]:
+      - navigation "Breadcrumb" [ref=f1e152]:
+        - generic [ref=f1e153]: Tổng quan
+      - generic [ref=f1e154]:
+        - generic "Mọi tác vụ, trình duyệt và xuất bản đều được mô phỏng cục bộ. Không kết nối tài khoản thật." [ref=f1e155]: Chế độ Mô phỏng
+        - button "Giám sát tác vụ" [ref=f1e156] [cursor=pointer]:
+          - generic [ref=f1e159]: "0"
+          - generic [ref=f1e160]: đang chạy
+        - button "Cần xử lý" [ref=f1e161] [cursor=pointer]:
+          - generic [ref=f1e164]: "2"
+        - button "Thông báo" [ref=f1e165] [cursor=pointer]
+        - button "Trợ lý AI ngữ cảnh" [ref=f1e170] [cursor=pointer]:
+          - generic [ref=f1e173]: Miro AI
+    - main [ref=f1e174]:
+      - generic [ref=f1e176]:
+        - generic [ref=f1e177]:
+          - generic [ref=f1e178]:
+            - heading "Tổng quan" [level=1] [ref=f1e179]
+            - paragraph [ref=f1e180]: Trạng thái vận hành thời gian thực của các tác vụ, tài nguyên và yêu cầu cần bạn quyết định.
+          - generic [ref=f1e181]:
+            - button "Chạy thử đa tác vụ (Kịch bản C)" [ref=f1e182] [cursor=pointer]
+            - button "Giao việc mới" [ref=f1e186] [cursor=pointer]
+        - generic [ref=f1e189]:
+          - generic [ref=f1e190]:
+            - paragraph [ref=f1e191]: Đang thực thi
+            - generic [ref=f1e192]:
+              - generic [ref=f1e193]: "0"
+              - generic [ref=f1e194]: tác vụ
+          - generic [ref=f1e195]:
+            - paragraph [ref=f1e196]: Đang chờ hàng đợi
+            - generic [ref=f1e197]:
+              - generic [ref=f1e198]: "0"
+              - generic [ref=f1e199]: hàng đợi
+          - generic [ref=f1e200]:
+            - paragraph [ref=f1e201]: Hoàn tất hôm nay
+            - generic [ref=f1e202]:
+              - generic [ref=f1e203]: "2"
+              - generic [ref=f1e204]: kết quả
+          - generic [ref=f1e205]:
+            - paragraph [ref=f1e206]: Cần bạn xử lý
+            - generic [ref=f1e207]:
+              - generic [ref=f1e208]: "2"
+              - generic [ref=f1e209]: duyệt / sự cố
+        - generic [ref=f1e210]:
+          - generic [ref=f1e211]:
+            - generic [ref=f1e212]:
+              - heading "Tác vụ đang hoạt động" [level=2] [ref=f1e213]
+              - button "Xem toàn bộ (4)" [ref=f1e214] [cursor=pointer]
+            - generic [ref=f1e219]:
+              - generic [ref=f1e220]:
+                - generic [ref=f1e226]:
+                  - paragraph [ref=f1e227]: "Xuất bản TikTok: Review 14 ngày KANS 377"
+                  - generic [ref=f1e228]:
+                    - generic [ref=f1e229]: TikTok · @miro.demo.beauty
+                    - generic [aria-hidden] [ref=f1e230]: ·
+                    - generic [ref=f1e231]: workflow
+                    - generic [aria-hidden] [ref=f1e232]: ·
+                    - generic [ref=f1e233]: 28m 00s
+                - generic [ref=f1e234]: Chờ phê duyệt
+              - generic [ref=f1e238]:
+                - paragraph [ref=f1e239]: Chờ phê duyệt từ chủ Workspace trước khi đăng (Mô phỏng)
+                - generic [ref=f1e243]:
+                  - generic [ref=f1e244]: Đang chờ phê duyệt trước khi xuất bản mô phỏng
+                  - generic [ref=f1e245]: Waiting
+              - generic [ref=f1e246]:
+                - generic [ref=f1e247]:
+                  - button "Mở trong Workspace" [ref=f1e248] [cursor=pointer]
+                  - button "Live Workspace" [ref=f1e254] [cursor=pointer]
+                - 'button "Hủy tác vụ Xuất bản TikTok: Review 14 ngày KANS 377" [ref=f1e260] [cursor=pointer]':
+                  - generic [ref=f1e263]: Hủy tác vụ
+          - generic [ref=f1e264]:
+            - heading "Cần bạn chú ý" [level=2] [ref=f1e265]
+            - generic [ref=f1e266]:
+              - generic [ref=f1e267]:
+                - generic [ref=f1e271]:
+                  - paragraph [ref=f1e272]: Phê duyệt xuất bản mô phỏng video "Review 14 ngày KANS 377" lên TikTok
+                  - paragraph [ref=f1e273]: Chính sách Workspace yêu cầu xác nhận thủ công trước mọi hành động xuất bản công khai.
+                - generic [ref=f1e274]:
+                  - button "Phê duyệt" [ref=f1e275] [cursor=pointer]
+                  - button "Từ chối" [ref=f1e276] [cursor=pointer]
+              - generic [ref=f1e277]:
+                - generic [ref=f1e281]:
+                  - paragraph [ref=f1e282]: Profile 23 bị ngắt kết nối khiến tác vụ đồng bộ định kỳ thất bại.
+                  - paragraph [ref=f1e283]: Mở trang Trình duyệt để kết nối lại Profile 23, sau đó nhấn Thử lại tác vụ.
+                - button "Mở Profile 23 · Backup Scraper Node" [ref=f1e284] [cursor=pointer]
+        - generic [ref=f1e285]:
+          - generic [ref=f1e286]:
+            - generic [ref=f1e287]:
+              - heading "Lịch trình sắp chạy" [level=3] [ref=f1e288]
+              - button "Tất cả" [ref=f1e294] [cursor=pointer]
+            - generic [ref=f1e295]:
+              - button "Quét xu hướng KANS 377 sáng hàng ngày 08:00 · daily · Asia/Bangkok Bật" [ref=f1e296] [cursor=pointer]:
+                - generic [ref=f1e297]:
+                  - paragraph [ref=f1e298]: Quét xu hướng KANS 377 sáng hàng ngày
+                  - paragraph [ref=f1e299]: 08:00 · daily · Asia/Bangkok
+                - generic [ref=f1e300]: Bật
+              - button "Tổng hợp Lookbook Fashion mỗi thứ Hai 09:30 · weekly · Asia/Bangkok Bật" [ref=f1e302] [cursor=pointer]:
+                - generic [ref=f1e303]:
+                  - paragraph [ref=f1e304]: Tổng hợp Lookbook Fashion mỗi thứ Hai
+                  - paragraph [ref=f1e305]: 09:30 · weekly · Asia/Bangkok
+                - generic [ref=f1e306]: Bật
+              - button "Kiểm tra hàng đợi xuất bản Affiliate 17:00 · weekdays · Asia/Bangkok Tắt" [ref=f1e308] [cursor=pointer]:
+                - generic [ref=f1e309]:
+                  - paragraph [ref=f1e310]: Kiểm tra hàng đợi xuất bản Affiliate
+                  - paragraph [ref=f1e311]: 17:00 · weekdays · Asia/Bangkok
+                - generic [ref=f1e312]: Tắt
+          - generic [ref=f1e314]:
+            - generic [ref=f1e315]:
+              - heading "Tài nguyên trình duyệt" [level=3] [ref=f1e316]
+              - button "Quản lý" [ref=f1e321] [cursor=pointer]
+            - generic [ref=f1e322]:
+              - 'button "Profile 20 · TikTok Research Main Xác minh: verified connected" [ref=f1e323] [cursor=pointer]':
+                - generic [ref=f1e324]:
+                  - paragraph [ref=f1e325]: Profile 20 · TikTok Research Main
+                  - paragraph [ref=f1e326]: "Xác minh: verified"
+                - generic [ref=f1e327]: connected
+              - 'button "Profile 21 · Fashion Media Collector Xác minh: verified connected" [ref=f1e329] [cursor=pointer]':
+                - generic [ref=f1e330]:
+                  - paragraph [ref=f1e331]: Profile 21 · Fashion Media Collector
+                  - paragraph [ref=f1e332]: "Xác minh: verified"
+                - generic [ref=f1e333]: connected
+              - 'button "Profile 22 · Affiliate Publishing Drafts Xác minh: unverified unverified" [ref=f1e335] [cursor=pointer]':
+                - generic [ref=f1e336]:
+                  - paragraph [ref=f1e337]: Profile 22 · Affiliate Publishing Drafts
+                  - paragraph [ref=f1e338]: "Xác minh: unverified"
+                - generic [ref=f1e339]: unverified
+              - 'button "Profile 23 · Backup Scraper Node Xác minh: expired disconnected" [ref=f1e341] [cursor=pointer]':
+                - generic [ref=f1e342]:
+                  - paragraph [ref=f1e343]: Profile 23 · Backup Scraper Node
+                  - paragraph [ref=f1e344]: "Xác minh: expired"
+                - generic [ref=f1e345]: disconnected
+          - generic [ref=f1e347]:
+            - generic [ref=f1e348]:
+              - heading "Hoạt động gần đây" [level=3] [ref=f1e349]
+              - button "Nhật ký" [ref=f1e350] [cursor=pointer]
+            - generic [ref=f1e351]:
+              - generic [ref=f1e352]:
+                - paragraph [ref=f1e353]: Hoàn tất tác vụ nghiên cứu 5 video mẫu KANS 377 (Đợt 1).
+                - paragraph [ref=f1e354]: 22:11 26-11 · KANS 377 Research
+              - generic [ref=f1e355]:
+                - paragraph [ref=f1e356]: Tạo yêu cầu phê duyệt xuất bản cho "Review 14 ngày KANS 377".
+                - paragraph [ref=f1e357]: 22:01 26-11 · TikTok · @miro.demo.beauty
+              - generic [ref=f1e358]:
+                - paragraph [ref=f1e359]: Thu thập dừng ở 3/5 bản ghi hợp lệ — gắn trạng thái Hoàn tất một phần.
+                - paragraph [ref=f1e360]: 21:38 26-11 · Affiliate Fashion Research
+              - generic [ref=f1e361]:
+                - paragraph [ref=f1e362]: Mất kết nối Profile 23 trong khi thực thi đồng bộ định kỳ.
+                - paragraph [ref=f1e363]: 20:26 26-11 · Profile 23
+        - generic [ref=f1e364]:
+          - generic [ref=f1e365]:
+            - heading "Dự án gần đây" [level=2] [ref=f1e366]
+            - button "Tất cả dự án" [ref=f1e367] [cursor=pointer]
+          - generic [ref=f1e371]:
+            - button "KANS 377 Product Research 2 tác vụ Thu thập xu hướng nội dung, phân tích hook video và đối chiếu câu hỏi khách hàng xoay quanh dòng sản phẩm KANS 377." [ref=f1e372] [cursor=pointer]:
+              - generic [ref=f1e373]:
+                - generic [ref=f1e374]: KANS 377 Product Research
+                - generic [ref=f1e378]: 2 tác vụ
+              - paragraph [ref=f1e379]: Thu thập xu hướng nội dung, phân tích hook video và đối chiếu câu hỏi khách hàng xoay quanh dòng sản phẩm KANS 377.
+            - button "Fashion Content Production 1 tác vụ Sản xuất video lookbook ngắn, phân tích khung hình bằng Media Studio và lên lịch xuất bản đa kênh." [ref=f1e380] [cursor=pointer]:
+              - generic [ref=f1e381]:
+                - generic [ref=f1e382]: Fashion Content Production
+                - generic [ref=f1e386]: 1 tác vụ
+              - paragraph [ref=f1e387]: Sản xuất video lookbook ngắn, phân tích khung hình bằng Media Studio và lên lịch xuất bản đa kênh.
+            - button "Affiliate Content Operations 1 tác vụ Tự động hóa lịch quét sản phẩm, quản lý nhóm browser profile và tổng hợp báo cáo hoạt động hàng ngày." [ref=f1e388] [cursor=pointer]:
+              - generic [ref=f1e389]:
+                - generic [ref=f1e390]: Affiliate Content Operations
+                - generic [ref=f1e394]: 1 tác vụ
+              - paragraph [ref=f1e395]: Tự động hóa lịch quét sản phẩm, quản lý nhóm browser profile và tổng hợp báo cáo hoạt động hàng ngày.
+  - region "Notifications alt+T"

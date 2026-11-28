@@ -1,0 +1,37 @@
+- generic [ref=f11e2]:
+  - complementary [ref=f11e3]:
+    - generic [ref=f11e4]: Miro
+    - navigation [ref=f11e5]:
+      - link "Công việc" [ref=f11e6] [cursor=pointer]:
+        - /url: /
+      - link "Giao việc (live)" [ref=f11e7] [cursor=pointer]:
+        - /url: /tasks-live
+      - link "Runtime" [ref=f11e8] [cursor=pointer]:
+        - /url: /runtime
+      - link "Thư viện" [ref=f11e9] [cursor=pointer]:
+        - /url: /library
+      - link "Xuất bản" [ref=f11e10] [cursor=pointer]:
+        - /url: /publish
+      - link "Editor" [ref=f11e11] [cursor=pointer]:
+        - /url: /editor
+      - link "Cài đặt & kết nối" [ref=f11e12] [cursor=pointer]:
+        - /url: /settings
+  - main [ref=f11e13]:
+    - heading "Giao viec" [level=1] [ref=f11e14]
+    - paragraph [ref=f11e15]:
+      - text: Nhiem vu capability da nghiem thu (actor/video/search TikTok) qua
+      - code [ref=f11e16]: POST /tasks/run-message
+      - text: . BE so huu state; chuyen trang khong mat task.
+    - generic [ref=f11e17]:
+      - 'textbox "VD: tim kiem tiktok KANS 377 5 video" [ref=f11e18]'
+      - button "Giao viec" [disabled] [ref=f11e19]
+    - heading "Phân tích video (Manual Control)" [level=2] [ref=f11e20]
+    - paragraph [ref=f11e21]: Dán URL video TikTok — Miro tự phân tích, không cần tab hay cú pháp kỹ thuật.
+    - generic [ref=f11e22]:
+      - textbox "https://www.tiktok.com/@.../video/..." [ref=f11e23]
+      - button "Phân tích video" [disabled] [ref=f11e24]
+    - generic [ref=f11e25]:
+      - button "Tìm kiếm mẫu" [ref=f11e26]
+      - button "Kiểm tra tài khoản" [ref=f11e27]
+    - heading "Task moi nhat (BE)" [level=2] [ref=f11e28]
+    - list

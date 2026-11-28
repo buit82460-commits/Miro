@@ -1,0 +1,137 @@
+- generic [ref=f51e2]:
+  - region "Notifications alt+T"
+  - generic [ref=f51e3]:
+    - generic [ref=f51e5]:
+      - generic [ref=f51e7]:
+        - generic [ref=f51e8]:
+          - link "Go to TikTok For You feed" [ref=f51e9] [cursor=pointer]:
+            - /url: /
+            - strong: TikTok
+          - button "Collapse sidebar" [ref=f51e14] [cursor=pointer]
+        - searchbox "Search" [ref=f51e19] [cursor=pointer]
+      - generic [ref=f51e26]:
+        - generic [ref=f51e27]:
+          - heading [level=2] [ref=f51e28]:
+            - link [ref=f51e30] [cursor=pointer]:
+              - /url: /
+              - listitem "For You" [ref=f51e31]
+          - heading [level=2] [ref=f51e38]:
+            - link [ref=f51e40] [cursor=pointer]:
+              - /url: /explore
+              - listitem "Explore" [ref=f51e41]
+          - heading [level=2] [ref=f51e49]:
+            - link [ref=f51e51] [cursor=pointer]:
+              - /url: /following
+              - listitem "Following" [ref=f51e52]
+          - heading [level=2] [ref=f51e60]:
+            - link [ref=f51e62] [cursor=pointer]:
+              - /url: /friends
+              - listitem "Friends" [ref=f51e63]
+          - heading [level=2] [ref=f51e70]:
+            - link [ref=f51e73] [cursor=pointer]:
+              - /url: /live
+              - listitem "LIVE" [ref=f51e74]
+          - listitem "Messages" [ref=f51e83] [cursor=pointer]
+          - listitem "Activity" [ref=f51e91] [cursor=pointer]
+          - link [ref=f51e101] [cursor=pointer]:
+            - /url: /tiktokstudio/upload?from=webapp&tab=video
+            - listitem "Upload" [ref=f51e102]
+          - heading [level=2] [ref=f51e110]:
+            - link [ref=f51e112] [cursor=pointer]:
+              - /url: /@hankhank068
+              - listitem "Profile" [ref=f51e113]
+          - listitem "More" [ref=f51e123] [cursor=pointer]
+        - generic [ref=f51e133]:
+          - heading "Company" [level=3] [ref=f51e134] [cursor=pointer]
+          - heading "Program" [level=3] [ref=f51e135] [cursor=pointer]
+          - heading "Terms & Policies" [level=3] [ref=f51e136] [cursor=pointer]
+          - generic [ref=f51e137]: © 2026 TikTok
+      - generic [ref=f51e139]:
+        - button "Get Coins" [ref=f51e142] [cursor=pointer]
+        - button "Get App" [ref=f51e160] [cursor=pointer]
+    - main [ref=f51e169]:
+      - generic [ref=f51e170]:
+        - generic [ref=f51e171]:
+          - article [ref=f51e172]:
+            - region "Watch in full screen" [active] [ref=f51e174] [cursor=pointer]:
+              - 'img "2 Bản Hit này Drill Mix lại với nhau nghe có vẻ PEAK VCL các Bác nhỉ...🗿🔥 #arismusic #thuongnhaudenthe #capcut #capcutpioneer #pioneertemplate" [ref=f51e179]'
+          - article [ref=f51e183]:
+            - region "Watch in full screen" [ref=f51e185] [cursor=pointer]
+          - article [ref=f51e198]
+          - article [ref=f51e357]
+          - article [ref=f51e358]
+          - article [ref=f51e359]
+          - article [ref=f51e360]
+          - article [ref=f51e361]
+          - article [ref=f51e362]
+        - generic:
+          - generic:
+            - generic [ref=f51e204]:
+              - button "Like video 53.9K likes" [ref=f51e363] [cursor=pointer]:
+                - button [ref=f51e209]
+                - strong [ref=f51e215]: 53.9K
+              - button "Read or add comments 258 comments" [ref=f51e364] [cursor=pointer]:
+                - button [ref=f51e219]
+                - strong [ref=f51e224]: "258"
+              - button "Add to Favorites. 7247 added to Favorites" [ref=f51e365] [cursor=pointer]:
+                - button [ref=f51e230]
+                - strong [ref=f51e236]: "7247"
+              - button "Share video 9699 shares" [ref=f51e238] [cursor=pointer]:
+                - button [ref=f51e241]
+                - strong [ref=f51e246]: "9699"
+            - generic [ref=f51e248]:
+              - link [ref=f51e251] [cursor=pointer]:
+                - /url: https://www.capcut.com/template-detail/7696186164704906497?channel=capcutpc_ttweb_anchor_template1&current_page=capcutpc_ttweb_anchor_template1&download_channel=capcutpc_ttweb_anchor_template1&enter_from=capcutpc_ttweb_anchor_template1&from_page=capcutpc_ttweb_anchor_template1&type=template&use_new_ui=0
+                - paragraph [ref=f51e256]: CapCut · Try this template
+              - generic [ref=f51e257]:
+                - link [ref=f51e259] [cursor=pointer]:
+                  - /url: /@aris29080
+                  - img "aris29080" [ref=f51e263]
+                - link [ref=f51e265] [cursor=pointer]:
+                  - /url: /@aris29080
+                  - paragraph [ref=f51e267]: 𝘼𝙧𝙞𝙨 𝙈𝙪𝙨𝙞𝙘
+                - button "Follow" [ref=f51e270] [cursor=pointer]
+              - generic [ref=f51e275]:
+                - generic [ref=f51e276]:
+                  - generic [ref=f51e278]:
+                    - generic [ref=f51e279]: 2 Bản Hit này Drill Mix lại với nhau nghe có vẻ PEAK VCL các Bác nhỉ...🗿🔥
+                    - link "Watch more videos of the arismusic category" [ref=f51e280] [cursor=pointer]:
+                      - /url: /tag/arismusic
+                      - paragraph [ref=f51e281]: "#arismusic"
+                    - link "Watch more videos of the thuongnhaudenthe category" [ref=f51e283] [cursor=pointer]:
+                      - /url: /tag/thuongnhaudenthe
+                      - paragraph [ref=f51e284]: "#thuongnhaudenthe"
+                    - link "Watch more videos of the capcut category" [ref=f51e286] [cursor=pointer]:
+                      - /url: /tag/capcut
+                      - paragraph [ref=f51e287]: "#capcut"
+                    - link "Watch more videos of the capcutpioneer category" [ref=f51e289] [cursor=pointer]:
+                      - /url: /tag/capcutpioneer
+                      - paragraph [ref=f51e290]: "#capcutpioneer"
+                    - link "Watch more videos of the pioneertemplate category" [ref=f51e292] [cursor=pointer]:
+                      - /url: /tag/pioneertemplate
+                      - paragraph [ref=f51e293]: "#pioneertemplate"
+                  - button "more" [ref=f51e295] [cursor=pointer]
+                - paragraph [ref=f51e366] [cursor=pointer]: See translation
+              - link "Watch more videos with music âm thanh gốc - prod.neyun" [ref=f51e297] [cursor=pointer]:
+                - /url: /music/âm-thanh-gốc-prodneyun-7691972340550109970
+                - paragraph [ref=f51e301]: âm thanh gốc - prod.neyun
+            - generic:
+              - generic [ref=f51e304] [cursor=pointer]:
+                - paragraph: 00:29 / 00:38
+                - slider "Video progress" [ref=f51e308]
+              - toolbar [ref=f51e310]:
+                - generic [ref=f51e311]:
+                  - button "Play" [ref=f51e367] [cursor=pointer]
+                  - generic [ref=f51e315]: 00:29 / 00:38
+                - generic [ref=f51e316]:
+                  - generic [ref=f51e317]:
+                    - generic "Auto scroll" [ref=f51e318] [cursor=pointer]
+                    - checkbox "Auto scroll" [ref=f51e320] [cursor=pointer]
+                  - button "Speed 1.0x" [ref=f51e322] [cursor=pointer]: 1.0x
+                  - button "Captions unavailable" [ref=f51e324] [cursor=pointer]
+                  - button "Volume" [pressed] [ref=f51e329] [cursor=pointer]
+                  - button [ref=f51e334] [cursor=pointer]
+        - generic [ref=f51e340]:
+          - button "Go to previous video" [disabled] [ref=f51e342]
+          - button "Go to next video" [ref=f51e348] [cursor=pointer]
+      - complementary

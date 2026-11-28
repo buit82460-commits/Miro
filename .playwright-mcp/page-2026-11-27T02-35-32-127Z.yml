@@ -1,0 +1,193 @@
+- generic [ref=f30e1]:
+  - generic [ref=f30e2]:
+    - complementary "Primary navigation" [ref=f30e4]:
+      - generic [ref=f30e5]:
+        - generic [ref=f30e6]:
+          - button [ref=f30e7] [cursor=pointer]:
+            - generic "miro." [ref=f30e8]:
+              - text: miro
+              - generic [ref=f30e9]: .
+          - button "Thu gọn thanh điều hướng" [ref=f30e10] [cursor=pointer]
+        - generic [ref=f30e13]:
+          - generic [ref=f30e14]: Personal Operations
+          - generic [ref=f30e15]: LOCAL
+        - generic [ref=f30e16]:
+          - button "Bảng lệnh" [ref=f30e17] [cursor=pointer]:
+            - generic [ref=f30e18]: Tìm kiếm nhanh...
+            - generic [ref=f30e23]: ⌘K
+          - button "Hội thoại mới" [ref=f30e24] [cursor=pointer]
+      - navigation "Workspace sections" [ref=f30e27]:
+        - generic [ref=f30e28]:
+          - button "WORKSPACE" [ref=f30e29] [cursor=pointer]
+          - list [ref=f30e33]:
+            - listitem [ref=f30e34]:
+              - link "Tổng quan" [ref=f30e35] [cursor=pointer]:
+                - /url: /overview
+            - listitem [ref=f30e42]:
+              - link "AI Workspace" [ref=f30e43] [cursor=pointer]:
+                - /url: /workspace
+            - listitem [ref=f30e48]:
+              - link "Tác vụ" [ref=f30e49] [cursor=pointer]:
+                - /url: /tasks
+            - listitem [ref=f30e54]:
+              - link "Dự án" [ref=f30e55] [cursor=pointer]:
+                - /url: /projects
+        - generic [ref=f30e59]:
+          - button "TỰ ĐỘNG HÓA" [ref=f30e60] [cursor=pointer]
+          - list [ref=f30e64]:
+            - listitem [ref=f30e65]:
+              - link "Lịch trình" [ref=f30e66] [cursor=pointer]:
+                - /url: /schedules
+            - listitem [ref=f30e72]:
+              - link "Workflows" [ref=f30e73] [cursor=pointer]:
+                - /url: /workflows
+        - generic [ref=f30e79]:
+          - button "CÔNG CỤ" [ref=f30e80] [cursor=pointer]
+          - list [ref=f30e84]:
+            - listitem [ref=f30e85]:
+              - link "Trình duyệt" [ref=f30e86] [cursor=pointer]:
+                - /url: /browser
+            - listitem [ref=f30e91]:
+              - link "Nghiên cứu" [ref=f30e92] [cursor=pointer]:
+                - /url: /research
+            - listitem [ref=f30e97]:
+              - link "Media Studio" [ref=f30e98] [cursor=pointer]:
+                - /url: /media
+            - listitem [ref=f30e102]:
+              - link "Xuất bản" [ref=f30e103] [cursor=pointer]:
+                - /url: /publishing
+            - listitem [ref=f30e108]:
+              - link "Tri thức" [ref=f30e109] [cursor=pointer]:
+                - /url: /knowledge
+        - generic [ref=f30e113]:
+          - button "HỆ THỐNG" [ref=f30e114] [cursor=pointer]
+          - list [ref=f30e118]:
+            - listitem [ref=f30e119]:
+              - link "Hoạt động" [ref=f30e120] [cursor=pointer]:
+                - /url: /activity
+            - listitem [ref=f30e124]:
+              - link "Tích hợp" [ref=f30e125] [cursor=pointer]:
+                - /url: /integrations
+            - listitem [ref=f30e129]:
+              - link "Cài đặt" [ref=f30e130] [cursor=pointer]:
+                - /url: /settings
+      - generic [ref=f30e135]:
+        - generic [ref=f30e136]:
+          - generic [ref=f30e137]: Miro Runtime · Mô phỏng
+          - generic [ref=f30e138]: OK
+        - generic [ref=f30e139]:
+          - generic [ref=f30e140]:
+            - generic [ref=f30e141]: OP
+            - generic [ref=f30e142]:
+              - paragraph [ref=f30e143]: Operator
+              - paragraph [ref=f30e144]: Asia/Bangkok
+          - button "Switch theme" [ref=f30e146] [cursor=pointer]
+    - generic [ref=f30e149]:
+      - banner [ref=f30e150]:
+        - navigation "Breadcrumb" [ref=f30e152]:
+          - generic [ref=f30e153]: AI Workspace
+        - generic [ref=f30e154]:
+          - generic "Mọi tác vụ, trình duyệt và xuất bản đều được mô phỏng cục bộ. Không kết nối tài khoản thật." [ref=f30e155]: Chế độ Mô phỏng
+          - button "Giám sát tác vụ" [ref=f30e156] [cursor=pointer]:
+            - generic [ref=f30e159]: "0"
+            - generic [ref=f30e160]: đang chạy
+          - button "Cần xử lý" [ref=f30e161] [cursor=pointer]:
+            - generic [ref=f30e164]: "2"
+          - button "Thông báo" [ref=f30e165] [cursor=pointer]
+      - main [ref=f30e170]:
+        - generic [ref=f30e172]:
+          - generic [ref=f30e173]:
+            - generic [ref=f30e174]:
+              - button "Hội thoại" [ref=f30e175] [cursor=pointer]
+              - button "Hội thoại mới" [ref=f30e181] [cursor=pointer]
+            - button "Mở Live Workspace" [ref=f30e186] [cursor=pointer]
+          - generic [ref=f30e192]:
+            - paragraph [ref=f30e195]: chào bạn
+            - generic [ref=f30e196]:
+              - generic [ref=f30e197]:
+                - generic "miro." [ref=f30e198]:
+                  - text: miro
+                  - generic [ref=f30e199]: .
+                - generic [ref=f30e200]: 22:01 26-11
+              - paragraph [ref=f30e201]: Miro đã bắt đầu tác vụ tìm kiếm và phân tích 10 video KANS 377 trên Profile 20 (mô phỏng). Tác vụ sẽ tiếp tục chạy nền ngay cả khi bạn đóng Live Workspace hoặc chuyển sang trang khác.
+              - generic [ref=f30e202]:
+                - generic [ref=f30e203]:
+                  - generic [ref=f30e209]:
+                    - paragraph [ref=f30e210]: Nghiên cứu 10 video KANS 377 (Profile 20)
+                    - generic [ref=f30e211]:
+                      - generic [ref=f30e212]: Profile 20 · KANS 377 Research
+                      - generic [aria-hidden] [ref=f30e213]: ·
+                      - generic [ref=f30e214]: chat
+                      - generic [aria-hidden] [ref=f30e215]: ·
+                      - generic [ref=f30e216]: 3m 52s
+                  - generic [ref=f30e217]: Hoàn tất
+                - generic [ref=f30e222]:
+                  - paragraph [ref=f30e223]: Hoàn tất thu thập 10/10 video mẫu KANS 377
+                  - generic [ref=f30e227]:
+                    - generic [ref=f30e228]: Hoàn tất 10/10 video mẫu
+                    - generic [ref=f30e229]: 10/10 video — 100%
+                - button "Xem 4 bước thực thi" [ref=f30e231] [cursor=pointer]
+                - generic [ref=f30e236]:
+                  - button "Xem kết quả" [ref=f30e237] [cursor=pointer]
+                  - button "Live Workspace" [ref=f30e243] [cursor=pointer]
+              - button "Mở Profile 20 · KANS 377 Research" [ref=f30e249] [cursor=pointer]
+            - paragraph [ref=f30e257]: tim kiem tiktok KANS 377 tong hop 5 video
+            - paragraph [ref=f30e260]: xin chao test QA chuc nang
+            - generic [ref=f30e261]:
+              - generic [ref=f30e262]:
+                - generic "miro." [ref=f30e263]:
+                  - text: miro
+                  - generic [ref=f30e264]: .
+                - generic [ref=f30e265]: 22:55 26-11
+              - paragraph [ref=f30e266]: Miro đã bắt đầu tác vụ tìm kiếm và phân tích 10 video KANS 377 trên Profile 20 (mô phỏng). Tác vụ sẽ tiếp tục chạy nền ngay cả khi bạn đóng Live Workspace hoặc chuyển sang trang khác.
+              - generic [ref=f30e267]:
+                - generic [ref=f30e268]:
+                  - generic [ref=f30e274]:
+                    - paragraph [ref=f30e275]: Nghiên cứu 10 video KANS 377 (Profile 20)
+                    - generic [ref=f30e276]:
+                      - generic [ref=f30e277]: Profile 20 · KANS 377 Research
+                      - generic [aria-hidden] [ref=f30e278]: ·
+                      - generic [ref=f30e279]: chat
+                      - generic [aria-hidden] [ref=f30e280]: ·
+                      - generic [ref=f30e281]: 15s
+                  - generic [ref=f30e282]: Hoàn tất
+                - generic [ref=f30e287]:
+                  - paragraph [ref=f30e288]: Hoàn tất thu thập 10/10 video mẫu KANS 377
+                  - generic [ref=f30e292]:
+                    - generic [ref=f30e293]: Hoàn tất 10/10 video mẫu
+                    - generic [ref=f30e294]: 10/10 video — 100%
+                - button "Xem 4 bước thực thi" [ref=f30e296] [cursor=pointer]
+                - generic [ref=f30e301]:
+                  - button "Xem kết quả" [ref=f30e302] [cursor=pointer]
+                  - button "Live Workspace" [ref=f30e308] [cursor=pointer]
+              - button "Mở Profile 20 · KANS 377 Research" [ref=f30e314] [cursor=pointer]
+          - generic [ref=f30e322]:
+            - textbox "Nhập yêu cầu cho Miro... (Enter để gửi, Shift+Enter xuống dòng)" [ref=f30e323]
+            - generic [ref=f30e324]:
+              - generic [ref=f30e325]:
+                - button "Đính kèm" [ref=f30e326] [cursor=pointer]
+                - combobox "Project context" [ref=f30e329]:
+                  - option "KANS 377 Product Research" [selected]
+                  - option "Fashion Content Production"
+                  - option "Affiliate Content Operations"
+                - combobox "Browser profile" [ref=f30e330]:
+                  - option "Profile 20" [selected]
+                  - option "Profile 21"
+                  - option "Profile 22"
+                  - option "Profile 23"
+                - combobox "Model selector" [ref=f30e331]:
+                  - option "Miro Core (Simulated)" [selected]
+                  - option "Miro Fast (Simulated)"
+                  - option "Miro Deep Research (Simulated)"
+              - button "Gửi lệnh" [disabled]
+    - region "Notifications alt+T"
+  - generic [ref=f30e336] [cursor=pointer]:
+    - button "Open Next.js Dev Tools" [ref=f30e337]
+    - generic [ref=f30e341]:
+      - button "Open issues overlay" [ref=f30e342]:
+        - generic [ref=f30e343]:
+          - generic [aria-hidden] [ref=f30e344]: "0"
+          - generic [ref=f30e345]: "1"
+        - generic [ref=f30e346]: Issue
+      - button "Collapse issues badge" [ref=f30e347]
+  - alert [ref=f30e350]

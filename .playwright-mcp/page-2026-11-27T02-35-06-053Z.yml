@@ -1,0 +1,128 @@
+- generic [ref=f28e1]:
+  - generic [ref=f28e2]:
+    - complementary [ref=f28e3]:
+      - generic [ref=f28e4]: Miro
+      - navigation [ref=f28e5]:
+        - link "Công việc" [ref=f28e6] [cursor=pointer]:
+          - /url: /
+        - link "Giao việc (live)" [ref=f28e7] [cursor=pointer]:
+          - /url: /tasks-live
+        - link "Runtime" [ref=f28e8] [cursor=pointer]:
+          - /url: /runtime
+        - link "Thư viện" [ref=f28e9] [cursor=pointer]:
+          - /url: /library
+        - link "Xuất bản" [ref=f28e10] [cursor=pointer]:
+          - /url: /publish
+        - link "Editor" [ref=f28e11] [cursor=pointer]:
+          - /url: /editor
+        - link "Cài đặt & kết nối" [ref=f28e12] [cursor=pointer]:
+          - /url: /settings
+    - main [ref=f28e13]:
+      - heading "Giao viec" [level=1] [ref=f28e14]
+      - paragraph [ref=f28e15]:
+        - text: Nhiem vu capability da nghiem thu (actor/video/search TikTok) qua
+        - code [ref=f28e16]: POST /tasks/run-message
+        - text: . BE so huu state; chuyen trang khong mat task.
+      - generic [ref=f28e17]:
+        - 'textbox "VD: tim kiem tiktok KANS 377 5 video" [ref=f28e18]'
+        - button "Giao viec" [disabled] [ref=f28e19]
+      - heading "Phân tích video (Manual Control)" [level=2] [ref=f28e20]
+      - paragraph [ref=f28e21]: Dán URL video TikTok — Miro tự phân tích, không cần tab hay cú pháp kỹ thuật.
+      - generic [ref=f28e22]:
+        - textbox "https://www.tiktok.com/@.../video/..." [ref=f28e23]
+        - button "Phân tích video" [disabled] [ref=f28e24]
+      - generic [ref=f28e25]:
+        - button "Tìm kiếm mẫu" [ref=f28e26]
+        - button "Kiểm tra tài khoản" [ref=f28e27]
+      - heading "Task moi nhat (BE)" [level=2] [ref=f28e28]
+      - list [ref=f28e29]:
+        - listitem [ref=f28e30]:
+          - link "task-a60d25eefda2" [ref=f28e31] [cursor=pointer]:
+            - /url: /tasks-live/task-a60d25eefda2
+          - generic [ref=f28e32]: "- needs_attention - SEARCH_NO_RECORDS"
+        - listitem [ref=f28e33]:
+          - link "task-1a9a6973da85" [ref=f28e34] [cursor=pointer]:
+            - /url: /tasks-live/task-1a9a6973da85
+          - generic [ref=f28e35]: "- needs_attention - NO_ROUTE_MATCH"
+        - listitem [ref=f28e36]:
+          - link "task-8c70bb1eb471" [ref=f28e37] [cursor=pointer]:
+            - /url: /tasks-live/task-8c70bb1eb471
+          - generic [ref=f28e38]: "- stop_requested - TAB_UNKNOWN"
+        - listitem [ref=f28e39]:
+          - link "task-49fb6a81afe1" [ref=f28e40] [cursor=pointer]:
+            - /url: /tasks-live/task-49fb6a81afe1
+          - generic [ref=f28e41]: "- needs_attention - NO_ROUTE_MATCH"
+        - listitem [ref=f28e42]:
+          - link "task-80fd02f9eff7" [ref=f28e43] [cursor=pointer]:
+            - /url: /tasks-live/task-80fd02f9eff7
+          - generic [ref=f28e44]: "- needs_attention - TAB_UNKNOWN"
+        - listitem [ref=f28e45]:
+          - link "task-4ada518b3b7c" [ref=f28e46] [cursor=pointer]:
+            - /url: /tasks-live/task-4ada518b3b7c
+          - generic [ref=f28e47]: "- needs_attention - NO_ROUTE_MATCH"
+        - listitem [ref=f28e48]:
+          - link "task-81b58a44123c" [ref=f28e49] [cursor=pointer]:
+            - /url: /tasks-live/task-81b58a44123c
+          - generic [ref=f28e50]: "- needs_attention - NO_ROUTE_MATCH"
+        - listitem [ref=f28e51]:
+          - link "task-9e67b82400cf" [ref=f28e52] [cursor=pointer]:
+            - /url: /tasks-live/task-9e67b82400cf
+          - generic [ref=f28e53]: "- needs_attention - OBSERVATION_TIMEOUT"
+        - listitem [ref=f28e54]:
+          - link "task-dc6b68c7ed04" [ref=f28e55] [cursor=pointer]:
+            - /url: /tasks-live/task-dc6b68c7ed04
+          - generic [ref=f28e56]: "- needs_attention - NO_ROUTE_MATCH"
+        - listitem [ref=f28e57]:
+          - link "task-ff1030af7817" [ref=f28e58] [cursor=pointer]:
+            - /url: /tasks-live/task-ff1030af7817
+          - generic [ref=f28e59]: "- needs_attention - SEARCH_NO_RECORDS"
+        - listitem [ref=f28e60]:
+          - link "task-d8690bec262e" [ref=f28e61] [cursor=pointer]:
+            - /url: /tasks-live/task-d8690bec262e
+          - generic [ref=f28e62]: "- needs_attention - NO_ROUTE_MATCH"
+        - listitem [ref=f28e63]:
+          - link "task-c87b85d6cee9" [ref=f28e64] [cursor=pointer]:
+            - /url: /tasks-live/task-c87b85d6cee9
+          - generic [ref=f28e65]: "- needs_attention - NO_ROUTE_MATCH"
+        - listitem [ref=f28e66]:
+          - link "task-7dbff808928b" [ref=f28e67] [cursor=pointer]:
+            - /url: /tasks-live/task-7dbff808928b
+          - generic [ref=f28e68]: "- needs_attention - NO_MANAGED_TAB"
+        - listitem [ref=f28e69]:
+          - link "task-2a724e29ba36" [ref=f28e70] [cursor=pointer]:
+            - /url: /tasks-live/task-2a724e29ba36
+          - generic [ref=f28e71]: "- needs_attention - NO_MANAGED_TAB"
+        - listitem [ref=f28e72]:
+          - link "task-da52957d39e2" [ref=f28e73] [cursor=pointer]:
+            - /url: /tasks-live/task-da52957d39e2
+          - generic [ref=f28e74]: "- queued"
+        - listitem [ref=f28e75]:
+          - link "task-0678e70f87c1" [ref=f28e76] [cursor=pointer]:
+            - /url: /tasks-live/task-0678e70f87c1
+          - generic [ref=f28e77]: "- queued"
+        - listitem [ref=f28e78]:
+          - link "task-d7331ca58526" [ref=f28e79] [cursor=pointer]:
+            - /url: /tasks-live/task-d7331ca58526
+          - generic [ref=f28e80]: "- queued"
+        - listitem [ref=f28e81]:
+          - link "task-e60e7ba7e230" [ref=f28e82] [cursor=pointer]:
+            - /url: /tasks-live/task-e60e7ba7e230
+          - generic [ref=f28e83]: "- needs_attention - RuntimeError - co evidence"
+        - listitem [ref=f28e84]:
+          - link "task-d20a836485b1" [ref=f28e85] [cursor=pointer]:
+            - /url: /tasks-live/task-d20a836485b1
+          - generic [ref=f28e86]: "- needs_attention - RuntimeError - co evidence"
+        - listitem [ref=f28e87]:
+          - link "task-951fbea19f84" [ref=f28e88] [cursor=pointer]:
+            - /url: /tasks-live/task-951fbea19f84
+          - generic [ref=f28e89]: "- needs_attention - RuntimeError - co evidence"
+  - generic [ref=f28e94] [cursor=pointer]:
+    - button "Open Next.js Dev Tools" [ref=f28e95]
+    - generic [ref=f28e99]:
+      - button "Open issues overlay" [ref=f28e100]:
+        - generic [ref=f28e101]:
+          - generic [aria-hidden] [ref=f28e102]: "0"
+          - generic [ref=f28e103]: "1"
+        - generic [ref=f28e104]: Issue
+      - button "Collapse issues badge" [ref=f28e105]
+  - alert [ref=f28e108]

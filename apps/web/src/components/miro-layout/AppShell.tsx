@@ -12,7 +12,6 @@ import {
   ShieldAlert,
 } from 'lucide-react';
 import { useMiroStore } from '../../stores/useMiroStore';
-import { startMiroExecutionEngine } from '../../proto-services/mock/executionEngine';
 import { GlobalSidebar } from './GlobalSidebar';
 import { GlobalHeader } from './GlobalHeader';
 import { TaskMonitorDrawer } from './TaskMonitorDrawer';
@@ -34,10 +33,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     (s) => s.approvals.filter((a) => a.status === 'pending').length
   );
 
-  // Start single global simulated execution engine
-  useEffect(() => {
-    startMiroExecutionEngine();
-  }, []);
+  // BE là nguồn sự thật cho tasks/runtime; FE chỉ poll qua hooks, không chạy engine mock cục bộ.
 
   // Apply theme & lang attributes on <html>
   useEffect(() => {

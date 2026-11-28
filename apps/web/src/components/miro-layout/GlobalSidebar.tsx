@@ -72,6 +72,9 @@ const NAV_GROUPS: NavGroupDef[] = [
       { to: '/activity', labelKey: 'activity', icon: Activity },
       { to: '/integrations', labelKey: 'integrations', icon: Plug },
       { to: '/settings', labelKey: 'settings', icon: Settings },
+      // BUG-03: link chéo sang shell cũ (trang live BE end-to-end).
+      { to: '/tasks-live', labelKey: 'tasksLive', icon: MessageSquare },
+      { to: '/runtime', labelKey: 'runtime', icon: Chrome },
     ],
   },
 ];

@@ -1,0 +1,509 @@
+[       1ms] [ERROR] A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+%s%s https://react.dev/link/hydration-mismatch 
+
+  ...
+    <HotReload assetPrefix="" globalError={[...]}>
+      <AppDevOverlayErrorBoundary globalError={[...]}>
+        <ReplaySsrOnlyErrors>
+        <DevRootHTTPAccessFallbackBoundary>
+          <HTTPAccessFallbackBoundary notFound={<NotAllowedRootHTTPFallbackError>}>
+            <HTTPAccessFallbackErrorBoundary pathname="/media" notFound={<NotAllowedRootHTTPFallbackError>} ...>
+              <RedirectBoundary>
+                <RedirectErrorBoundary router={{...}}>
+                  <Head headCacheNode={{lazyData:null, ...}}>
+                    <__next_viewport_boundary__>
+                    <MetadataTree>
+                      <__next_metadata_boundary__>
+                        <__next_metadata_boundary__>
+                          <div
+                            hidden={true}
+-                           bis_skin_checked="1"
+                          >
+                  <__next_root_layout_boundary__>
+                    <SegmentViewNode type="layout" pagePath="layout.tsx">
+                      <SegmentTrieNode>
+                      <link>
+                      <RootLayout>
+                        <html lang="vi" data-theme="midnight-lime" className="dark" suppressHydrationWarning={true}>
+                          <head>
+                          <body
+                            className="antialiased"
+-                           __processed_3d450ec7-5bc7-4c9b-bb82-be803f263273__="true"
+-                           bis_register="W3sibWFzdGVyIjp0cnVlLCJleHRlbnNpb25JZCI6ImVwcGlvY2VtaG1ubGJoanBsY2drb2ZjaWll..."
+                          >
+                            ...
+                              <MediaStudioPageRoute params={Promise} searchParams={Promise}>
+                                <MiroShell>
+                                  <AppShell>
+                                    <div
+                                      className="flex h-screen w-screen overflow-hidden bg-[var(--color-canvas)] text-..."
+-                                     bis_skin_checked="1"
+                                    >
+                                      <div
+                                        className="hidden lg:flex h-full shrink-0"
+-                                       bis_skin_checked="1"
+                                      >
+                                        <GlobalSidebar>
+                                          <aside aria-label="Primary na..." className="flex flex-...">
+                                            <div
+                                              className="px-3 pt-3 pb-2 space-y-2.5 shrink-0"
+-                                             bis_skin_checked="1"
+                                            >
+                                              <div
+                                                className="flex items-center justify-between gap-2 h-8"
+-                                               bis_skin_checked="1"
+                                              >
+                                              <div
+                                                className="flex items-center justify-between rounded-[6px] bg-[var(--c..."
+-                                               bis_skin_checked="1"
+                                              >
+                                              <div
+                                                className="flex gap-1.5 flex-col"
+-                                               bis_skin_checked="1"
+                                              >
+                                            <nav className="flex-1 ove..." aria-label="Workspace ...">
+                                              <div
+                                                className="space-y-0.5"
+-                                               bis_skin_checked="1"
+                                              >
+                                              <div
+                                                className="space-y-0.5"
+-                                               bis_skin_checked="1"
+                                              >
+                                              <div
+                                                className="space-y-0.5"
+-                                               bis_skin_checked="1"
+                                              >
+                                              <div
+                                                className="space-y-0.5"
+-                                               bis_skin_checked="1"
+                                              >
+                                            <div
+                                              className="p-2.5 border-t border-[var(--color-border)] space-y-2 shrink-0"
+-                                             bis_skin_checked="1"
+                                            >
+                                              <div
+                                                className="flex items-center justify-between px-2 py-1 text-[11px] tex..."
+-                                               bis_skin_checked="1"
+                                              >
+                                              <div
+                                                className="flex items-center justify-between gap-2 px-1"
+-                                               bis_skin_checked="1"
+                                              >
+                                                <div
+                                                  className="flex items-center gap-2 min-w-0"
+-                                                 bis_skin_checked="1"
+                                                >
+                                                  <div
+                                                    className="flex h-7 w-7 shrink-0 items-center justify-center round..."
+-                                                   bis_skin_checked="1"
+                                                  >
++                                                   OP
+                                                  <div
+                                                    className="min-w-0"
+-                                                   bis_skin_checked="1"
+                                                  >
+                                                <div
+                                                  className="flex items-center gap-0.5 shrink-0"
+-                                                 bis_skin_checked="1"
+                                                >
+                                      <div
+                                        className="flex flex-1 flex-col min-w-0 h-full overflow-hidden"
+-                                       bis_skin_checked="1"
+                                      >
+                                        <GlobalHeader>
+                                          <header className="flex items...">
+                                            <div
+                                              className="flex items-center gap-2.5 min-w-0"
+-                                             bis_skin_checked="1"
+                                            >
+                                              <Button>
+                                              <div
+                                                className="lg:hidden"
+-                                               bis_skin_checked="1"
+                                              >
+                                              ...
+                                            <div
+                                              className="flex items-center gap-1.5 shrink-0"
+-                                             bis_skin_checked="1"
+                                            >
+                                        ...
+                                      ...
+                  ...
+ @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:57
+[      89ms] [ERROR] A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+%s%s https://react.dev/link/hydration-mismatch 
+
+  ...
+    <RedirectErrorBoundary router={{...}}>
+      <InnerLayoutRouter url="/media" tree={[...]} cacheNode={{lazyData:null, ...}} segmentPath={[...]}>
+        <SegmentViewNode type="page" pagePath="media/page...">
+          <SegmentTrieNode>
+          <ClientPageRoot Component={function MediaStudioPageRoute} searchParams={{}} params={{}}>
+            <MediaStudioPageRoute params={Promise} searchParams={Promise}>
+              <MiroShell>
+                <AppShell>
+                  <div className="flex h-scr...">
+                    <div>
+                    <div className="flex flex-...">
+                      <GlobalHeader>
+                      <main className="flex-1 min...">
+                        <Suspense fallback={null}>
+                          <MediaStudioPage>
+                            <div
+                              className="flex flex-col h-full w-full overflow-hidden"
+-                             bis_skin_checked="1"
+                            >
+                              <div
+                                className="flex flex-1 min-h-0 overflow-hidden"
+-                               bis_skin_checked="1"
+                              >
+                                <aside className="hidden md:...">
+                                  <div
+                                    className="p-3 border-b border-[var(--color-border)] space-y-2"
+-                                   bis_skin_checked="1"
+                                  >
+                                    <div
+                                      className="flex items-center justify-between"
+-                                     bis_skin_checked="1"
+                                    >
+                                      <h1>
+                                      <div
+                                        className="flex items-center gap-1"
+-                                       bis_skin_checked="1"
+                                      >
+                                    <div
+                                      className="relative"
+-                                     bis_skin_checked="1"
+                                    >
+                                    <div
+                                      className="flex items-center gap-1"
+-                                     bis_skin_checked="1"
+                                    >
+                                    ...
+                                  <div
+                                    className="flex-1 overflow-y-auto p-2.5 space-y-1.5"
+-                                   bis_skin_checked="1"
+                                  >
+                                    <button type="button" onClick={function onClick} className="w-full rou...">
+                                      <div
+                                        className="rounded-[4px] flex items-center justify-center text-white/75 shrink..."
+                                        style={{backgroundColor:"#23311A"}}
+-                                       bis_skin_checked="1"
+                                      >
+                                      <div
+                                        className="min-w-0 flex-1"
+-                                       bis_skin_checked="1"
+                                      >
+                                    <button type="button" onClick={function onClick} className="w-full rou...">
+                                      <div
+                                        className="rounded-[4px] flex items-center justify-center text-white/75 shrink..."
+                                        style={{backgroundColor:"#1D2836"}}
+-                                       bis_skin_checked="1"
+                                      >
+                                      <div
+                                        className="min-w-0 flex-1"
+-                                       bis_skin_checked="1"
+                                      >
+                                    <button type="button" onClick={function onClick} className="w-full rou...">
+                                      <div
+                                        className="rounded-[4px] flex items-center justify-center text-white/75 shrink..."
+                                        style={{backgroundColor:"#2B232E"}}
+-                                       bis_skin_checked="1"
+                                      >
+                                      <div
+                                        className="min-w-0 flex-1"
+-                                       bis_skin_checked="1"
+                                      >
+                                    <button type="button" onClick={function onClick} className="w-full rou...">
+                                      <div
+                                        className="rounded-[4px] flex items-center justify-center text-white/75 shrink..."
+                                        style={{backgroundColor:"#212A24"}}
+-                                       bis_skin_checked="1"
+                                      >
+                                      <div
+                                        className="min-w-0 flex-1"
+-                                       bis_skin_checked="1"
+                                      >
+                                <div
+                                  className="flex-1 flex flex-col min-w-0 bg-[var(--color-canvas)] overflow-y-auto p-4..."
+-                                 bis_skin_checked="1"
+                                >
+                                  <div
+                                    className="flex flex-wrap items-center justify-between gap-2"
+-                                   bis_skin_checked="1"
+                                  >
+                                    <div
+-                                     bis_skin_checked="1"
+                                    >
+                                    <div
+                                      className="flex items-center gap-2"
+-                                     bis_skin_checked="1"
+                                    >
+                                  <div
+                                    className="flex-1 min-h-[240px] max-h-[420px] rounded-[10px] border border-[var(--..."
+                                    style={{backgroundColor:"#23311A"}}
+-                                   bis_skin_checked="1"
+                                  >
+                                    <div
+                                      className="flex items-center justify-between text-[11px] font-mono-tech text-whi..."
+-                                     bis_skin_checked="1"
+                                    >
+                                    <div
+                                      className="flex flex-col items-center justify-center gap-2 text-center my-auto"
+-                                     bis_skin_checked="1"
+                                    >
+                                    <div
+                                      className="rounded-[6px] bg-black/60 px-3 py-2 text-[12px] text-white/95"
+-                                     bis_skin_checked="1"
+                                    >
++                                     Sau hai tuần dùng đều đặn KANS 377 vào buổi tối, đây là ba điểm mình thấy rõ nhất.
+                                  <div
+                                    className="flex items-center gap-3 px-1"
+-                                   bis_skin_checked="1"
+                                  >
+                                  <div
+                                    className="grid grid-cols-1 sm:grid-cols-2 gap-3"
+-                                   bis_skin_checked="1"
+                                  >
+                                    <div
+                                      className="rounded-[8px] bg-[var(--color-surface-1)] border border-[var(--color-..."
+-                                     bis_skin_checked="1"
+                                    >
+                                      <div
+                                        className="flex items-center justify-between"
+-                                       bis_skin_checked="1"
+                                      >
+                                      ...
+                                    <div
+                                      className="rounded-[8px] bg-[var(--color-surface-1)] border border-[var(--color-..."
+-                                     bis_skin_checked="1"
+                                    >
+                                      <div
+                                        className="flex items-center justify-between"
+-                                       bis_skin_checked="1"
+                                      >
+                                      ...
+                                <aside className="hidden lg:...">
+                                  <div
+                                    className="p-3 border-b border-[var(--color-border)]"
+-                                   bis_skin_checked="1"
+                                  >
+                                    <SegmentedTabs value="analysis" onChange={function bound dispatchSetState} ...>
+                                      <div
+                                        role="tablist"
+                                        className="inline-flex items-center gap-1 rounded-[8px] bg-[var(--color-surfac..."
+-                                       bis_skin_checked="1"
+                                      >
+                                  <div
+                                    className="flex-1 overflow-y-auto p-3.5 space-y-3"
+-                                   bis_skin_checked="1"
+                                  >
+                                    <div
+                                      className="space-y-2.5"
+-                                     bis_skin_checked="1"
+                                    >
+                                      <p>
+                                      <button type="button" onClick={function onClick} className="w-full rou...">
+                                        <div
+                                          className="flex items-center justify-between gap-2 text-[12px]"
+-                                         bis_skin_checked="1"
+                                        >
+                                        ...
+                                      <button type="button" onClick={function onClick} className="w-full rou...">
+                                        <div
+                                          className="flex items-center justify-between gap-2 text-[12px]"
+-                                         bis_skin_checked="1"
+                                        >
+                                        ...
+                                      <button type="button" onClick={function onClick} className="w-full rou...">
+                                        <div
+                                          className="flex items-center justify-between gap-2 text-[12px]"
+-                                         bis_skin_checked="1"
+                                        >
+                                        ...
+                                      <button type="button" onClick={function onClick} className="w-full rou...">
+                                        <div
+                                          className="flex items-center justify-between gap-2 text-[12px]"
+-                                         bis_skin_checked="1"
+                                        >
+                                        ...
+                              <div
+                                className="h-[112px] border-t border-[var(--color-border)] bg-[var(--color-surface-1)]..."
+-                               bis_skin_checked="1"
+                              >
+                                <div
+                                  className="flex items-center justify-between text-[11px] text-[var(--color-text-muted)]"
+-                                 bis_skin_checked="1"
+                                >
+                                <div
+                                  className="flex-1 flex items-stretch gap-1.5 overflow-x-auto"
+-                                 bis_skin_checked="1"
+                                >
+                    ...
+        ...
+      ...
+ @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:57
+[     658ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:197
+[    2530ms] [ERROR] Unchecked runtime.lastError: Could not establish connection. Receiving end does not exist. @ http://127.0.0.1:3100/publishing:1
+[    2738ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:25631
+[    2940ms] [ERROR] A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+%s%s https://react.dev/link/hydration-mismatch 
+
+  ...
+    <HotReload assetPrefix="" globalError={[...]}>
+      <AppDevOverlayErrorBoundary globalError={[...]}>
+        <ReplaySsrOnlyErrors>
+        <DevRootHTTPAccessFallbackBoundary>
+          <HTTPAccessFallbackBoundary notFound={<NotAllowedRootHTTPFallbackError>}>
+            <HTTPAccessFallbackErrorBoundary pathname="/publishing" notFound={<NotAllowedRootHTTPFallbackError>} ...>
+              <RedirectBoundary>
+                <RedirectErrorBoundary router={{...}}>
+                  <Head headCacheNode={{lazyData:null, ...}}>
+                    <__next_viewport_boundary__>
+                    <MetadataTree>
+                      <__next_metadata_boundary__>
+                        <__next_metadata_boundary__>
+                          <div
+                            hidden={true}
+-                           bis_skin_checked="1"
+                          >
+                  <__next_root_layout_boundary__>
+                    <SegmentViewNode type="layout" pagePath="layout.tsx">
+                      <SegmentTrieNode>
+                      <link>
+                      <RootLayout>
+                        <html lang="vi" data-theme="midnight-lime" className="dark" suppressHydrationWarning={true}>
+                          <head>
+                          <body
+                            className="antialiased"
+-                           __processed_1db55496-9bb0-4adb-b8fd-80f65b56706c__="true"
+-                           bis_register="W3sibWFzdGVyIjp0cnVlLCJleHRlbnNpb25JZCI6ImVwcGlvY2VtaG1ubGJoanBsY2drb2ZjaWll..."
+                          >
+                            ...
+                              <PublishingPageRoute params={Promise} searchParams={Promise}>
+                                <MiroShell>
+                                  <AppShell>
+                                    <div
+                                      className="flex h-screen w-screen overflow-hidden bg-[var(--color-canvas)] text-..."
+-                                     bis_skin_checked="1"
+                                    >
+                                      <div
+                                        className="hidden lg:flex h-full shrink-0"
+-                                       bis_skin_checked="1"
+                                      >
+                                        <GlobalSidebar>
+                                          <aside aria-label="Primary na..." className="flex flex-...">
+                                            <div
+                                              className="px-3 pt-3 pb-2 space-y-2.5 shrink-0"
+-                                             bis_skin_checked="1"
+                                            >
+                                              <div
+                                                className="flex items-center justify-between gap-2 h-8"
+-                                               bis_skin_checked="1"
+                                              >
+                                              <div
+                                                className="flex items-center justify-between rounded-[6px] bg-[var(--c..."
+-                                               bis_skin_checked="1"
+                                              >
+                                              <div
+                                                className="flex gap-1.5 flex-col"
+-                                               bis_skin_checked="1"
+                                              >
+                                            <nav className="flex-1 ove..." aria-label="Workspace ...">
+                                              <div
+                                                className="space-y-0.5"
+-                                               bis_skin_checked="1"
+                                              >
+                                              <div
+                                                className="space-y-0.5"
+-                                               bis_skin_checked="1"
+                                              >
+                                              <div
+                                                className="space-y-0.5"
+-                                               bis_skin_checked="1"
+                                              >
+                                              <div
+                                                className="space-y-0.5"
+-                                               bis_skin_checked="1"
+                                              >
+                                            <div
+                                              className="p-2.5 border-t border-[var(--color-border)] space-y-2 shrink-0"
+-                                             bis_skin_checked="1"
+                                            >
+                                              <div
+                                                className="flex items-center justify-between px-2 py-1 text-[11px] tex..."
+-                                               bis_skin_checked="1"
+                                              >
+                                              <div
+                                                className="flex items-center justify-between gap-2 px-1"
+-                                               bis_skin_checked="1"
+                                              >
+                                                <div
+                                                  className="flex items-center gap-2 min-w-0"
+-                                                 bis_skin_checked="1"
+                                                >
+                                                  <div
+                                                    className="flex h-7 w-7 shrink-0 items-center justify-center round..."
+-                                                   bis_skin_checked="1"
+                                                  >
++                                                   OP
+                                                  <div
+                                                    className="min-w-0"
+-                                                   bis_skin_checked="1"
+                                                  >
+                                                <div
+                                                  className="flex items-center gap-0.5 shrink-0"
+-                                                 bis_skin_checked="1"
+                                                >
+                                      <div
+                                        className="flex flex-1 flex-col min-w-0 h-full overflow-hidden"
+-                                       bis_skin_checked="1"
+                                      >
+                                        <GlobalHeader>
+                                          <header className="flex items...">
+                                            <div
+                                              className="flex items-center gap-2.5 min-w-0"
+-                                             bis_skin_checked="1"
+                                            >
+                                              <Button>
+                                              <div
+                                                className="lg:hidden"
+-                                               bis_skin_checked="1"
+                                              >
+                                              ...
+                                            <div
+                                              className="flex items-center gap-1.5 shrink-0"
+-                                             bis_skin_checked="1"
+                                            >
+                                        ...
+                                      ...
+                  ...
+ @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:57

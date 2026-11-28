@@ -1,0 +1,110 @@
+- generic [ref=f5e1]:
+  - generic [ref=f5e2]:
+    - complementary "Primary navigation" [ref=f5e4]:
+      - generic [ref=f5e5]:
+        - generic [ref=f5e6]:
+          - button [ref=f5e7] [cursor=pointer]:
+            - generic "miro." [ref=f5e8]:
+              - text: miro
+              - generic [ref=f5e9]: .
+          - button "Thu gọn thanh điều hướng" [ref=f5e10] [cursor=pointer]
+        - generic [ref=f5e13]:
+          - generic [ref=f5e14]: Personal Operations
+          - generic [ref=f5e15]: LOCAL
+        - generic [ref=f5e16]:
+          - button "Bảng lệnh" [ref=f5e17] [cursor=pointer]:
+            - generic [ref=f5e18]: Tìm kiếm nhanh...
+            - generic [ref=f5e23]: ⌘K
+          - button "Hội thoại mới" [ref=f5e24] [cursor=pointer]
+      - navigation "Workspace sections" [ref=f5e27]:
+        - generic [ref=f5e28]:
+          - button "WORKSPACE" [ref=f5e29] [cursor=pointer]
+          - list [ref=f5e33]:
+            - listitem [ref=f5e34]:
+              - link "Tổng quan" [ref=f5e35] [cursor=pointer]:
+                - /url: /overview
+            - listitem [ref=f5e42]:
+              - link "AI Workspace" [ref=f5e43] [cursor=pointer]:
+                - /url: /workspace
+            - listitem [ref=f5e47]:
+              - link "Tác vụ" [ref=f5e48] [cursor=pointer]:
+                - /url: /tasks
+            - listitem [ref=f5e54]:
+              - link "Dự án" [ref=f5e55] [cursor=pointer]:
+                - /url: /projects
+        - generic [ref=f5e59]:
+          - button "TỰ ĐỘNG HÓA" [ref=f5e60] [cursor=pointer]
+          - list [ref=f5e64]:
+            - listitem [ref=f5e65]:
+              - link "Lịch trình" [ref=f5e66] [cursor=pointer]:
+                - /url: /schedules
+            - listitem [ref=f5e72]:
+              - link "Workflows" [ref=f5e73] [cursor=pointer]:
+                - /url: /workflows
+        - generic [ref=f5e79]:
+          - button "CÔNG CỤ" [ref=f5e80] [cursor=pointer]
+          - list [ref=f5e84]:
+            - listitem [ref=f5e85]:
+              - link "Trình duyệt" [ref=f5e86] [cursor=pointer]:
+                - /url: /browser
+            - listitem [ref=f5e91]:
+              - link "Nghiên cứu" [ref=f5e92] [cursor=pointer]:
+                - /url: /research
+            - listitem [ref=f5e97]:
+              - link "Media Studio" [ref=f5e98] [cursor=pointer]:
+                - /url: /media
+            - listitem [ref=f5e102]:
+              - link "Xuất bản" [ref=f5e103] [cursor=pointer]:
+                - /url: /publishing
+            - listitem [ref=f5e108]:
+              - link "Tri thức" [ref=f5e109] [cursor=pointer]:
+                - /url: /knowledge
+        - generic [ref=f5e113]:
+          - button "HỆ THỐNG" [ref=f5e114] [cursor=pointer]
+          - list [ref=f5e118]:
+            - listitem [ref=f5e119]:
+              - link "Hoạt động" [ref=f5e120] [cursor=pointer]:
+                - /url: /activity
+            - listitem [ref=f5e124]:
+              - link "Tích hợp" [ref=f5e125] [cursor=pointer]:
+                - /url: /integrations
+            - listitem [ref=f5e129]:
+              - link "Cài đặt" [ref=f5e130] [cursor=pointer]:
+                - /url: /settings
+      - generic [ref=f5e135]:
+        - generic [ref=f5e136]:
+          - generic [ref=f5e137]: Miro Runtime · Mô phỏng
+          - generic [ref=f5e138]: OK
+        - generic [ref=f5e139]:
+          - generic [ref=f5e140]:
+            - generic [ref=f5e141]: OP
+            - generic [ref=f5e142]:
+              - paragraph [ref=f5e143]: Operator
+              - paragraph [ref=f5e144]: Asia/Bangkok
+          - button "Switch theme" [ref=f5e146] [cursor=pointer]
+    - generic [ref=f5e149]:
+      - banner [ref=f5e150]:
+        - navigation "Breadcrumb" [ref=f5e152]:
+          - generic [ref=f5e153]: Tác vụ
+        - generic [ref=f5e154]:
+          - generic "Mọi tác vụ, trình duyệt và xuất bản đều được mô phỏng cục bộ. Không kết nối tài khoản thật." [ref=f5e155]: Chế độ Mô phỏng
+          - button "Giám sát tác vụ" [ref=f5e156] [cursor=pointer]:
+            - generic [ref=f5e159]: "0"
+            - generic [ref=f5e160]: đang chạy
+          - button "Cần xử lý" [ref=f5e161] [cursor=pointer]:
+            - generic [ref=f5e164]: "2"
+          - button "Thông báo" [ref=f5e165] [cursor=pointer]
+          - button "Trợ lý AI ngữ cảnh" [ref=f5e170] [cursor=pointer]:
+            - generic [ref=f5e173]: Miro AI
+      - main [ref=f5e174]
+    - region "Notifications alt+T"
+  - generic [ref=f5e179] [cursor=pointer]:
+    - button "Open Next.js Dev Tools" [ref=f5e180]
+    - generic [ref=f5e184]:
+      - button "Open issues overlay" [ref=f5e185]:
+        - generic [ref=f5e186]:
+          - generic [aria-hidden] [ref=f5e187]: "0"
+          - generic [ref=f5e188]: "1"
+        - generic [ref=f5e189]: Issue
+      - button "Collapse issues badge" [ref=f5e190]
+  - alert [ref=f5e193]

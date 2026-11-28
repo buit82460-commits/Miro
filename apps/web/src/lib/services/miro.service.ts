@@ -1,4 +1,6 @@
 import { api } from "@/lib/api/http";
+import { ConnectionsService, type ConnectionAccount } from "@/lib/services/connections.service";
+import { PlatformsService } from "@/lib/services/platforms.service";
 import type {
   ChatSendInput,
   PlatformCloneInput,
@@ -51,9 +53,9 @@ export const LibraryService = {
 };
 
 export const PublishService = {
-  // Repair Slice 04: BE dung POST /threads/publish (dry-run) + POST
-  // /publications; khong co GET list batches. batches()/receipts() giu
-  // tuong thich hien thi lich su cuc bo (trang tu hien DỮ LIỆU MẪU).
+  // BE dung POST /threads/publish (dry-run) + POST /publications;
+  // khong co GET list batches. batches()/receipts() doc BFF tuong ung
+  // (tra [] khi BE khong co du lieu, 502 khi BE down).
   batches(): Promise<FullProject[]> {
     return api.get<FullProject[]>(`${PREFIX}/publish/batches`);
   },
@@ -268,30 +270,21 @@ export const StudioService = {
 };
 
 export const SettingsService = {
-  // Repair Slice 04: BE dung /connections/accounts + /platforms
-  // (khong co /settings/*). Anh xa semantics that, khong doi ten may moc.
-  connections(): Promise<Record<string, unknown>[]> {
-    return api.get<Record<string, unknown>[]>(`${PREFIX}/connections/accounts`);
+  // Chuẩn hóa qua services dùng chung (connections/platforms.service).
+  // BE sở hữu state; FE chỉ đọc + invalidate Query key sau mutation.
+  connections(platform = "", status = ""): Promise<ConnectionAccount[]> {
+    return ConnectionsService.list(platform, status);
   },
   platforms(): Promise<Registry> {
-    return api.get<Registry>(`${PREFIX}/platforms`);
+    return PlatformsService.list();
   },
   upsertPlatform(input: PlatformUpsertInput): Promise<Registry> {
-    return api.post<Registry>(`${PREFIX}/platforms`, {
-      id: input.id,
-      name: input.name,
-      runtime: input.runtime,
-      accounts: input.accounts ?? [],
-    });
+    return PlatformsService.upsert(input);
   },
   clonePlatform(id: string, input: PlatformCloneInput): Promise<Registry> {
-    return api.post<Registry>(`${PREFIX}/platforms/${id}/clone`, {
-      new_id: input.new_id ?? "",
-    });
+    return PlatformsService.clone(id, input.new_id ?? "");
   },
   rollbackRegistry(input: RollbackInput): Promise<Registry> {
-    return api.post<Registry>(`${PREFIX}/platforms/rollback`, {
-      version: input.version,
-    });
+    return PlatformsService.rollback(input.version);
   },
 };

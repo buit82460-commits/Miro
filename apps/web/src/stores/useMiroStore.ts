@@ -171,6 +171,20 @@ export const useMiroStore = create<MiroStore>()(
   persist(
     (set, get) => ({
       ...createInitialSeedState(),
+      // Unmock Slice 04: khong load seed mau KANS/Profile-20 vao production.
+      // Giua nguyen shape type; BE la source of truth, store chi giu du lieu
+      // user tao that tren may nay.
+      projects: [],
+      browserProfiles: [],
+      conversations: [],
+      tasks: [],
+      researchProjects: [],
+      researchRecords: [],
+      settings: {
+        ...createInitialSeedState().settings,
+        defaultProfileId: '',
+        defaultModel: 'Miro Core',
+      },
       ...buildInitialUI(),
 
       updateSettings: (patch) =>
@@ -866,16 +880,20 @@ export const useMiroStore = create<MiroStore>()(
 
       resetDemoData: () => {
         const currentSettings = get().settings;
-        const fresh = createInitialSeedState();
         set({
-          ...fresh,
+          projects: [],
+          browserProfiles: [],
+          conversations: [],
+          tasks: [],
+          researchProjects: [],
+          researchRecords: [],
           ...buildInitialUI(),
-          settings: { ...fresh.settings, theme: currentSettings.theme, language: currentSettings.language },
+          settings: { ...currentSettings },
         });
       },
     }),
     {
-      name: 'miro-workspace-v2-store',
+      name: 'miro-workspace-v3-store',
       partialize: (state) => ({
         settings: state.settings,
         projects: state.projects,

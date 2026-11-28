@@ -1,0 +1,290 @@
+- generic [ref=f51e2]:
+  - region "Notifications alt+T"
+  - generic [ref=f51e3]:
+    - generic [ref=f51e5]:
+      - generic [ref=f51e7]:
+        - generic [ref=f51e8]:
+          - link "Go to TikTok For You feed" [ref=f51e9] [cursor=pointer]:
+            - /url: /
+            - strong: TikTok
+          - button "Collapse sidebar" [ref=f51e14] [cursor=pointer]
+        - searchbox "Search" [ref=f51e19] [cursor=pointer]
+      - generic [ref=f51e26]:
+        - generic [ref=f51e27]:
+          - heading [level=2] [ref=f51e28]:
+            - link [ref=f51e30] [cursor=pointer]:
+              - /url: /
+              - listitem "For You" [ref=f51e31]
+          - heading [level=2] [ref=f51e38]:
+            - link [ref=f51e40] [cursor=pointer]:
+              - /url: /explore
+              - listitem "Explore" [ref=f51e41]
+          - heading [level=2] [ref=f51e49]:
+            - link [ref=f51e51] [cursor=pointer]:
+              - /url: /following
+              - listitem "Following" [ref=f51e52]
+          - heading [level=2] [ref=f51e60]:
+            - link [ref=f51e62] [cursor=pointer]:
+              - /url: /friends
+              - listitem "Friends" [ref=f51e63]
+          - heading [level=2] [ref=f51e70]:
+            - link [ref=f51e73] [cursor=pointer]:
+              - /url: /live
+              - listitem "LIVE" [ref=f51e74]
+          - listitem "Messages" [ref=f51e83] [cursor=pointer]
+          - listitem "Activity" [ref=f51e91] [cursor=pointer]
+          - link [ref=f51e101] [cursor=pointer]:
+            - /url: /tiktokstudio/upload?from=webapp&tab=video
+            - listitem "Upload" [ref=f51e102]
+          - heading [level=2] [ref=f51e110]:
+            - link [ref=f51e112] [cursor=pointer]:
+              - /url: /@hankhank068
+              - listitem "Profile" [ref=f51e113]
+          - listitem "More" [ref=f51e123] [cursor=pointer]
+        - generic [ref=f51e133]:
+          - heading "Company" [level=3] [ref=f51e134] [cursor=pointer]
+          - heading "Program" [level=3] [ref=f51e135] [cursor=pointer]
+          - heading "Terms & Policies" [level=3] [ref=f51e136] [cursor=pointer]
+          - generic [ref=f51e137]: © 2026 TikTok
+      - generic [ref=f51e139]:
+        - button "Get Coins" [ref=f51e142] [cursor=pointer]
+        - button "Get App" [ref=f51e160] [cursor=pointer]
+    - main [ref=f51e169]:
+      - generic [ref=f51e170]:
+        - generic [ref=f51e171]:
+          - article [ref=f51e172]:
+            - region "Watch in full screen" [ref=f51e174] [cursor=pointer]:
+              - 'img "2 Bản Hit này Drill Mix lại với nhau nghe có vẻ PEAK VCL các Bác nhỉ...🗿🔥 #arismusic #thuongnhaudenthe #capcut #capcutpioneer #pioneertemplate" [ref=f51e179]'
+          - article [ref=f51e183]:
+            - region "Watch in full screen" [ref=f51e185] [cursor=pointer]
+          - article [ref=f51e198]
+          - article [ref=f51e357]
+          - article [ref=f51e358]
+          - article [ref=f51e359]
+          - article [ref=f51e360]
+          - article [ref=f51e361]
+          - article [ref=f51e362]
+        - generic:
+          - generic:
+            - generic [ref=f51e204]:
+              - button "Like video 53.9K likes" [ref=f51e363] [cursor=pointer]:
+                - button [ref=f51e209]
+                - strong [ref=f51e215]: 53.9K
+              - button "Read or add comments 258 comments" [active] [ref=f51e364] [cursor=pointer]:
+                - button [ref=f51e219]
+                - strong [ref=f51e224]: "258"
+              - button "Add to Favorites. 7247 added to Favorites" [ref=f51e365] [cursor=pointer]:
+                - button [ref=f51e230]
+                - strong [ref=f51e236]: "7247"
+              - button "Share video 9699 shares" [ref=f51e238] [cursor=pointer]:
+                - button [ref=f51e241]
+                - strong [ref=f51e246]: "9699"
+            - generic [ref=f51e248]:
+              - link [ref=f51e251] [cursor=pointer]:
+                - /url: https://www.capcut.com/template-detail/7696186164704906497?channel=capcutpc_ttweb_anchor_template1&current_page=capcutpc_ttweb_anchor_template1&download_channel=capcutpc_ttweb_anchor_template1&enter_from=capcutpc_ttweb_anchor_template1&from_page=capcutpc_ttweb_anchor_template1&type=template&use_new_ui=0
+                - paragraph [ref=f51e256]: CapCut · Try this template
+              - generic [ref=f51e257]:
+                - link [ref=f51e259] [cursor=pointer]:
+                  - /url: /@aris29080
+                  - img "aris29080" [ref=f51e263]
+                - link [ref=f51e265] [cursor=pointer]:
+                  - /url: /@aris29080
+                  - paragraph [ref=f51e267]: 𝘼𝙧𝙞𝙨 𝙈𝙪𝙨𝙞𝙘
+                - button "Follow" [ref=f51e270] [cursor=pointer]
+              - generic [ref=f51e275]:
+                - generic [ref=f51e276]:
+                  - generic [ref=f51e278]:
+                    - generic [ref=f51e279]: 2 Bản Hit này Drill Mix lại với nhau nghe có vẻ PEAK VCL các Bác nhỉ...🗿🔥
+                    - link "Watch more videos of the arismusic category" [ref=f51e280] [cursor=pointer]:
+                      - /url: /tag/arismusic
+                      - paragraph [ref=f51e281]: "#arismusic"
+                    - link "Watch more videos of the thuongnhaudenthe category" [ref=f51e283] [cursor=pointer]:
+                      - /url: /tag/thuongnhaudenthe
+                      - paragraph [ref=f51e284]: "#thuongnhaudenthe"
+                    - link "Watch more videos of the capcut category" [ref=f51e286] [cursor=pointer]:
+                      - /url: /tag/capcut
+                      - paragraph [ref=f51e287]: "#capcut"
+                    - link "Watch more videos of the capcutpioneer category" [ref=f51e289] [cursor=pointer]:
+                      - /url: /tag/capcutpioneer
+                      - paragraph [ref=f51e290]: "#capcutpioneer"
+                    - link "Watch more videos of the pioneertemplate category" [ref=f51e292] [cursor=pointer]:
+                      - /url: /tag/pioneertemplate
+                      - paragraph [ref=f51e293]: "#pioneertemplate"
+                  - button "more" [ref=f51e295] [cursor=pointer]
+                - paragraph [ref=f51e366] [cursor=pointer]: See translation
+              - link "Watch more videos with music âm thanh gốc - prod.neyun" [ref=f51e297] [cursor=pointer]:
+                - /url: /music/âm-thanh-gốc-prodneyun-7691972340550109970
+                - paragraph [ref=f51e301]: âm thanh gốc - prod.neyun
+            - generic:
+              - generic [ref=f51e304] [cursor=pointer]:
+                - paragraph: 00:29 / 00:38
+                - slider "Video progress" [ref=f51e308]
+              - toolbar [ref=f51e310]:
+                - generic [ref=f51e311]:
+                  - button "Play" [ref=f51e367] [cursor=pointer]
+                  - generic [ref=f51e315]: 00:29 / 00:38
+                - generic [ref=f51e316]:
+                  - generic [ref=f51e317]:
+                    - generic "Auto scroll" [ref=f51e318] [cursor=pointer]
+                    - checkbox "Auto scroll" [ref=f51e320] [cursor=pointer]
+                  - button "Speed 1.0x" [ref=f51e322] [cursor=pointer]: 1.0x
+                  - button "Captions unavailable" [ref=f51e324] [cursor=pointer]
+                  - button "Volume" [pressed] [ref=f51e329] [cursor=pointer]
+                  - button [ref=f51e334] [cursor=pointer]
+        - generic [ref=f51e340]:
+          - button "Go to previous video" [disabled] [ref=f51e342]
+          - button "Go to next video" [ref=f51e348] [cursor=pointer]
+      - complementary [ref=f51e374]:
+        - generic [ref=f51e376]:
+          - generic [ref=f51e377]:
+            - generic [ref=f51e378]:
+              - generic [ref=f51e379]: Comments
+              - generic [ref=f51e380]: "258"
+            - button "exit" [ref=f51e383] [cursor=pointer]
+          - generic [ref=f51e389]:
+            - generic [ref=f51e391]:
+              - generic [ref=f51e392]:
+                - link [ref=f51e395] [cursor=pointer]:
+                  - /url: /@bunem783
+                - generic [ref=f51e397]:
+                  - generic [ref=f51e398]:
+                    - generic [ref=f51e399]:
+                      - link [ref=f51e401] [cursor=pointer]:
+                        - /url: /@bunem783
+                        - paragraph [ref=f51e402]: .
+                      - paragraph
+                    - generic [ref=f51e403] [cursor=pointer]
+                  - generic [ref=f51e404]: ê đc nha ,sài đỡ mụn hẳn
+                  - generic [ref=f51e405]:
+                    - generic [ref=f51e406]:
+                      - generic [ref=f51e407]: 10-19
+                      - button "Reply" [ref=f51e409] [cursor=pointer]
+                    - button "Like video 214 likes" [ref=f51e410] [cursor=pointer]:
+                      - generic [ref=f51e413]: "214"
+              - button "View 17 replies" [ref=f51e418] [cursor=pointer]
+            - generic [ref=f51e424]:
+              - generic [ref=f51e425]:
+                - link [ref=f51e428] [cursor=pointer]:
+                  - /url: /@nguyen.tien.hung69
+                - generic [ref=f51e430]:
+                  - generic [ref=f51e431]:
+                    - generic [ref=f51e432]:
+                      - link [ref=f51e434] [cursor=pointer]:
+                        - /url: /@nguyen.tien.hung69
+                        - paragraph [ref=f51e435]: 《$Hải♡Đăng$》( ≧∀≦)
+                      - paragraph
+                    - generic [ref=f51e436] [cursor=pointer]
+                  - generic [ref=f51e437]: "\"Thiếu vắng e ngày nắng u màu\""
+                  - generic [ref=f51e438]:
+                    - generic [ref=f51e439]:
+                      - generic [ref=f51e440]: 10-20
+                      - button "Reply" [ref=f51e442] [cursor=pointer]
+                    - button "Like video 24 likes" [ref=f51e443] [cursor=pointer]:
+                      - generic [ref=f51e446]: "24"
+              - button "View 9 replies" [ref=f51e451] [cursor=pointer]
+            - generic [ref=f51e457]:
+              - generic [ref=f51e458]:
+                - link [ref=f51e461] [cursor=pointer]:
+                  - /url: /@xn.dnh.kiyu
+                - generic [ref=f51e463]:
+                  - generic [ref=f51e464]:
+                    - generic [ref=f51e465]:
+                      - link [ref=f51e467] [cursor=pointer]:
+                        - /url: /@xn.dnh.kiyu
+                        - paragraph [ref=f51e468]: KEYTHY🎵
+                      - paragraph
+                    - generic [ref=f51e469] [cursor=pointer]
+                  - generic [ref=f51e470]: "\"gần mực thì đen, gần quên thì..."
+                  - generic [ref=f51e471]:
+                    - generic [ref=f51e472]:
+                      - generic [ref=f51e473]: 10-21
+                      - button "Reply" [ref=f51e475] [cursor=pointer]
+                    - button "Like video 50 likes" [ref=f51e476] [cursor=pointer]:
+                      - generic [ref=f51e479]: "50"
+              - button "View 5 replies" [ref=f51e484] [cursor=pointer]
+            - generic [ref=f51e491]:
+              - link [ref=f51e494] [cursor=pointer]:
+                - /url: /@trn.hoi.lm52
+              - generic [ref=f51e496]:
+                - generic [ref=f51e497]:
+                  - generic [ref=f51e498]:
+                    - link [ref=f51e500] [cursor=pointer]:
+                      - /url: /@trn.hoi.lm52
+                      - paragraph [ref=f51e501]: Trần Hoài Lâm
+                    - paragraph
+                  - generic [ref=f51e502] [cursor=pointer]
+                - generic [ref=f51e503]: Ủa, sao không ai nói cho tui biết sớm hơn?
+                - generic [ref=f51e504]:
+                  - generic [ref=f51e505]:
+                    - generic [ref=f51e506]: 1d ago
+                    - button "Reply" [ref=f51e508] [cursor=pointer]
+                  - button "Like video 0 likes" [ref=f51e509] [cursor=pointer]:
+                    - generic [ref=f51e512]: "0"
+            - generic [ref=f51e515]:
+              - link [ref=f51e518] [cursor=pointer]:
+                - /url: /@ng.ngan0001
+              - generic [ref=f51e520]:
+                - generic [ref=f51e521]:
+                  - generic [ref=f51e522]:
+                    - link [ref=f51e524] [cursor=pointer]:
+                      - /url: /@ng.ngan0001
+                      - paragraph [ref=f51e525]: a1beeE
+                    - paragraph
+                  - generic [ref=f51e526] [cursor=pointer]
+                - generic [ref=f51e527]: Hay anh
+                - generic [ref=f51e528]:
+                  - generic [ref=f51e529]:
+                    - generic [ref=f51e530]: 1d ago
+                    - button "Reply" [ref=f51e532] [cursor=pointer]
+                  - button "Like video 1 likes" [ref=f51e533] [cursor=pointer]:
+                    - generic [ref=f51e536]: "1"
+            - generic [ref=f51e538]:
+              - generic [ref=f51e539]:
+                - link [ref=f51e542] [cursor=pointer]:
+                  - /url: /@cong57373
+                - generic [ref=f51e544]:
+                  - generic [ref=f51e545]:
+                    - generic [ref=f51e546]:
+                      - link [ref=f51e548] [cursor=pointer]:
+                        - /url: /@cong57373
+                        - paragraph [ref=f51e549]: 68gbvn.space_ĐónƯuĐãiNgay
+                      - paragraph
+                    - generic [ref=f51e550] [cursor=pointer]
+                  - generic [ref=f51e551]: bài này nghe hoài luôn á
+                  - generic [ref=f51e552]:
+                    - generic [ref=f51e553]:
+                      - generic [ref=f51e554]: 10-19
+                      - button "Reply" [ref=f51e556] [cursor=pointer]
+                    - button "Like video 16 likes" [ref=f51e557] [cursor=pointer]:
+                      - generic [ref=f51e560]: "16"
+              - button "View 1 reply" [ref=f51e565] [cursor=pointer]
+            - generic [ref=f51e572]:
+              - link [ref=f51e575] [cursor=pointer]:
+                - /url: /@hoi.h6676
+              - generic [ref=f51e577]:
+                - generic [ref=f51e578]:
+                  - generic [ref=f51e579]:
+                    - link [ref=f51e581] [cursor=pointer]:
+                      - /url: /@hoi.h6676
+                      - paragraph [ref=f51e582]: Hoài Hà
+                    - paragraph
+                  - generic [ref=f51e583] [cursor=pointer]
+                - generic [ref=f51e584]: âm nhạc có điêu khắc trên bia đá khắc phục hậu quả là một người phụ nữ Việt đẹp nhất trong lịch sử văn hóa Việt đẹp nhất trong các trường đh công lập thuộc về nước sau đó lại có điêu khắc gỗ 🪾 cho Việt Nam có 🙂‍↕️cho Việt đẹp nhất thế gian không về nhà chồng ngày Tết sắp tới đó lại là một trong những ngày đầu năm mới giáp ngọ năm mới giáp ngọ năm mới giáp Hà yến sào có điêu luyện và thiết kế nội ngoại thành và thiết kế và thi đấu ở giải đấu ở vị trí của nó là ý nghĩ thoáng có 🙂‍↕️có 🙂‍↕️có nhac có thể được đi du học Mỹ thuật Công nghiệp xây lắp và thiết bị j có thể là một trong những ngày đầu năm mới tại Việt Nam và các tỉnh miền núi vùng cao phải là người phụ trách công việc và các trường đại và r cho ông ta nói chuyện và mình có điêu khắc gỗ e có điêu luyện của học viện âm có điêu luyện của nó là ý nghĩ của mình và thiết bị điện giật chết có điêu luyện và thi đấu ở vị trí thứ hai của nó và thiết kế và thiết kế và thi đấu ở giải đấu này tí a đổi mới tại Mỹ thuật Công và thiết lập một trong những ngày tháng năm sinh giá e có 🙂‍↕️ta ew và các trường đại và r có thể là một người phụ trách công lập và thiết lập và hoạt hình ngắn có thể được đi học Mỹ đã ế ẩm lead you still I love the có thể là ý kiến 🐜 có thể làm tràn ly là ý tưởng của ww là ý kiến đóng mới giáp Hà yến tiệc cho q là ý kiến tí a đổi cho nhau những ngày cuối cùng của mình để không em ơi có 🙂‍↕️ta ew có thể là ý kiến đóng góp cho Việt
+                - generic [ref=f51e585]:
+                  - generic [ref=f51e586]:
+                    - generic [ref=f51e587]: 10-28
+                    - button "Reply" [ref=f51e589] [cursor=pointer]
+                  - button "Like video 1 likes" [ref=f51e590] [cursor=pointer]:
+                    - generic [ref=f51e593]: "1"
+          - generic [ref=f51e616]:
+            - link [ref=f51e617] [cursor=pointer]:
+              - /url: /@hankhank068
+            - generic [ref=f51e622]:
+              - generic [ref=f51e623]:
+                - generic [ref=f51e625]:
+                  - generic [ref=f51e626]: Add comment...
+                  - textbox [ref=f51e629]
+                - generic [ref=f51e634]:
+                  - button "“@” a user to tag them in your comments" [ref=f51e636] [cursor=pointer]
+                  - button "Click to add emojis" [ref=f51e642] [cursor=pointer]
+              - button "Post" [disabled] [ref=f51e648]

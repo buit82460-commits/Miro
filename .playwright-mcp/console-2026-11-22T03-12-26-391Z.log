@@ -1,0 +1,13 @@
+[     931ms] [WARNING] Error with Permissions-Policy header: Unrecognized feature: 'attribution-reporting'. @ :1
+[     931ms] [WARNING] Error with Permissions-Policy header: Unrecognized feature: 'interest-cohort'. @ :1
+[     931ms] [WARNING] Error with Permissions-Policy header: Unrecognized feature: 'shared-storage'. @ :1
+[     931ms] [WARNING] Error with Permissions-Policy header: Unrecognized feature: 'shared-storage-select-url'. @ :1
+[     966ms] [ERROR] Permissions policy violation: unload is not allowed in this document. @ https://static.xx.fbcdn.net/rsrc.php/v4/y_/r/03Kle9FnLiX.js:324
+[    1710ms] [LOG] 
+%cStop! font-family:helvetica; font-size:20px; font-size:50px; font-weight:bold; color:red; -webkit-text-stroke:1px black; @ https://static.xx.fbcdn.net/rsrc.php/v4ikWl4/yE/l/en_GB-j/8GdZsQ_BYb8XpYNLiVaWY-634qZGlUTNghGua3ojTwqA9yQQ16HPWla8uNkSa_UOvUoggE6hXN6L_WAbLwTindz-8j1mHe4NfePofag0cYtMj1QQpxt4A9rkJiV0rCbL00mGp32MEMaTHi-ZvMxou4AGTuvHkGknxSqYjgtu5V_eOim32xasrQnpcCqAMR5KyJAsEU3aVax2XA2wXGRA1_WgY3fOv8MVbKR4sX5G-w5RGpKmN20-M5q5dLxY4qYVQyX75EJn-sPfbbI5-Qktwk-4JolwpeE4ae9xgncQlXNIQ_22zOI09pMSboN2BlY.js:1069
+[    1710ms] [LOG] 
+%cThis is a browser feature intended for developers. If someone told you to copy and paste something here to enable a Facebook feature or "hack" someone's account, it's a scam and will give them access to your Facebook account. font-family:helvetica; font-size:20px;  @ https://static.xx.fbcdn.net/rsrc.php/v4ikWl4/yE/l/en_GB-j/8GdZsQ_BYb8XpYNLiVaWY-634qZGlUTNghGua3ojTwqA9yQQ16HPWla8uNkSa_UOvUoggE6hXN6L_WAbLwTindz-8j1mHe4NfePofag0cYtMj1QQpxt4A9rkJiV0rCbL00mGp32MEMaTHi-ZvMxou4AGTuvHkGknxSqYjgtu5V_eOim32xasrQnpcCqAMR5KyJAsEU3aVax2XA2wXGRA1_WgY3fOv8MVbKR4sX5G-w5RGpKmN20-M5q5dLxY4qYVQyX75EJn-sPfbbI5-Qktwk-4JolwpeE4ae9xgncQlXNIQ_22zOI09pMSboN2BlY.js:1069
+[    1710ms] [LOG] 
+%cSee https://www.facebook.com/selfxss for more information. font-family:helvetica; font-size:20px;  @ https://static.xx.fbcdn.net/rsrc.php/v4ikWl4/yE/l/en_GB-j/8GdZsQ_BYb8XpYNLiVaWY-634qZGlUTNghGua3ojTwqA9yQQ16HPWla8uNkSa_UOvUoggE6hXN6L_WAbLwTindz-8j1mHe4NfePofag0cYtMj1QQpxt4A9rkJiV0rCbL00mGp32MEMaTHi-ZvMxou4AGTuvHkGknxSqYjgtu5V_eOim32xasrQnpcCqAMR5KyJAsEU3aVax2XA2wXGRA1_WgY3fOv8MVbKR4sX5G-w5RGpKmN20-M5q5dLxY4qYVQyX75EJn-sPfbbI5-Qktwk-4JolwpeE4ae9xgncQlXNIQ_22zOI09pMSboN2BlY.js:1069
+[    1710ms] [LOG] 
+%c  @ https://static.xx.fbcdn.net/rsrc.php/v4ikWl4/yE/l/en_GB-j/8GdZsQ_BYb8XpYNLiVaWY-634qZGlUTNghGua3ojTwqA9yQQ16HPWla8uNkSa_UOvUoggE6hXN6L_WAbLwTindz-8j1mHe4NfePofag0cYtMj1QQpxt4A9rkJiV0rCbL00mGp32MEMaTHi-ZvMxou4AGTuvHkGknxSqYjgtu5V_eOim32xasrQnpcCqAMR5KyJAsEU3aVax2XA2wXGRA1_WgY3fOv8MVbKR4sX5G-w5RGpKmN20-M5q5dLxY4qYVQyX75EJn-sPfbbI5-Qktwk-4JolwpeE4ae9xgncQlXNIQ_22zOI09pMSboN2BlY.js:1069

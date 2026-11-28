@@ -814,10 +814,34 @@ class TaskService:
                     "hint": "extension Profile 20 chua ket noi"}
         # Decide: goi y tab tu caller neu hop le, neu khong thi chon tab
         # TikTok dau tien, cuoi cung la tab bat ky cung instance.
+        # BUG-11: tab Miro UI (localhost/:3100 tasks-live, runtime...) KHONG
+        # bao gio la execution tab — autonomous chi duoc chon tab khong phai
+        # Miro UI; neu chi con tab Miro UI -> NO_MANAGED_TAB fail-closed
+        # (khong navigate cuop tab user dang nhin).
+        def _is_miro_owned(u: str) -> bool:
+            try:
+                from urllib.parse import urlsplit as _split
+                _p = _split(str(u or ""))
+                _host = str(_p.hostname or "").lower()
+                if _host in ("localhost", "127.0.0.1", "[::1]", "::1"):
+                    return True
+            except Exception:
+                pass
+            return False
+
+        candidates = [t for t in mine
+                      if not _is_miro_owned(str((t or {}).get("url") or ""))]
+        if not candidates:
+            err = "NO_MANAGED_TAB"
+            self._emit(record, "browser_observe_failed",
+                       {"error": err,
+                        "hint": "chi con tab Miro UI — khong cuop tab user"})
+            return {"ok": False, "error": err, "task_id": task_id,
+                    "hint": "extension Profile 20 chua ket noi"}
         chosen = 0
         try:
             if int(tab_id or 0):
-                for t in mine:
+                for t in candidates:
                     try:
                         if int((t or {}).get("tab")) == int(tab_id):
                             chosen = int(tab_id)
@@ -827,7 +851,7 @@ class TaskService:
         except (TypeError, ValueError):
             chosen = 0
         if not chosen:
-            for t in mine:
+            for t in candidates:
                 u = str((t or {}).get("url") or "")
                 if "tiktok.com" in u:
                     try:
@@ -837,7 +861,7 @@ class TaskService:
                         continue
         if not chosen:
             try:
-                chosen = int((mine[0] or {}).get("tab"))
+                chosen = int((candidates[0] or {}).get("tab"))
             except (TypeError, ValueError):
                 chosen = 0
         if not chosen:

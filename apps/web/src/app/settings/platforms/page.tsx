@@ -3,10 +3,12 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
-import MiroNav from "@/components/miro-nav";
+import { YoucareShell } from "@/components/youcare/YoucareShell";
 import {
   useClonePlatform,
+  usePatchCapability,
   usePlatforms,
+  usePlatformsHistory,
   useRollbackRegistry,
   useUpsertPlatform,
 } from "@/hooks/data/useMiro";
@@ -29,7 +31,9 @@ function badge(s: string) {
         ? { background: "#fef7e0", color: "#b06000" }
         : s === "BLOCKED"
           ? { background: "#fce8e6", color: "#a50e0e" }
-          : { background: "#f1f3f4", color: "#5f6368" };
+          : s === "UNSUPPORTED" || s === "UNAVAILABLE"
+            ? { background: "#e8eaed", color: "#3c4043" }
+            : { background: "#f1f3f4", color: "#5f6368" };
   return <span style={{ borderRadius: 12, padding: "2px 10px", fontSize: 12, ...style }}>{s}</span>;
 }
 
@@ -38,11 +42,17 @@ const CAP_STATUS_OPTIONS = ["SUPPORTED", "PARTIAL", "BLOCKED", "UNKNOWN"] as con
 
 export default function PlatformsPage() {
   const { data, isLoading, isError } = usePlatforms();
+  const { data: historyData } = usePlatformsHistory();
   const upsert = useUpsertPlatform();
   const clone = useClonePlatform();
   const rollback = useRollbackRegistry();
+  const patchCap = usePatchCapability();
   const [msg, setMsg] = useState("");
   const [cloneId, setCloneId] = useState("");
+  const [patchPlatform, setPatchPlatform] = useState("");
+  const [patchCapName, setPatchCapName] = useState("publish");
+  const [patchStatus, setPatchStatus] = useState("");
+  const [patchEvidence, setPatchEvidence] = useState("");
 
   const form = useForm<PlatformUpsertInput>({
     resolver: zodResolver(platformUpsertSchema),
@@ -88,12 +98,16 @@ export default function PlatformsPage() {
   };
 
   return (
-    <MiroNav>
-      <h1 data-testid="platforms-title">Cài đặt → Nền tảng</h1>
-      <p>
-        Registry version <b data-testid="registry-version">{data?.version ?? "…"}</b> · đọc
+    <YoucareShell title="Nền tảng" subtitle="Registry versioned từ BE — update + rollback giữ task cũ.">
+      <h1 data-testid="platforms-title" style={{ display: "none" }}>Cài đặt → Nền tảng</h1>
+      <p>Registry version <b data-testid="registry-version">{(data as any)?.version ?? "…"}</b> · đọc
         (list/download/reconcile/watch) và đăng (draft/publish) tách riêng · update + rollback giữ
         task cũ (task pin version).
+        {historyData ? (
+          <span data-testid="registry-history">
+            {" "}· history: {(historyData.history ?? []).map((h) => `v${h.version}`).join(", ") || "trống"}
+          </span>
+        ) : null}
       </p>
       {isLoading ? <p>Đang tải registry nền tảng…</p> : null}
       {isError ? <p style={{ color: "#B52E2E" }}>Chưa nối được BE.</p> : null}
@@ -212,7 +226,7 @@ export default function PlatformsPage() {
                 capsField.append({
                   key: "list",
                   status: "SUPPORTED",
-                  runtime: "fixture",
+                  runtime: "",
                   input: "",
                   output: "",
                   evidence: "",
@@ -325,6 +339,71 @@ export default function PlatformsPage() {
         {rollbackForm.formState.errors.version ? (
           <p style={{ color: "#B52E2E" }}>{rollbackForm.formState.errors.version.message}</p>
         ) : null}
+
+        <form
+          data-testid="capability-patch-form"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!patchPlatform.trim() || !patchCapName) {
+              setMsg("Nhập platform id + capability để PATCH");
+              return;
+            }
+            const patch: Record<string, string> = {};
+            if (patchStatus.trim()) patch.status = patchStatus.trim();
+            if (patchEvidence.trim()) patch.evidence = patchEvidence.trim();
+            if (Object.keys(patch).length === 0) {
+              setMsg("Nhập ít nhất 1 field (status/evidence)");
+              return;
+            }
+            patchCap.mutate(
+              { platformId: patchPlatform.trim(), capability: patchCapName, patch },
+              {
+                onSuccess: (r) => setMsg(`Đã PATCH ${patchCapName} @ ${patchPlatform} — registry v${r.version}.`),
+                onError: (err) => setMsg(`PATCH thất bại: ${(err as Error).message}`),
+              },
+            );
+          }}
+          style={{ marginTop: 16, padding: 12, border: "1px solid #eee", borderRadius: 8 }}
+        >
+          <b>PATCH capability (all-optional)</b>
+          <div style={{ display: "flex", gap: 8, marginTop: 8, alignItems: "center", flexWrap: "wrap" }}>
+            <input
+              data-testid="cap-patch-platform"
+              placeholder="platform id (vd: shopee)"
+              value={patchPlatform}
+              onChange={(e) => setPatchPlatform(e.target.value)}
+            />
+            <select
+              data-testid="cap-patch-name"
+              value={patchCapName}
+              onChange={(e) => setPatchCapName(e.target.value)}
+            >
+              {CAP_KEY_OPTIONS.map((k) => (
+                <option key={k} value={k}>{k}</option>
+              ))}
+            </select>
+            <select
+              data-testid="cap-patch-status"
+              value={patchStatus}
+              onChange={(e) => setPatchStatus(e.target.value)}
+            >
+              <option value="">(giữ status)</option>
+              {CAP_STATUS_OPTIONS.map((k) => (
+                <option key={k} value={k}>{k}</option>
+              ))}
+            </select>
+            <input
+              data-testid="cap-patch-evidence"
+              placeholder="evidence"
+              value={patchEvidence}
+              onChange={(e) => setPatchEvidence(e.target.value)}
+              style={{ minWidth: 220 }}
+            />
+            <button data-testid="cap-patch-submit" type="submit" disabled={patchCap.isPending}>
+              {patchCap.isPending ? "Đang PATCH…" : "PATCH capability"}
+            </button>
+          </div>
+        </form>
       </section>
 
       {(data?.platforms ?? []).map((p) => (
@@ -411,6 +490,6 @@ export default function PlatformsPage() {
         Chi tiết ma trận đầy đủ: <code>docs/platform-matrix.md</code> · capabilities còn lại:{" "}
         {CAPS.join(", ")}
       </p>
-    </MiroNav>
+    </YoucareShell>
   );
 }

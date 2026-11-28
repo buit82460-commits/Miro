@@ -1,0 +1,44 @@
+- generic [ref=f18e5]:
+  - complementary [ref=f18e6]:
+    - generic [ref=f18e12]:
+      - generic [ref=f18e13]:
+        - generic [ref=f18e14]: ChatGPT
+        - generic [ref=f18e26]:
+          - button "Search" [ref=f18e27] [cursor=pointer]
+          - button "Hide sidebar" [expanded] [ref=f18e35] [cursor=pointer]
+      - navigation "Chat history" [ref=f18e40]:
+        - button "New chat" [ref=f18e44] [cursor=pointer]
+        - generic [ref=f18e54]:
+          - generic [ref=f18e57]:
+            - button "Scheduled" [ref=f18e58] [cursor=pointer]
+            - button "Library" [ref=f18e65] [cursor=pointer]
+            - button "Plugins" [ref=f18e73] [cursor=pointer]
+            - button "Explore" [ref=f18e82] [cursor=pointer]
+          - generic [ref=f18e93]:
+            - generic [ref=f18e97]:
+              - button "Projects" [expanded] [ref=f18e100] [cursor=pointer]
+              - generic:
+                - generic:
+                  - generic:
+                    - button "Project sidebar options"
+            - generic [ref=f18e117]:
+              - button "Recents" [expanded] [ref=f18e120] [cursor=pointer]
+              - generic:
+                - generic:
+                  - generic:
+                    - button "Chat sidebar options"
+                    - button "New chat"
+      - generic [ref=f18e136]:
+        - generic [ref=f18e137]:
+          - iframe [ref=f18e140]
+          - generic [ref=f18e141]: Templates
+        - button "Open profile menu" [disabled] [ref=f18e158]:
+          - generic [ref=f18e159]:
+            - status [ref=f18e160]: Loading profile
+            - generic [aria-hidden] [ref=f18e162]: HJ
+            - generic [ref=f18e164]:
+              - generic [ref=f18e165]: haodao jr
+              - generic [ref=f18e166]: Free
+    - generic:
+      - separator
+  - main [ref=f18e171]

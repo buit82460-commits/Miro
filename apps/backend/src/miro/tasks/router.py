@@ -33,6 +33,19 @@ async def submit(payload: TaskSubmitRequest, request: Request):
         return _err(exc)
 
 
+@router.get("")
+async def list_tasks(request: Request, limit: int = 20):
+    """Compat list: GET /tasks -> task moi nhat (khop FE TasksService.list).
+
+    BE so huu state; day la alias read-only cua GET /tasks/recent,
+    khong doi semantics submit (POST "") hay get theo id."""
+    service = get_service(request)
+    try:
+        return service.store.recent(limit)
+    except TaskConflictError as exc:
+        return _err(exc)
+
+
 @router.get("/recent")
 async def recent(request: Request, limit: int = 20):
     """UI doc lap: liet ke task moi nhat (read-only, BE so huu state)."""

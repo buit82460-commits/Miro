@@ -69,9 +69,9 @@
   --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.22);
   --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.40);
 
-  /* Typography Families */
-  --font-sans: 'Geist', 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  /* Typography Families — Miro dùng Inter làm sans duy nhất toàn app */
+  --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 
   color-scheme: dark;
 }

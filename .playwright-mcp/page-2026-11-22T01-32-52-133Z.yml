@@ -1,0 +1,101 @@
+- generic [ref=f7e1]:
+  - generic:
+    - generic:
+      - generic: Happy Sunday
+      - textbox "Write your prompt to Claude" [ref=f7e3]:
+        - /placeholder: How can I help you today?
+    - status
+  - generic [ref=f7e9]:
+    - heading "Claude" [level=1] [ref=f7e11]
+    - generic [ref=f7e12]:
+      - complementary "Sidebar" [ref=f7e14]:
+        - generic [ref=f7e15]:
+          - button "Hide sidebar" [ref=f7e18] [cursor=pointer]:
+            - generic [aria-hidden] [ref=f7e22]: 
+          - link "Claude" [ref=f7e25] [cursor=pointer]:
+            - /url: /new
+        - generic [ref=f7e28]:
+          - heading "Navigation" [level=2] [ref=f7e29]
+          - generic [ref=f7e31]:
+            - generic [ref=f7e32]:
+              - link "New" [ref=f7e34] [cursor=pointer]:
+                - /url: /new
+                - generic [aria-hidden] [ref=f7e36]: 
+                - generic [aria-hidden] [ref=f7e42]:
+                  - generic [ref=f7e43]: Ctrl
+                  - generic [ref=f7e44]: +
+                  - generic [ref=f7e45]: Shift
+                  - generic [ref=f7e46]: +
+                  - generic [ref=f7e47]: O
+              - button "Search" [ref=f7e48] [cursor=pointer]:
+                - generic [aria-hidden] [ref=f7e50]: 
+                - generic [aria-hidden] [ref=f7e54]:
+                  - generic [ref=f7e55]: Ctrl
+                  - generic [ref=f7e56]: +
+                  - generic [ref=f7e57]: Shift
+                  - generic [ref=f7e58]: +
+                  - generic [ref=f7e59]: K
+            - generic [ref=f7e61]:
+              - link "Projects" [ref=f7e63] [cursor=pointer]:
+                - /url: /cowork/projects
+                - generic [aria-hidden] [ref=f7e65]: 
+              - link "Artifacts" [ref=f7e70] [cursor=pointer]:
+                - /url: /artifacts
+                - generic [aria-hidden] [ref=f7e72]: 
+              - link "Customize" [ref=f7e79] [cursor=pointer]:
+                - /url: /customize
+                - generic [aria-hidden] [ref=f7e81]: 
+            - generic [ref=f7e90]:
+              - generic [ref=f7e91]:
+                - generic [ref=f7e93]:
+                  - heading [level=3] [ref=f7e94]:
+                    - button "Chats and tasks" [expanded] [ref=f7e95] [cursor=pointer]:
+                      - generic [aria-hidden]: 
+                  - button "Group and sort" [ref=f7e100] [cursor=pointer]:
+                    - generic [aria-hidden] [ref=f7e104]: 
+                - status [ref=f7e110]:
+                  - generic [ref=f7e111]: Loading
+              - status [ref=f7e140]
+          - generic [ref=f7e142]:
+            - button [ref=f7e144] [cursor=pointer]:
+              - img [aria-hidden] [ref=f7e149]: "?"
+            - link "Get apps and extensions" [ref=f7e151] [cursor=pointer]:
+              - /url: /downloads
+              - generic [ref=f7e153]:
+                - generic [aria-hidden]: 
+        - separator "Resize sidebar" [ref=f7e154]
+      - main [ref=f7e157]:
+        - generic [ref=f7e159]:
+          - toolbar "Page tools" [ref=f7e162]:
+            - button "Use incognito" [ref=f7e167] [cursor=pointer]
+          - generic [ref=f7e180]:
+            - generic [ref=f7e181]:
+              - heading "New chat" [level=2] [ref=f7e182]
+              - generic [ref=f7e183]: Happy Sunday
+            - generic [ref=f7e189]:
+              - status [ref=f7e190]
+              - group [ref=f7e193]:
+                - generic [ref=f7e194]:
+                  - status
+                  - status [ref=f7e195]
+                  - status
+                  - generic [ref=f7e199]:
+                    - generic [ref=f7e202]:
+                      - generic [aria-hidden]: How can I help you today?
+                      - generic [ref=f7e203]:
+                        - textbox [aria-hidden] [ref=f7e204]:
+                          - paragraph [ref=f7e205]
+                        - status [ref=f7e206]
+                    - generic:
+                      - button "Add files, connectors, and more" [ref=f7e209] [cursor=pointer]:
+                        - generic [aria-hidden] [ref=f7e213]: 
+                      - generic [ref=f7e221]:
+                        - button "Send message" [disabled]:
+                          - generic:
+                            - generic [aria-hidden]: 
+  - status [ref=f7e224]
+  - generic:
+    - generic:
+      - generic:
+        - status
+        - region "Notifications"

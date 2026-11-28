@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 import { useMiroStore } from '../../stores/useMiroStore';
 import { useTranslation } from '../../i18n/useTranslation';
-import { launchTaskFromInstruction } from '../../proto-services/mock/executionEngine';
+import { useBeTasks } from '@/hooks/data/useRuntime';
 import { cn } from '../../lib/utils';
 
 interface PaletteItem {
@@ -40,14 +40,10 @@ export function CommandPalette() {
 
   const open = useMiroStore((s) => s.commandPaletteOpen);
   const setOpen = useMiroStore((s) => s.setCommandPaletteOpen);
-  const tasks = useMiroStore((s) => s.tasks);
-  const projects = useMiroStore((s) => s.projects);
-  const schedules = useMiroStore((s) => s.schedules);
-  const mediaAssets = useMiroStore((s) => s.mediaAssets);
-  const profiles = useMiroStore((s) => s.browserProfiles);
   const theme = useMiroStore((s) => s.settings.theme);
   const updateSettings = useMiroStore((s) => s.updateSettings);
   const setTaskMonitorOpen = useMiroStore((s) => s.setTaskMonitorOpen);
+  const beTasks = useBeTasks(6, 5000);
 
   const [query, setQuery] = useState('');
   const [selectedIdx, setSelectedIdx] = useState(0);
@@ -78,20 +74,12 @@ export function CommandPalette() {
 
     const quickActions: PaletteItem[] = [
       {
-        id: 'act-new-sched',
+        id: 'act-new-task',
         group: 'Hành động nhanh',
-        label: 'Tạo lịch nghiên cứu 10 video KANS 377 (08:00 mỗi ngày)',
-        sublabel: 'Kịch bản A',
+        label: 'Tạo tác vụ mới trên BE',
+        sublabel: 'Mở trang Tác vụ (POST /tasks)',
         icon: <Plus className="w-4 h-4 text-[var(--color-accent-text)]" />,
-        onSelect: () =>
-          closeAnd(() => {
-            launchTaskFromInstruction({
-              instruction: 'Tạo lịch nghiên cứu 10 video TikTok về KANS 377 vào 8 giờ sáng mỗi ngày.',
-              overrideScenario: 'schedule_create',
-              trigger: 'manual',
-            });
-            navigate('/workspace');
-          }),
+        onSelect: () => closeAnd(() => navigate('/tasks')),
       },
       {
         id: 'act-monitor',
@@ -122,59 +110,19 @@ export function CommandPalette() {
       },
     ];
 
-    const taskItems: PaletteItem[] = tasks.slice(0, 6).map((tk) => ({
+    const taskItems: PaletteItem[] = (beTasks.data ?? []).slice(0, 6).map((tk) => ({
       id: `tk-${tk.id}`,
-      group: 'Tác vụ',
-      label: tk.title,
-      sublabel: `${t.status[tk.status]} · ${tk.resource.label}`,
+      group: 'Tác vụ (BE)',
+      label: String(tk.id),
+      sublabel: String(tk.status ?? ''),
       icon: <ListChecks className="w-4 h-4" />,
-      onSelect: () => closeAnd(() => navigate(`/tasks/${tk.id}`)),
-    }));
-
-    const projectItems: PaletteItem[] = projects.map((p) => ({
-      id: `pj-${p.id}`,
-      group: 'Dự án',
-      label: p.name,
-      sublabel: p.accentTag,
-      icon: <Folder className="w-4 h-4" />,
-      onSelect: () => closeAnd(() => navigate(`/projects/${p.id}`)),
-    }));
-
-    const scheduleItems: PaletteItem[] = schedules.map((sc) => ({
-      id: `sc-${sc.id}`,
-      group: 'Lịch trình',
-      label: sc.name,
-      sublabel: `${sc.time} · ${sc.timezone}`,
-      icon: <CalendarClock className="w-4 h-4" />,
-      onSelect: () => closeAnd(() => navigate(`/schedules/${sc.id}`)),
-    }));
-
-    const profileItems: PaletteItem[] = profiles.map((p) => ({
-      id: `pf-${p.id}`,
-      group: 'Trình duyệt',
-      label: `${p.name} · ${p.alias}`,
-      sublabel: p.connectionState,
-      icon: <Chrome className="w-4 h-4" />,
-      onSelect: () => closeAnd(() => navigate(`/browser/${p.id}`)),
-    }));
-
-    const mediaItems: PaletteItem[] = mediaAssets.map((m) => ({
-      id: `md-${m.id}`,
-      group: 'Media Studio',
-      label: m.name,
-      sublabel: `${m.collection} · ${m.durationSec}s`,
-      icon: <Film className="w-4 h-4" />,
-      onSelect: () => closeAnd(() => navigate(`/media/${m.id}`)),
+      onSelect: () => closeAnd(() => navigate(`/tasks`)),
     }));
 
     const all = [
       ...quickActions,
       ...navItems,
       ...taskItems,
-      ...projectItems,
-      ...scheduleItems,
-      ...profileItems,
-      ...mediaItems,
     ];
 
     if (!query.trim()) return all;
@@ -185,7 +133,7 @@ export function CommandPalette() {
         (i.sublabel?.toLowerCase().includes(q) ?? false) ||
         i.group.toLowerCase().includes(q)
     );
-  }, [query, tasks, projects, schedules, profiles, mediaAssets, theme, language, t]);
+  }, [query, beTasks.data, theme, language, t]);
 
   useEffect(() => {
     setSelectedIdx(0);

@@ -1,0 +1,54 @@
+- generic [ref=f14e1]:
+  - generic "Trình phát video YouTube" [ref=f14e5]:
+    - generic [ref=f14e7]: "Alibaba Cloud Model Studio: Every Top-tier AI Models in One Platform"
+    - generic [ref=f14e11]:
+      - generic:
+        - generic [ref=f14e13] [cursor=pointer]:
+          - generic [ref=f14e15]:
+            - generic "Secure, Scalable AI Platform" [ref=f14e16]
+            - generic "click.alibabacloud.com" [ref=f14e17]
+          - link "Tìm hiểu thêm This link opens in new tab" [ref=f14e18]:
+            - generic: Tìm hiểu thêm
+        - generic [ref=f14e19]:
+          - generic "Được tài trợ" [ref=f14e21]
+          - button "Trung tâm quảng cáo của tôi" [ref=f14e23] [cursor=pointer]
+          - generic [ref=f14e25]:
+            - text: •
+            - generic "1/2" [ref=f14e26]
+          - link "click.alibabacloud.com This link opens in new tab" [ref=f14e27]:
+            - generic [ref=f14e28] [cursor=pointer]: click.alibabacloud.com
+    - generic [ref=f14e31]:
+      - generic [ref=f14e32]:
+        - slider "Thanh trượt tìm kiếm" [disabled] [ref=f14e33]
+        - generic:
+          - generic:
+            - generic:
+              - slider "Nhấp vào hoặc cuộn bảng điều khiển để tua chính xác" [disabled]
+      - generic [ref=f14e43]:
+        - generic [ref=f14e44]:
+          - button "Tạm dừng (k)" [ref=f14e45] [cursor=pointer]
+          - generic [ref=f14e46]:
+            - button "Tắt tiếng (m)" [ref=f14e48] [cursor=pointer]
+            - slider "Âm lượng":
+              - generic [ref=f14e49] [cursor=pointer]
+          - button "0 Phút 0 Giây / 0 Phút 38 Giây" [ref=f14e52] [cursor=pointer]: 0:00 / 0:38
+        - generic [ref=f14e53]:
+          - generic [ref=f14e54]:
+            - button "Không có phụ đề" [ref=f14e55] [cursor=pointer]
+            - button "Cài đặt" [ref=f14e57] [cursor=pointer]
+          - generic [ref=f14e58]:
+            - button "Chế độ rạp chiếu phim (t)" [ref=f14e59] [cursor=pointer]
+            - button "Toàn màn hình (f)" [ref=f14e60] [cursor=pointer]
+  - banner [ref=f14e84]:
+    - generic [ref=f14e86]:
+      - generic [ref=f14e87]:
+        - button "Hướng dẫn" [ref=f14e89] [cursor=pointer]
+        - generic [ref=f14e91]:
+          - link:
+            - /url: /
+      - search [ref=f14e93]:
+        - generic [ref=f14e95]:
+          - generic [ref=f14e96]:
+            - combobox [ref=f14e98]
+            - button [ref=f14e101] [cursor=pointer]
+          - button "Search" [ref=f14e102] [cursor=pointer]

@@ -1,4 +1,8 @@
-import { fail, getStore, nextId, ok, pushHistory } from "@/lib/fixtures/store";
+// Publish BFF — BE-first, không fixture-fallback.
+// BE không có EP list batches/receipts: GET trả [] trung thực (rỗng, không mẫu).
+// POST threads → BE POST /threads/publish dry-run (allow_post=false, không post thật).
+// BE down → 502 BE_UNREACHABLE, không bịa receipt posted. Platform BE chưa có EP → 502.
+import { fail, ok } from "@/lib/fixtures/store";
 
 const PLATFORMS = ["threads", "facebook", "tiktok", "youtube", "instagram"];
 
@@ -7,7 +11,8 @@ const PLATFORMS = ["threads", "facebook", "tiktok", "youtube", "instagram"];
 const BE_BASE = process.env.MIRO_BE_BASE ?? "http://localhost:8770";
 
 export async function GET() {
-  return ok(getStore().batches);
+  // BE không expose GET list batches — trả rỗng trung thực, không seed mẫu.
+  return ok([]);
 }
 
 type BePublishResult = {
@@ -81,50 +86,36 @@ export async function POST(req: Request) {
   if (!body.video_id) return fail("Chọn video", 422);
   if (!body.platform || !PLATFORMS.includes(body.platform)) return fail("Platform chưa hợp lệ", 422);
   if (!body.account) return fail("Chọn tài khoản", 422);
+
+  // BE chỉ có luồng Threads (M2). Platform khác chưa có EP publish → 502, không mock.
+  if (body.platform !== "threads") {
+    return fail(`BE_UNREACHABLE: BE chưa hỗ trợ publish ${body.platform}. Chưa đăng gì.`, 502);
+  }
+
   const batch = {
-    id: nextId("batch"),
+    id: `batch-${body.video_id}-${Date.now()}`,
     video_id: body.video_id,
     platform: body.platform,
     account: body.account,
     scheduled_at: body.scheduled_at,
     status: body.scheduled_at ? "scheduled" : "queued",
-    source: "fixture" as "fixture" | "backend",
+    source: "backend" as const,
     backend_detail: "",
   };
-  getStore().batches.unshift(batch);
 
-  if (body.platform === "threads") {
-    const attemptId = nextId("att");
-    const be = await publishThreadsDryRun({
-      publication_id: batch.id,
-      attempt_id: attemptId,
-      render_id: body.video_id,
-      owner: body.account.replace(/^@/, ""),
-      shortcode: body.video_id,
-    });
-    if (be.reachable) {
-      // BE thật đã trả lời (dry-run/deny/lỗi): hiển thị kết quả thật,
-      // KHÔNG tạo receipt fixture "posted" gây hiểu nhầm.
-      batch.source = "backend";
-      batch.status = be.status;
-      batch.backend_detail = be.detail;
-    } else {
-      // Fixture fallback khi BE không reachable — vẫn gắn nhãn DỮ LIỆU MẪU.
-      const postId = nextId("post");
-      getStore().receipts.unshift({
-        id: nextId("rc"),
-        post_id: postId,
-        post_url: `https://www.threads.com/t/${postId}`,
-        platform: "threads",
-        account: body.account,
-        status: "posted",
-        posted_at: new Date().toISOString(),
-        source: "fixture",
-      });
-      batch.status = "posted";
-      batch.backend_detail = "DỮ LIỆU MẪU — chưa đăng thật (BE không reachable).";
-    }
+  const be = await publishThreadsDryRun({
+    publication_id: batch.id,
+    attempt_id: `att-${Date.now()}`,
+    render_id: body.video_id,
+    owner: body.account.replace(/^@/, ""),
+    shortcode: body.video_id,
+  });
+  if (!be.reachable) {
+    // BE down → 502 fail-closed. KHÔNG tạo receipt posted mẫu.
+    return fail("BE_UNREACHABLE: không nối được BE. Chưa đăng gì.", 502);
   }
-  pushHistory("publish", `${batch.id} ${batch.platform}/${batch.account} -> ${batch.status} [${batch.source}]`);
+  // BE thật đã trả lời (dry-run/deny/lỗi): hiển thị kết quả thật.
+  batch.status = be.status;
+  batch.backend_detail = be.detail;
   return ok(batch, 201);
 }

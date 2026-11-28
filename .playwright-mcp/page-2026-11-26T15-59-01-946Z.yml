@@ -1,0 +1,276 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - complementary "Primary navigation" [ref=e4]:
+      - generic [ref=e5]:
+        - generic [ref=e6]:
+          - button [ref=e7] [cursor=pointer]:
+            - generic "miro." [ref=e8]:
+              - text: miro
+              - generic [ref=e9]: .
+          - button "Thu gọn thanh điều hướng" [ref=e10] [cursor=pointer]
+        - generic [ref=e13]:
+          - generic [ref=e14]: Personal Operations
+          - generic [ref=e15]: LOCAL
+        - generic [ref=e16]:
+          - button "Bảng lệnh" [ref=e17] [cursor=pointer]:
+            - generic [ref=e18]: Tìm kiếm nhanh...
+            - generic [ref=e23]: ⌘K
+          - button "Hội thoại mới" [ref=e24] [cursor=pointer]
+      - navigation "Workspace sections" [ref=e27]:
+        - generic [ref=e28]:
+          - button "WORKSPACE" [ref=e29] [cursor=pointer]
+          - list [ref=e33]:
+            - listitem [ref=e34]:
+              - link "Tổng quan" [ref=e35] [cursor=pointer]:
+                - /url: /overview
+            - listitem [ref=e42]:
+              - link "AI Workspace" [ref=e43] [cursor=pointer]:
+                - /url: /workspace
+            - listitem [ref=e48]:
+              - link "Tác vụ" [ref=e49] [cursor=pointer]:
+                - /url: /tasks
+            - listitem [ref=e54]:
+              - link "Dự án" [ref=e55] [cursor=pointer]:
+                - /url: /projects
+        - generic [ref=e59]:
+          - button "TỰ ĐỘNG HÓA" [ref=e60] [cursor=pointer]
+          - list [ref=e64]:
+            - listitem [ref=e65]:
+              - link "Lịch trình" [ref=e66] [cursor=pointer]:
+                - /url: /schedules
+            - listitem [ref=e72]:
+              - link "Workflows" [ref=e73] [cursor=pointer]:
+                - /url: /workflows
+        - generic [ref=e79]:
+          - button "CÔNG CỤ" [ref=e80] [cursor=pointer]
+          - list [ref=e84]:
+            - listitem [ref=e85]:
+              - link "Trình duyệt" [ref=e86] [cursor=pointer]:
+                - /url: /browser
+            - listitem [ref=e91]:
+              - link "Nghiên cứu" [ref=e92] [cursor=pointer]:
+                - /url: /research
+            - listitem [ref=e97]:
+              - link "Media Studio" [ref=e98] [cursor=pointer]:
+                - /url: /media
+            - listitem [ref=e102]:
+              - link "Xuất bản" [ref=e103] [cursor=pointer]:
+                - /url: /publishing
+            - listitem [ref=e108]:
+              - link "Tri thức" [ref=e109] [cursor=pointer]:
+                - /url: /knowledge
+        - generic [ref=e113]:
+          - button "HỆ THỐNG" [ref=e114] [cursor=pointer]
+          - list [ref=e118]:
+            - listitem [ref=e119]:
+              - link "Hoạt động" [ref=e120] [cursor=pointer]:
+                - /url: /activity
+            - listitem [ref=e124]:
+              - link "Tích hợp" [ref=e125] [cursor=pointer]:
+                - /url: /integrations
+            - listitem [ref=e129]:
+              - link "Cài đặt" [ref=e130] [cursor=pointer]:
+                - /url: /settings
+      - generic [ref=e135]:
+        - generic [ref=e136]:
+          - generic [ref=e137]: Miro Runtime · Mô phỏng
+          - generic [ref=e138]: OK
+        - generic [ref=e139]:
+          - generic [ref=e140]:
+            - generic [ref=e141]: OP
+            - generic [ref=e142]:
+              - paragraph [ref=e143]: Operator
+              - paragraph [ref=e144]: Asia/Bangkok
+          - button "Switch theme" [ref=e146] [cursor=pointer]
+    - generic [ref=e149]:
+      - banner [ref=e150]:
+        - navigation "Breadcrumb" [ref=e152]:
+          - generic [ref=e153]: AI Workspace
+        - generic [ref=e154]:
+          - generic "Mọi tác vụ, trình duyệt và xuất bản đều được mô phỏng cục bộ. Không kết nối tài khoản thật." [ref=e155]: Chế độ Mô phỏng
+          - button "Giám sát tác vụ" [ref=e156] [cursor=pointer]:
+            - generic [ref=e159]: "1"
+            - generic [ref=e160]: đang chạy
+          - button "Cần xử lý" [ref=e161] [cursor=pointer]:
+            - generic [ref=e164]: "2"
+          - button "Thông báo" [ref=e165] [cursor=pointer]
+      - main [ref=e170]:
+        - generic [ref=e171]:
+          - complementary "Hội thoại" [ref=e375]:
+            - generic [ref=e376]:
+              - heading "Hội thoại" [level=2] [ref=e377]
+              - generic [ref=e378]:
+                - button "Hội thoại mới" [ref=e379] [cursor=pointer]
+                - button "Close history" [ref=e382] [cursor=pointer]
+            - generic [ref=e386]:
+              - button [ref=e387] [cursor=pointer]:
+                - paragraph [ref=e388]: chào bạn
+                - paragraph [ref=e389]: 5 tin nhắn · 22:55 26-11
+              - button [ref=e473] [cursor=pointer]:
+                - paragraph [ref=e391]: Nghiên cứu đợt 1 — KANS 377
+                - paragraph [ref=e392]: 4 tin nhắn · 22:59 26-11
+          - generic [ref=e172]:
+            - generic [ref=e174]:
+              - button "Hội thoại" [ref=e175] [cursor=pointer]
+              - button "Hội thoại mới" [ref=e181] [cursor=pointer]
+            - generic [ref=e192]:
+              - paragraph [ref=e395]: Thu thập 5 video mẫu đầu tiên về KANS 377 trên Profile 20 để kiểm tra cách mở đầu.
+              - generic [ref=e396]:
+                - generic [ref=e397]:
+                  - generic "miro." [ref=e398]:
+                    - text: miro
+                    - generic [ref=e399]: .
+                  - generic [ref=e400]: 21:41 26-11
+                - paragraph [ref=e401]: Đã hoàn tất thu thập 5 bản ghi mẫu cho KANS 377 trên Profile 20. Ba trong năm video sử dụng cấu trúc mở đầu bằng mốc thời gian trải nghiệm thực tế và cận cảnh kết cấu sản phẩm. Hai bản ghi có trường chỉ số không quan sát được đã được đánh dấu rõ ràng.
+                - generic [ref=e402]:
+                  - generic [ref=e403]:
+                    - generic [ref=e409]:
+                      - paragraph [ref=e410]: Nghiên cứu 5 video mẫu KANS 377 (Đợt 1)
+                      - generic [ref=e411]:
+                        - generic [ref=e412]: KANS 377 Research
+                        - generic [aria-hidden] [ref=e413]: ·
+                        - generic [ref=e414]: chat
+                        - generic [aria-hidden] [ref=e415]: ·
+                        - generic [ref=e416]: 24m 00s
+                    - generic [ref=e417]: Hoàn tất
+                  - generic [ref=e422]:
+                    - paragraph [ref=e423]: Hoàn tất thu thập 5/5 bản ghi mẫu
+                    - generic [ref=e427]:
+                      - generic [ref=e428]: Đã hoàn tất 5/5 video mẫu
+                      - generic [ref=e429]: 5/5 video — 100%
+                  - button "Xem 4 bước thực thi" [ref=e431] [cursor=pointer]
+                  - generic [ref=e436]:
+                    - button "Xem kết quả" [ref=e437] [cursor=pointer]
+                    - button "Live Workspace" [ref=e443] [cursor=pointer]
+                - generic [ref=e448]:
+                  - paragraph [ref=e449]: Tóm tắt quan sát (Dữ liệu mẫu)
+                  - generic [ref=e450]:
+                    - generic [ref=e451]:
+                      - paragraph [ref=e452]: Bản ghi hợp lệ
+                      - paragraph [ref=e453]: 5 / 5 video mẫu
+                    - generic [ref=e454]:
+                      - paragraph [ref=e455]: Thiếu trường dữ liệu
+                      - paragraph [ref=e456]: 2 bản ghi (comments / shares)
+                    - generic [ref=e457]:
+                      - paragraph [ref=e458]: Nhóm hook nổi bật
+                      - paragraph [ref=e459]: Nhật ký 7–14 ngày & So sánh thành phần
+                - generic [ref=e460]:
+                  - button "Mở bảng Nghiên cứu KANS 377" [ref=e461] [cursor=pointer]
+                  - button "Mở dự án KANS 377" [ref=e467] [cursor=pointer]
+              - paragraph [ref=e476]: dong mot
+              - generic [ref=e477]:
+                - generic [ref=e478]:
+                  - generic "miro." [ref=e479]:
+                    - text: miro
+                    - generic [ref=e480]: .
+                  - generic [ref=e481]: 22:59 26-11
+                - paragraph [ref=e482]: Miro đã bắt đầu tác vụ tìm kiếm và phân tích 10 video KANS 377 trên Profile 21 (mô phỏng). Tác vụ sẽ tiếp tục chạy nền ngay cả khi bạn đóng Live Workspace hoặc chuyển sang trang khác.
+                - generic [ref=e483]:
+                  - generic [ref=e484]:
+                    - generic [ref=e490]:
+                      - paragraph [ref=e491]: Nghiên cứu 10 video KANS 377 (Profile 21)
+                      - generic [ref=e492]:
+                        - generic [ref=e493]: Profile 21 · KANS 377 Research
+                        - generic [aria-hidden] [ref=e494]: ·
+                        - generic [ref=e495]: chat
+                    - generic [ref=e496]: Đang chờ hàng đợi
+                  - generic [ref=e501]:
+                    - paragraph [ref=e502]: Chuẩn bị mở Profile 21 (Mô phỏng)...
+                    - generic [ref=e505]:
+                      - generic [ref=e506]: Profile 21 · Đang xếp hàng khởi chạy
+                      - generic [ref=e507]: 0/10 video — 0%
+                  - button "Xem 4 bước thực thi" [ref=e509] [cursor=pointer]
+                  - generic [ref=e513]:
+                    - generic [ref=e514]:
+                      - button "Mở trong Workspace" [ref=e515] [cursor=pointer]
+                      - button "Live Workspace" [ref=e521] [cursor=pointer]
+                    - generic [ref=e526]:
+                      - button "Tạm dừng Nghiên cứu 10 video KANS 377 (Profile 21)" [ref=e527] [cursor=pointer]:
+                        - generic [ref=e531]: Tạm dừng
+                      - button "Hủy tác vụ Nghiên cứu 10 video KANS 377 (Profile 21)" [ref=e532] [cursor=pointer]:
+                        - generic [ref=e535]: Hủy tác vụ
+                - button "Mở Profile 21 · KANS 377 Research" [ref=e537] [cursor=pointer]
+            - generic [ref=e322]:
+              - textbox "Nhập yêu cầu cho Miro... (Enter để gửi, Shift+Enter xuống dòng)" [active] [ref=e323]
+              - generic [ref=e324]:
+                - generic [ref=e325]:
+                  - button "Đính kèm" [ref=e326] [cursor=pointer]
+                  - combobox "Project context" [ref=e329]:
+                    - option "KANS 377 Product Research"
+                    - option "Fashion Content Production"
+                    - option "Affiliate Content Operations" [selected]
+                  - combobox "Browser profile" [ref=e330]:
+                    - option "Profile 20"
+                    - option "Profile 21" [selected]
+                    - option "Profile 22"
+                    - option "Profile 23"
+                  - combobox "Model selector" [ref=e331]:
+                    - option "Miro Core (Simulated)" [selected]
+                    - option "Miro Fast (Simulated)"
+                    - option "Miro Deep Research (Simulated)"
+                - button "Gửi lệnh" [disabled]
+          - separator "Resize workspace split" [ref=e543]
+          - region "Universal Live Workspace" [ref=e546]:
+            - generic [ref=e547]:
+              - generic [ref=e553]:
+                - generic [ref=e554]:
+                  - heading "Live Workspace" [level=2] [ref=e555]
+                  - generic [ref=e556]: Đang chờ hàng đợi
+                - paragraph [ref=e561]: Nghiên cứu 10 video KANS 377 (Profile 21) · Profile 21 · KANS 377 Research
+              - generic [ref=e562]:
+                - button "Mở toàn trang" [ref=e563] [cursor=pointer]
+                - button "Mở rộng" [ref=e568] [cursor=pointer]
+                - button "Đóng Live Workspace" [ref=e574] [cursor=pointer]
+            - generic [ref=e578]:
+              - generic [ref=e581]:
+                - generic [ref=e582]: Profile 21 · Đang xếp hàng khởi chạy
+                - generic [ref=e583]: 0/10 video — 0%
+              - generic [ref=e584]:
+                - tablist [ref=e585]:
+                  - tab "Workspace" [selected] [ref=e586] [cursor=pointer]
+                  - tab "Hoạt động 1" [ref=e588] [cursor=pointer]:
+                    - generic [ref=e589]: Hoạt động
+                    - generic [ref=e590]: "1"
+                  - tab "Bằng chứng 0" [ref=e591] [cursor=pointer]:
+                    - generic [ref=e592]: Bằng chứng
+                    - generic [ref=e593]: "0"
+                  - tab "Kết quả" [ref=e594] [cursor=pointer]
+                - combobox "Switch observed task" [ref=e596]:
+                  - option "Nghiên cứu 10 video KANS 377 (Profile 21)" [selected]
+                  - option "Nghiên cứu 10 video KANS 377 (Profile 20)"
+                  - option "Nghiên cứu 10 video KANS 377 (Profile 20)"
+                  - 'option "Xuất bản TikTok: Review 14 ngày KANS 377"'
+                  - option "Nghiên cứu 5 video mẫu KANS 377 (Đợt 1)"
+                  - option "Khảo sát 5 video áo khoác tối giản (Kết quả một phần)"
+                  - option "Đồng bộ chỉ số định kỳ trên Profile 23"
+            - generic [ref=e598]:
+              - generic [ref=e599]:
+                - generic [ref=e600]: AI đang điều khiển (Mô phỏng)Cơ chế chuyển giao quyền mô phỏng đồng bộ theo tác vụ.
+                - button "Tiếp quản (Human Takeover)" [ref=e606] [cursor=pointer]
+              - generic [ref=e613]:
+                - generic [ref=e614]:
+                  - generic [ref=e615]:
+                    - generic [ref=e619]: Profile 21
+                    - generic [ref=e620]: https://demo.social.local/explore/fashion-aw
+                  - generic [ref=e621]: Demo Browser Preview
+                - generic [ref=e623]:
+                  - generic [ref=e624]:
+                    - generic [ref=e625]: Lookbook Feed — Thu Đông (Demo)
+                    - generic [ref=e626]: Observing DOM (Demo)
+                  - paragraph [ref=e627]: Bảng tin tham khảo phong cách phối đồ mô phỏng.
+                  - generic [ref=e628]:
+                    - generic [ref=e629]:
+                      - generic [ref=e630]: Bản ghi mẫu đã quan sát (0)
+                      - generic [ref=e631]: Dữ liệu mẫu mô phỏng
+                    - generic [ref=e632]: Đang khởi tạo phiên trình duyệt mô phỏng và chờ bản ghi đầu tiên...
+    - region "Notifications alt+T"
+  - generic [ref=e336] [cursor=pointer]:
+    - button "Open Next.js Dev Tools" [ref=e337]
+    - generic [ref=e341]:
+      - button "Open issues overlay" [ref=e342]:
+        - generic [ref=e343]:
+          - generic [aria-hidden] [ref=e344]: "0"
+          - generic [ref=e345]: "1"
+        - generic [ref=e346]: Issue
+      - button "Collapse issues badge" [ref=e347]
+  - alert [ref=e350]

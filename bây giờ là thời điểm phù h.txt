@@ -1,0 +1,1307 @@
+Tôi nghĩ bây giờ là thời điểm phù hợp để chúng ta **hệ thống hóa lại toàn bộ dự án Miro**, từ mục tiêu sản phẩm, kiến trúc, những năng lực đã xây dựng, những phần còn dang dở cho đến các công nghệ có thể tận dụng trong tương lai.
+
+Trước đây chúng ta thường phát triển theo từng vấn đề phát sinh. Cách đó giúp giải quyết được nhiều bài toán thực tế, nhưng khi dự án ngày càng lớn, nếu không có một bản đồ tổng thể thì rất dễ xảy ra tình trạng:
+
+- Phát triển lại chức năng đã tồn tại.
+- Nghiên cứu được giải pháp tốt nhưng không biết đưa vào giai đoạn nào.
+- Backend có nhiều capability nhưng người dùng chưa thể trực tiếp sử dụng.
+- Agent mới không kế thừa được kiến thức của Agent trước.
+- Mở thêm nhiều nhiệm vụ trong khi các nhiệm vụ cũ chưa hoàn thành.
+
+Lần này tôi sẽ phân chia theo **kiến trúc sản phẩm, năng lực hiện tại, mức độ hoàn thiện, quan hệ phụ thuộc và thứ tự phát triển**. Đây sẽ là roadmap tổng thể để chúng ta tham chiếu, chưa phải chỉ thị triển khai mới cho Coding Agent.
+
+# **I. Xác định lại mục tiêu cuối cùng của Miro**
+
+Miro là một **Personal AI Operating Workspace** — không gian làm việc AI cá nhân có thể tự vận hành, điều khiển công cụ và thực hiện công việc thay người dùng.
+
+Miro cần có ba phương thức hoạt động chính.
+
+**Manual Control**
+
+Bạn trực tiếp điều khiển và sử dụng các công cụ của Miro.
+
+**AI Control**
+
+Bạn giao nhiệm vụ bằng ngôn ngữ tự nhiên, Miro tự thực hiện.
+
+**Autonomous Mode**
+
+Miro tự thực hiện công việc theo lịch, sự kiện hoặc điều kiện.
+
+Cả ba phương thức phải sử dụng chung hệ thống công cụ, dữ liệu, quyền hạn và quản lý nhiệm vụ. Không xây ba hệ thống thực thi độc lập.
+
+Mục tiêu quan trọng nhất là sau này bạn có thể tắt Coding Agent, đóng IDE, không cần mở ChatGPT, nhưng Miro vẫn có thể tiếp nhận nhiệm vụ và vận hành trong phạm vi môi trường đã được cấu hình.
+
+# **II. Bản đồ kiến trúc tổng thể Miro**
+
+Để hiểu rõ chúng ta đang đứng ở đâu, tôi chia Miro thành 10 hệ thống chính. Đây là bản đồ kiến trúc mục tiêu, không có nghĩa toàn bộ các hệ thống đã được triển khai.
+
+# **miro.**
+
+PERSONAL AI OPERATING WORKSPACE
+
+Manual Control
+
+AI Control
+
+Autonomous Mode
+
+**01 — User Interface**
+
+Chat · Control Center · Live Workspace · Task Monitor
+
+Đã thiết kế định hướng, chưa nghiệm thu tích hợp
+
+**02 — Agent Intelligence**
+
+LLM · Planner · Tool Calling · Context
+
+Rule-based, chưa có LLM production tổng quát
+
+**03 — Automation Engine**
+
+Schedule · Event · Workflow · Watcher
+
+Chưa nghiệm thu
+
+**04 — Task & Runtime Engine**
+
+TaskService · Launcher · Execution · Lifecycle · Recovery
+
+Đã có nền tảng, chưa hoàn thiện standalone runtime
+
+**05 — Gateway & Security**
+
+Permission · Profile Binding · Lease · Authorization · Evidence
+
+Đã nghiệm thu trong các browser slice
+
+**06 — Browser Engine**
+
+Bridge · Extension · REA-MẮT · Browser Actions
+
+Đã có production capability
+
+**07 — Media Intelligence**
+
+REA Video · Audio · OCR · VideoMD · FFmpeg
+
+Slice 03 hoàn thành một phần
+
+**08 — Desktop & Other Tools**
+
+Windows · Files · Editor · Publishing
+
+Có nghiên cứu, chưa nghiệm thu tổng thể
+
+**09 — Internet Research**
+
+Search · Platform Adapters · Data Collection
+
+TikTok đã có, các nền tảng khác cần kiểm kê
+
+**10 — Data, Memory & Connectivity**
+
+Local Persistence · Knowledge · Cloud Sync · Remote Access
+
+Cần kiểm kê hiện trạng và phát triển theo nhu cầu
+
+**Project Intelligence — Hệ thống hỗ trợ phát triển Miro**
+
+Documentation · Preflight · Capability Map · Runbooks · CI · Verification · Knowledge Writeback
+
+Audit đã hoàn thành, chưa nghiệm thu giải pháp cải thiện
+
+Project Intelligence được đặt riêng vì nó phục vụ Coding Agent phát triển dự án, không phải bộ não thực hiện nhiệm vụ cho người dùng của Miro.
+
+Đây là điểm cần giữ rõ ràng trong toàn bộ quá trình phát triển sau này.
+
+# **III. Hiện tại chúng ta đã làm được những gì?**
+
+## **1. Các cột mốc phát triển thực tế**
+
+Baseline mới nhất theo báo cáo là **HEAD&#x20;**`9b33700`, chưa push.
+
+**01**
+
+**Browser Bridge**
+
+Kết nối Backend, Gateway, Bridge, Extension và Chrome thật.
+
+Đã nghiệm thu
+
+**01B**
+
+**Persistent Connection**
+
+Pairing, kết nối lại, Launcher recovery, bật/tắt Extension và credential.
+
+Đã nghiệm thu có giới hạn
+
+**02A**
+
+**Browser Observation**
+
+REA-MẮT đọc DOM, metadata và structured search records.
+
+Đã nghiệm thu
+
+**02B**
+
+**Browser Interaction**
+
+Miro tự điều hướng, tìm kiếm, quan sát lại và thu thập Evidence.
+
+Đã nghiệm thu theo báo cáo
+
+**03**
+
+**Media Intelligence**
+
+Nối REA Video vào production, decompose video, phân tích và so sánh media.
+
+Hoàn thành một phần
+
+**AUDIT**
+
+**Project Context Grounding**
+
+Điều tra nguyên nhân Coding Agent bỏ sót kiến thức dự án.
+
+Audit hoàn thành
+
+## **2. Hệ thống Browser — Cánh tay đầu tiên của Miro**
+
+Đây hiện là nhóm năng lực có bằng chứng production rõ ràng nhất.
+
+| Năng lực                             | Trạng thái               |
+| ------------------------------------ | ------------------------ |
+| Kết nối Chrome thật                  | Đạt                      |
+| Kết nối Profile 20                   | Đạt                      |
+| Persistent Pairing                   | Đạt có giới hạn          |
+| Launcher quản lý Bridge              | Đạt                      |
+| Tự kết nối lại                       | Đạt trong các lần đã thử |
+| Tự nhận diện mọi Chrome Profile      | Chưa nghiệm thu          |
+| Quản lý đồng thời nhiều Profile thật | Chưa nghiệm thu đầy đủ   |
+| Đọc DOM qua Extension                | Đạt                      |
+| REA-MẮT đọc metadata                 | Đạt                      |
+| Thu thập dữ liệu có cấu trúc         | Đạt                      |
+| Tự điều hướng đến trang tìm kiếm     | Đạt                      |
+| Tìm kiếm TikTok theo từ khóa         | Đạt                      |
+| Thay đổi số lượng kết quả            | Đạt trong các thử nghiệm |
+| Đọc metadata video đang mở           | Đạt                      |
+| Observe → Decide → Act → Verify      | Đạt ở phạm vi rule-based |
+| Tổng quát hóa mọi website            | Chưa đạt                 |
+| Live Browser Preview trên UI         | Chưa nghiệm thu          |
+
+Điều chúng ta đã xây dựng không chỉ là một đoạn script tìm TikTok. Đó là một đường thực thi có thể tiếp tục mở rộng:
+
+**TaskService → Gateway → Bridge → Extension → Chrome → REA-MẮT → Evidence.**
+
+Các năng lực Browser mới trong tương lai nên tận dụng đường thực thi này thay vì tạo một Browser Runtime riêng cho mỗi nền tảng.
+
+## **3. Hệ thống Media — Mắt và tai của Miro**
+
+Backend test mới nhất
+
+# **458 PASS**
+
+2 skipped
+
+Bridge test mới nhất
+
+# **89 PASS**
+
+Theo báo cáo Slice 03
+
+| Năng lực Media                 | Hiện trạng                                              |
+| ------------------------------ | ------------------------------------------------------- |
+| REA Video native               | Đã có implementation                                    |
+| MediaIntelProvider             | Đã kết nối production                                   |
+| yt-dlp acquisition             | Hoạt động trong lần nghiệm thu mới, còn giới hạn format |
+| FFmpeg processing              | Đã có                                                   |
+| Frame extraction               | Đã có                                                   |
+| Shot decomposition             | Đã nghiệm thu                                           |
+| OCR                            | Đã có implementation                                    |
+| Audio analysis                 | Đã có, một số chỉ số đã nghiệm thu                      |
+| Audio stems                    | Đã có implementation                                    |
+| VideoMD                        | Đã có và đã sửa lỗi                                     |
+| Video comparison               | Đã chạy thật trên hai video                             |
+| Speech-to-text                 | Blocked                                                 |
+| Speaker diarization            | Blocked                                                 |
+| Vision Language Model          | Denied theo policy                                      |
+| Hiểu ngữ nghĩa video tổng quát | Chưa nghiệm thu                                         |
+| Phân tích hàng loạt video      | Partial                                                 |
+
+### **Kết quả Slice 03 theo từng Level**
+
+**Level 1**
+
+Phân tích video local
+
+Accepted
+
+**Level 2**
+
+Phân tích video TikTok
+
+Accepted
+
+**Level 3**
+
+Tìm và phân tích nhiều video
+
+Partial
+
+**Level 4**
+
+So sánh và tổng hợp nội dung
+
+Partial
+
+**Level 5**
+
+Tổng quát hóa sang nhiệm vụ khác
+
+Blocked
+
+# **2/5**
+
+Video có decompose hình ảnh đầy đủ
+
+2 video đầy đủ hình ảnh3 video audio-only probe
+
+Cần nhớ rằng Miro hiện đã biết xử lý và phân biệt một số đặc điểm video, nhưng chưa nên tuyên bố Miro đã hiểu hoàn chỉnh lời thoại, ý nghĩa hình ảnh và nội dung bán hàng như một AI multimodal tổng quát.
+
+## **4. Bộ não và hệ thống thực thi nhiệm vụ**
+
+Đây là khu vực chúng ta cần quan tâm nhiều trong những giai đoạn tiếp theo.
+
+| Thành phần                        | Hiện trạng                 |
+| --------------------------------- | -------------------------- |
+| TaskService                       | Đã có                      |
+| Natural-language routing          | Đã có, rule-based          |
+| Production Task API               | Đã hoạt động               |
+| Tool Registry                     | Đã có nền tảng             |
+| Browser execution loop            | Đã hoạt động               |
+| Permission Manager                | Đã có                      |
+| Evidence validation               | Đã có                      |
+| LLM Planner tổng quát             | Chưa nghiệm thu            |
+| Dynamic Tool Calling              | Chưa nghiệm thu production |
+| Context-aware planning            | Chưa nghiệm thu            |
+| Long-term Agent Memory            | Chưa xác định đầy đủ       |
+| Multi-step general task execution | Chưa nghiệm thu tổng quát  |
+| Background task management        | Cần kiểm kê và nghiệm thu  |
+| Autonomous Scheduler              | Chưa nghiệm thu            |
+
+Nói cách khác, Miro đã có **một số giác quan, cánh tay và hệ thần kinh thực thi**, nhưng bộ não tổng quát để tự hiểu nhiều loại yêu cầu khác nhau vẫn chưa hoàn chỉnh.
+
+# **IV. Đánh giá mức độ trưởng thành của Miro**
+
+Tôi không muốn sử dụng con số kiểu “Miro đã hoàn thành 70%”, vì chúng ta chưa xác định đầy đủ khối lượng công việc cuối cùng. Con số đó sẽ không có cơ sở.
+
+Thay vào đó, tôi phân loại theo khả năng sử dụng thực tế.
+
+Browser Connection & Security
+
+Đã nghiệm thu phạm vi
+
+Browser Observation
+
+Đã nghiệm thu phạm vi
+
+Browser Interaction
+
+Đã nghiệm thu phạm vi
+
+Media Intelligence
+
+Production một phần
+
+Task Orchestration
+
+Production một phần
+
+Agent Intelligence
+
+Có nền tảng / thiết kế
+
+Standalone Application
+
+Có nền tảng / thiết kế
+
+Frontend Integration
+
+Có nền tảng / thiết kế
+
+Project Intelligence
+
+Có nền tảng / thiết kế
+
+Desktop Automation
+
+Chưa nghiệm thu
+
+Autonomous Scheduling
+
+Chưa nghiệm thu
+
+Remote & Cloud
+
+Chưa nghiệm thu
+
+Đây là đánh giá mức độ trưởng thành theo các báo cáo hiện có, không phải tỷ lệ phần trăm hoàn thành hay kết quả kiểm tra trực tiếp source.
+
+Điểm mạnh hiện tại của Miro là **Browser, Gateway, REA-MẮT và nền tảng thực thi production**.
+
+Điểm yếu lớn nhất hiện tại là chưa biến những năng lực đó thành một ứng dụng hoàn chỉnh để bạn có thể trực tiếp sử dụng mỗi ngày.
+
+# **V. Roadmap tổng thể đề xuất**
+
+Tôi muốn thay đổi cách nhìn roadmap một chút. Không nên chỉ tiếp tục Slice 04, Slice 05, Slice 06 bằng cách bổ sung hết công cụ này đến công cụ khác.
+
+Chúng ta cần có các phiên bản sản phẩm thực sự sử dụng được.
+
+1. **Foundation — Nền móng**
+
+   Đã đạt các milestone chính
+
+   Slice 01 → 01B → 02A → 02B
+
+   Browser, Gateway, Connection, Navigation, Evidence.
+2. **Consolidation — Hoàn thiện và củng cố**
+
+   Giai đoạn hiện tại
+
+   Slice 03 + Project Context Grounding + tổng hợp nghiên cứu
+
+   Xác định rõ năng lực Media, xử lý phần dang dở và ổn định kiến thức dự án.
+3. **Miro Alpha — Ứng dụng sử dụng độc lập**
+
+   Giai đoạn đề xuất tiếp theo
+
+   Standalone Runtime, Frontend thật, lưu nhiệm vụ và theo dõi thực thi.
+4. **Miro Beta — AI Agent thông minh**
+
+   Agent Intelligence
+
+   LLM, Tool Calling, Planning, Context và phối hợp các capability.
+5. **Miro Autonomous — Nhân viên AI tự vận hành**
+
+   Automation & Durable Execution
+
+   Scheduler, Watcher, Workflow, Recovery và nhiệm vụ tự động.
+6. **Miro Connected — Không gian làm việc mở rộng**
+
+   Remote Control & Cloud
+
+   Điều khiển từ điện thoại, đồng bộ dữ liệu, nhiều thiết bị.
+7. **Miro Ecosystem — Hệ sinh thái công cụ**
+
+   Capability Expansion
+
+   Desktop, Internet Research, Content Studio, Publishing và các integration chuyên biệt.
+
+Tên Alpha, Beta, Autonomous và Connected là cách tôi đề xuất tổ chức mục tiêu sản phẩm, chưa phải tên release chính thức.
+
+## **Giai đoạn 1 — Foundation**
+
+Đây là các công việc chúng ta đã phát triển từ Slice 01 đến Slice 02B.
+
+Mục tiêu không phải làm Browser trở nên hoàn hảo, mà là có một nền tảng đủ tin cậy để Miro thực hiện nhiệm vụ thực tế qua production.
+
+Các nguyên tắc cần bảo toàn:
+
+| Hệ thống        | Vai trò                           |
+| --------------- | --------------------------------- |
+| Gateway         | Kiểm soát đường thực thi          |
+| Permission      | Giới hạn hành động                |
+| Lease           | Kiểm soát quyền sở hữu tài nguyên |
+| Profile Binding | Không điều khiển nhầm Profile     |
+| Bridge          | Kết nối Browser Runtime           |
+| REA-MẮT         | Quan sát                          |
+| Evidence        | Xác minh kết quả                  |
+| Launcher        | Quản lý vòng đời hệ thống         |
+
+Không thay thế các thành phần này chỉ vì phát hiện một repository mới có chức năng tương tự.
+
+## **Giai đoạn 2 — Consolidation**
+
+**Đây là vị trí hiện tại của chúng ta.**
+
+Giai đoạn này không nên mở rộng thêm nhiều capability. Chủ yếu cần hiểu và củng cố những gì đang có.
+
+| Công việc                   | Kết quả cần hướng đến                            |
+| --------------------------- | ------------------------------------------------ |
+| Tổng hợp báo cáo nghiên cứu | Biết chính xác các công nghệ có thể tận dụng     |
+| Kiểm kê REA Video           | Không bỏ sót implementation hiện có              |
+| Slice 03                    | Xác định chính xác phần đạt, partial và blocked  |
+| Media acquisition           | Làm rõ giới hạn format từng video                |
+| STT Sherpa                  | Đánh giá dependency, tài nguyên và quyền cài đặt |
+| VLM                         | Làm rõ policy và nhu cầu thực tế                 |
+| Project Context Grounding   | Cải thiện khả năng kế thừa kiến thức             |
+| Cold-start Agent Acceptance | Kiểm tra Agent mới có tìm đúng capability không  |
+| Cold-restart bug            | Giữ theo dõi, xử lý theo mức độ ảnh hưởng        |
+| Repository state            | Thống nhất commit, verify, handover và tài liệu  |
+
+STT, VLM và các vấn đề tồn đọng chưa mặc nhiên được phép triển khai. Chúng ta sẽ quyết định sau khi có đủ báo cáo.
+
+## **Giai đoạn 3 — Miro Alpha: Phiên bản đầu tiên bạn trực tiếp sử dụng**
+
+Đây là cột mốc tôi muốn ưu tiên sau khi đã tổng hợp xong hiện trạng.
+
+Không nhất thiết phải có LLM tổng quát hoặc hàng trăm công cụ mới làm được Alpha.
+
+Chỉ cần kết nối những năng lực đã thực sự hoạt động vào một ứng dụng độc lập.
+
+Miro Alpha — minh họa trải nghiệm mục tiêu, không phải giao diện đang kết nối production.
+
+Alpha cần tập trung vào:
+
+| Thành phần         | Yêu cầu                                     |
+| ------------------ | ------------------------------------------- |
+| Standalone Runtime | Khởi động và sử dụng không cần Coding Agent |
+| Frontend           | Tích hợp từng chức năng thật                |
+| AI Workspace       | Nhận yêu cầu thuộc capability đã hỗ trợ     |
+| Tasks              | Theo dõi nhiệm vụ                           |
+| Local Persistence  | Lưu dữ liệu và kết quả                      |
+| Task Progress      | Hiển thị tiến độ có căn cứ                  |
+| Activity Timeline  | Hiển thị sự kiện thực thi                   |
+| Browser Control    | Quản lý Profile và kết nối                  |
+| Research           | Xem dữ liệu đã thu thập                     |
+| Media Studio       | Xem kết quả REA Video                       |
+| Manual Control     | Thao tác trực tiếp với công cụ              |
+
+Chưa cần Supabase, Vercel, LangGraph hoặc n8n để đạt được toàn bộ mục tiêu Alpha.
+
+Khi Alpha hoàn thành, chúng ta sẽ có một sản phẩm mà bạn thực sự sử dụng được, dù tập năng lực ban đầu còn giới hạn.
+
+## **Giai đoạn 4 — Miro Beta: Phát triển bộ não AI**
+
+Giai đoạn này sẽ nâng Miro từ khả năng nhận một số câu lệnh được định tuyến sẵn sang khả năng hiểu yêu cầu và phối hợp công cụ linh hoạt hơn.
+
+**Natural Language Request**
+
+Yêu cầu của người dùng
+
+**LLM + Context + Memory**
+
+Hiểu mục tiêu và thông tin liên quan
+
+**Planner & Capability Selection**
+
+Chọn công cụ, xác định bước thực hiện
+
+**Task Runtime + Gateway**
+
+Kiểm tra quyền và thực thi có kiểm soát
+
+Browser
+
+Media
+
+Desktop
+
+Research
+
+Schedule
+
+Files
+
+**Observation → Verification → Replanning**
+
+Kiểm tra kết quả và điều chỉnh bước tiếp theo
+
+Các công nghệ có thể xem xét ở đây gồm LangGraph, model provider hiện có, Ollama và những thư viện quản lý context.
+
+Nhưng chúng ta cần phân biệt:
+
+- LLM cung cấp khả năng hiểu yêu cầu và suy luận.
+- LangGraph có thể cung cấp cơ chế orchestration và checkpoint.
+- Gateway quyết định hành động nào được phép.
+- Capability thực hiện hành động.
+- Evidence xác minh kết quả.
+
+Không giao toàn bộ quyền điều khiển máy tính cho LLM thông qua một công cụ terminal chung.
+
+## **Giai đoạn 5 — Miro Autonomous: Tự vận hành**
+
+Đây là giai đoạn hiện thực hóa điều bạn đã nói trước đó: mở Miro lên, nó tự kiểm tra lịch trình và thực hiện các công việc đã được giao.
+
+| Hệ thống         | Chức năng                                |
+| ---------------- | ---------------------------------------- |
+| Scheduler        | Chạy công việc theo lịch                 |
+| Event Engine     | Kích hoạt khi xảy ra sự kiện             |
+| Watcher          | Theo dõi điều kiện hoặc thay đổi         |
+| Task Queue       | Quản lý công việc đang chờ               |
+| Workflow Engine  | Thực hiện quy trình nhiều bước           |
+| Recovery         | Phục hồi khi gián đoạn                   |
+| Resource Manager | Tránh tranh chấp Profile, file và cửa sổ |
+| Approval Center  | Chờ người dùng cấp quyền                 |
+| Notification     | Thông báo kết quả hoặc vấn đề            |
+
+Ví dụ mục tiêu:
+
+Mỗi sáng 8 giờ, Miro tự nghiên cứu một danh sách sản phẩm, tìm video mới, phân tích nội dung trong phạm vi capability đã có, tổng hợp báo cáo và lưu vào dự án. Khi bạn mở ứng dụng, kết quả đã nằm trong Research Workspace.
+
+APScheduler có thể được xem xét ở phần lập lịch. n8n có thể hỗ trợ kết nối workflow bên ngoài. Temporal chỉ cần đánh giá nếu cơ chế thực thi và phục hồi hiện có không còn đáp ứng.
+
+## **Giai đoạn 6 — Miro Connected: Điều khiển từ xa và Cloud**
+
+Chúng ta vẫn giữ nguyên định hướng **Local-first, Cloud-connected**.
+
+**Điện thoại**
+
+**Máy tính khác**
+
+**Remote Access**
+
+Tailscale hoặc Cloudflare Access
+
+**Miro Local Runtime**
+
+Máy tính chính · Browser · REA · Files · Scheduler
+
+**Local DB**
+
+Dữ liệu và trạng thái local
+
+**Cloud DB**
+
+Supabase — đồng bộ tùy chọn
+
+Tailscale có thể giúp chúng ta đạt khả năng điều khiển từ xa sớm mà chưa cần xây hệ thống Cloud Sync.
+
+Supabase và Vercel chỉ trở nên cần thiết hơn khi muốn có Cloud Control Center, đồng bộ nhiều thiết bị hoặc tiếp nhận nhiệm vụ khi máy tính chính chưa online.
+
+Các nhiệm vụ phụ thuộc Chrome, Windows hoặc media local vẫn cần máy thực thi hoạt động.
+
+## **Giai đoạn 7 — Miro Ecosystem: Mở rộng hệ sinh thái công cụ**
+
+Đây là nhóm có rất nhiều tiềm năng từ những repository bạn đang nghiên cứu.
+
+Tuy nhiên, không nhất thiết phải chờ đến cuối roadmap mới nghiên cứu hoặc tích hợp từng capability. Chúng có thể phát triển song song nếu phục vụ trực tiếp một Vertical Slice cần thiết.
+
+Nhóm năng lực mở rộng gồm Desktop Automation, Internet Research, Content Production, Publishing, File Management và các công cụ chuyên ngành khác.
+
+# **VI. Technology Solution Map — Những thứ có thể bổ sung vào Miro**
+
+Tôi sẽ tập hợp lại các công nghệ chúng ta đã trao đổi trước đó và đặt chúng vào đúng vị trí.
+
+## **Technology Solution Map**
+
+23 công nghệ và nhóm giải pháp đã được nhắc đến trong quá trình thảo luận.Tất cả công nghệ
+
+Đang hiển thị 23 mục
+
+**agent-desktop**
+
+Desktop
+
+Accessibility Tree, desktop actions, screenshot, trace, cursor overlay
+
+Vị trí: Desktop Execution Engine
+
+Ứng viên tích hợp
+
+**agent-reach**
+
+Internet
+
+Platform channels, research, transcription, doctor, fallback
+
+Vị trí: Research & Capability Management
+
+Nghiên cứu chọn lọc
+
+**OpenCLI**
+
+Internet
+
+Browser-based platform adapters
+
+Vị trí: Internet Research
+
+Đánh giá xung đột Bridge/CDP
+
+**yt-dlp**
+
+Media
+
+Media acquisition
+
+Vị trí: REA Video
+
+Đã có trong pipeline
+
+**FFmpeg**
+
+Media
+
+Frames, audio, transcode và media processing
+
+Vị trí: Media Processing
+
+Đã có
+
+**VideoMD / REA Native**
+
+Media
+
+Decompose, storyboard và video comparison
+
+Vị trí: Media Intelligence
+
+Đã có production một phần
+
+**Sherpa-ONNX / STT**
+
+Media
+
+Nhận diện lời thoại
+
+Vị trí: Audio Intelligence
+
+Blocked, cần xác minh dependency
+
+**LangGraph**
+
+AI
+
+Agent orchestration, checkpoints, interrupt
+
+Vị trí: Agent Intelligence
+
+Ứng viên
+
+**Ollama**
+
+AI
+
+Chạy mô hình AI local
+
+Vị trí: Model Provider
+
+Tùy phần cứng
+
+**pgvector / Qdrant**
+
+AI
+
+Semantic retrieval và vector memory
+
+Vị trí: Knowledge & Memory
+
+Chỉ khi có nhu cầu
+
+**APScheduler**
+
+Automation
+
+Time-based scheduling
+
+Vị trí: Automation Center
+
+Ứng viên
+
+**n8n**
+
+Automation
+
+External workflows và integrations
+
+Vị trí: Workflow Integration
+
+Tương lai
+
+**Temporal**
+
+Automation
+
+Durable execution, retry và recovery
+
+Vị trí: Runtime
+
+Khi cần mở rộng
+
+**SQLite**
+
+Data
+
+Local persistence
+
+Vị trí: Task, project và local state
+
+Ưu tiên kiểm kê
+
+**Supabase**
+
+Data
+
+PostgreSQL, Auth, Storage, Realtime
+
+Vị trí: Cloud Data
+
+Định hướng
+
+**Tailscale**
+
+Connectivity
+
+Mạng riêng giữa các thiết bị
+
+Vị trí: Remote Control
+
+Ứng viên ưu tiên
+
+**Cloudflare**
+
+Connectivity
+
+Hosting, Tunnel, Access
+
+Vị trí: Cloud Connectivity
+
+Ứng viên
+
+**Vercel**
+
+Connectivity
+
+Frontend deployment
+
+Vị trí: Cloud Control Center
+
+Định hướng
+
+**ripgrep / Tree-sitter**
+
+Development
+
+Tìm kiếm và phân tích source
+
+Vị trí: Project Intelligence
+
+Tái sử dụng nếu phù hợp
+
+**MCP**
+
+Development
+
+Giao diện chuẩn cho tool và context
+
+Vị trí: Agent Integration
+
+Chưa cần xây server mới
+
+**GitHub**
+
+Development
+
+Source, versioning, CI và verification
+
+Vị trí: Development Infrastructure
+
+Hạ tầng hiện có
+
+**Docker**
+
+Development
+
+Đóng gói và tái lập môi trường
+
+Vị trí: Deployment
+
+Khi phù hợp
+
+**Grafana**
+
+Development
+
+Monitoring và observability
+
+Vị trí: Runtime Monitoring
+
+Khi cần mở rộng
+
+Danh sách này là kho giải pháp để tham chiếu khi xuất hiện nhu cầu thực tế, không phải danh sách dependency cần cài đặt.
+
+# **VII. Đặt riêng agent-desktop và agent-reach vào đúng vị trí**
+
+Hai repository bạn vừa nghiên cứu có tiềm năng khá lớn, nhưng không nên coi chúng là hai hệ thống thay thế toàn bộ Miro.
+
+## **agent-desktop**
+
+**agent-desktop**
+
+Ứng viên cánh tay Desktop của Miro
+
+**Accessibility Tree**
+
+Hiểu giao diện ứng dụng
+
+**Desktop Actions**
+
+Click, type, drag, scroll
+
+**Action Verification**
+
+Kiểm chứng thao tác
+
+**Cursor Overlay**
+
+Quan sát AI điều khiển
+
+**Screenshot & Trace**
+
+Live Workspace và Evidence
+
+**Interaction Lease**
+
+Quản lý quyền thao tác
+
+Tôi muốn nghiên cứu khả năng biến nó thành một Desktop Execution Adapter dưới Gateway của Miro.
+
+Khi đó, Miro có thể mở rộng sang điều khiển các ứng dụng Windows, trình biên tập video, phần mềm quản lý tài nguyên và các ứng dụng không có API thuận tiện.
+
+## **agent-reach**
+
+**agent-reach**
+
+Ứng viên mở rộng Internet Research
+
+**Platform Adapters**
+
+Nhiều nguồn Internet
+
+**Doctor**
+
+Kiểm tra môi trường
+
+**Capability Registry**
+
+Biết công cụ hiện có
+
+**Ordered Fallback**
+
+Phương án dự phòng hợp lệ
+
+**Health Fingerprint**
+
+Kiểm tra độ mới của Evidence
+
+**Release Acceptance**
+
+Nghiệm thu source và runtime
+
+Đối với agent-reach, tôi đặc biệt quan tâm đến kiến trúc capability management và production acceptance, không chỉ các platform adapter.
+
+Theo báo cáo đã đọc trước đó, agent-reach không có TikTok trong danh sách 14 channel, nên chưa phải giải pháp trực tiếp thay thế Slice 03.
+
+Cả hai vẫn cần kiểm thử độc lập và đánh giá compatibility trước khi tích hợp.
+
+# **VIII. Frontend — Không được bỏ quên những gì đã thiết kế**
+
+Chúng ta đã dành khá nhiều thời gian thống nhất UI/UX. Tôi giữ nguyên toàn bộ định hướng đó trong roadmap.
+
+## **Miro Design System**
+
+# **miro.**
+
+# **Command. Execute.**
+
+# **Observe. Control.**
+
+Canvas
+
+\#0B0B0C
+
+Surface
+
+\#17181B
+
+Text
+
+\#FFFFFF
+
+Accent
+
+\#C6F432
+
+Geist / Inter · JetBrains Mono · Lucide · Tailwind CSSMidnight Lime · Navy Cream · Light Mode · System
+
+Chúng ta đã thống nhất 14 khu vực điều hướng chính:
+
+**Workspace**
+
+Overview
+
+AI Workspace
+
+Tasks
+
+Projects
+
+**Automation**
+
+Schedules
+
+Workflows
+
+**Tools**
+
+Browser
+
+Research
+
+Media Studio
+
+Publishing
+
+Knowledge
+
+**System**
+
+Activity
+
+Integrations
+
+Settings
+
+Các thành phần nhận diện đặc biệt của Miro vẫn là Live Task Card, Live Workspace, Global Task Monitor, Human Takeover, Task Deep Links, Technical Inspector, Approval Center và Emergency Stop.
+
+Tôi muốn chúng ta phân biệt hai giai đoạn Frontend:
+
+| Prototype           | Production Frontend     |
+| ------------------- | ----------------------- |
+| Thử nghiệm thiết kế | Sử dụng capability thật |
+| Mock state          | Backend state           |
+| Simulated progress  | Runtime progress        |
+| Simulated browser   | Browser thật            |
+| Simulated takeover  | Resource ownership thật |
+| Mock results        | Validated Evidence      |
+
+Các prototype Lovable và Google AI Studio là nguồn tham khảo thiết kế. Không sử dụng logic mô phỏng của prototype làm Backend production.
+
+# **IX. Những ứng dụng thực tế mà Miro có thể hướng tới**
+
+Tôi muốn roadmap kỹ thuật luôn gắn với các công việc thực tế của bạn, thay vì chỉ xây dựng công nghệ vì nó thú vị.
+
+[Xiaohongshu Beauty Product Research and Trust | Digital Crew® posted on the topic | LinkedIn](https://images.openai.com/static-rsc-4/Ad1oB5eM98_bvJ3FST9C_StV6SX8gNDyFkR6xiHTugjAa87cLTEyCCiIeO8Ccea3ChNyPgNMQlvE5QdGyknMdr0kUKpsu6tJvOMGNxgx3XqBj2sfN1Z1hrLquwmNMqX07K6-uS2EUka3cQxhSpi7NeH2TKsOAu1hg6DrzkcTbr8?purpose=inline)
+
+**01 — Product Research**
+
+Nghiên cứu sản phẩm, thị trường, đối thủ và nội dung TikTok.
+
+Đã có nền tảng Browser Search và Media Intelligence một phần.
+
+[Video Marketing & Production | Foxtra](https://images.openai.com/static-rsc-4/z2b_1w6r3id6K80RizJR5PxlNv8UYv19mKs-iVLNergXR6-YNmfoNT1-XY97_nzQM27cp1WjkeH0FLJvAawMck1e94Nnr7uNUvaveZOB83M_N4II8KZkQS6nADNYNr-Mfig-h7Q0IHnq4wGMNpvPGW6sRt0uGyzCAnlprcso_Xk?purpose=inline)
+
+**02 — Content Intelligence**
+
+Phân tích video, hook, lời thoại, hình ảnh, phân cảnh và phong cách sáng tạo.
+
+REA Video đang phát triển, STT và VLM còn giới hạn.
+
+[From Brief to Final Cut: Build a Fashion Promo Video That Sells | Snappyit](https://images.openai.com/static-rsc-4/Dq43QL9eWAMGmPLe-SG2qIWdkQXFB6Na9e01Fn7N_QNyZtZlvxuPi4vXo7hkDRvXMeedz7G-uFY0qUE2JXffQyUlszWzvjD6fosie5sILItNsTeo5-yGb8qhdenx_EOekV8I0OUvELINllE9iXl8nIJFLoIIs8VtMEuYLW8Mo7Q?purpose=inline)
+
+**03 — Content Production**
+
+Quản lý footage, tạo kịch bản, xây storyboard, chuẩn bị tài nguyên và dựng video.
+
+Hướng mở rộng Media Studio và Desktop Automation.
+
+**04 — Publishing & Operations**
+
+Quản lý tài khoản, chuẩn bị nội dung, duyệt, lên lịch và đăng bài.
+
+Cần quyền ghi và nghiệm thu riêng cho hành động bên ngoài.
+
+[GitHub Copilot Computer Use on Windows: Enable Desktop App Control and Manage Approvals](https://images.openai.com/static-rsc-4/S76FYXbX5bXz9f1NxBIV9HSGB3p3uiNylxd_Lrrlp9F4b_KjacWlK-IKE3mhyp_5Tr0FtySD40Tlc5-bPkOyracvNvTmKld_uAFB6deW1wCDY4jZy6QXoM9Y3SUTD7G7MCBBYfKO6TbOT7A43-2MsFgbrNAHG-HHcrr2dNLOgho?purpose=inline)
+
+**05 — Personal AI Assistant**
+
+Quản lý dự án, file, lịch trình, nghiên cứu Internet và điều khiển ứng dụng.
+
+Cần Agent Intelligence, Desktop Engine và Autonomous Runtime.
+
+Những nhóm ứng dụng này có thể tận dụng chung Browser, Media, Task Runtime và bộ não AI, thay vì mỗi nhóm lại xây một hệ thống độc lập.
+
+# **X. Phải quản lý những việc còn dang dở như thế nào?**
+
+Tôi muốn giữ một danh sách công việc tồn đọng riêng, không để chúng biến mất khi chuyển sang milestone mới.
+
+## **Miro — Open Issues & Backlog**
+
+Danh sách tổng hợp đề xuất để không bỏ quên các vấn đề đã phát hiện.Tất cả nhóm
+
+**Cold-restart persistence**
+
+Security & Runtime
+
+Known bug
+
+Chưa xác định root cause.
+
+**Full navigation negative coverage**
+
+Browser
+
+Cần đối chiếu
+
+Kiểm tra lại bằng chứng redirect, sai binding, grant expiry và cancellation.
+
+**Multi-profile discovery**
+
+Browser
+
+Chưa nghiệm thu
+
+Tự nhận diện và quản lý nhiều Profile thật.
+
+**Large collection / pagination**
+
+Browser
+
+Backlog
+
+Giới hạn structured observation 2.000 ký tự mỗi trường.
+
+**Full visual acquisition**
+
+Media
+
+Partial
+
+2/5 video có decompose hình ảnh đầy đủ.
+
+**STT Sherpa**
+
+Media
+
+Blocked
+
+Dependency chưa cài, cần approval.
+
+**Speaker diarization**
+
+Media
+
+Blocked
+
+Chưa nghiệm thu nhận diện người nói.
+
+**VLM**
+
+Media
+
+Denied
+
+Bị giới hạn bởi policy hiện tại.
+
+**Slice 03 Level 3–4**
+
+Media
+
+Partial
+
+Phân tích nhiều video và tổng hợp so sánh.
+
+**Slice 03 Level 5**
+
+Media
+
+Blocked
+
+Chưa chứng minh khả năng tổng quát hóa.
+
+**Context Grounding implementation**
+
+Project Intelligence
+
+Audit only
+
+PREFLIGHT, bootstrap và cơ chế truy xuất chưa nghiệm thu.
+
+**Cold-start Agent Acceptance**
+
+Project Intelligence
+
+Chưa thực hiện
+
+Kiểm thử nhiều Agent mới không có lịch sử chat.
+
+**Standalone Runtime**
+
+Product
+
+Chưa nghiệm thu
+
+Miro hoạt động độc lập không cần Coding Agent.
+
+**Frontend Integration**
+
+Product
+
+Prototype
+
+Kết nối UI với production API và state thật.
+
+**Local Persistence**
+
+Product
+
+Cần kiểm kê
+
+Lưu và phục hồi task, project, schedule và kết quả.
+
+**Agent Intelligence**
+
+Product
+
+Chưa nghiệm thu
+
+LLM planner và dynamic tool calling.
+
+**Scheduler / Automation**
+
+Product
+
+Chưa nghiệm thu
+
+Tự chạy lịch và workflow.
+
+Không phải tất cả các vấn đề này đều có mức ưu tiên như nhau. Những vấn đề ảnh hưởng bảo mật, tính chính xác, mất dữ liệu hoặc khả năng sử dụng thực tế cần được ưu tiên hơn các cải tiến tiện ích.
+
+# **XI. Cách tổ chức phát triển từ giờ trở đi**
+
+Tôi muốn chia dự án thành bốn luồng công việc dài hạn, thay vì gom mọi thứ thành một danh sách nhiệm vụ khổng lồ.
+
+**Track A — Core & Runtime**
+
+Gateway, TaskService, Security, Launcher, Recovery, Agent Intelligence.
+
+**Track B — Capabilities**
+
+Browser, REA, Media, Desktop, Internet Research, Publishing.
+
+**Track C — Product Experience**
+
+Frontend, Live Workspace, Task Monitor, Manual Control, Remote Control.
+
+**Track D — Development Intelligence**
+
+Project Context, Research Inventory, Preflight, Tests, CI và Verification.
+
+Bốn luồng có thể tiến triển song song, nhưng cần phối hợp theo các milestone chung. Chỉ tách Agent làm việc độc lập khi phạm vi file và trách nhiệm đủ rõ để tránh xung đột.
+
+Đặc biệt, Track D phải giúp ba track còn lại phát triển nhanh và chính xác hơn, không biến thành một dự án nghiên cứu kiến trúc riêng kéo dài vô tận.
+
+## **Nguyên tắc tiếp nhận công nghệ mới**
+
+Mỗi khi bạn gửi thêm một repository hoặc báo cáo nghiên cứu, tôi muốn đánh giá nó theo quy trình sau:
+
+Công nghệ hoặc repository mới
+
+Nó giải quyết bài toán nào của Miro?
+
+Miro đã có giải pháp tương đương chưa?
+
+Đánh giá chất lượng, giấy phép, bảo mật và compatibility
+
+REUSE
+
+Tái sử dụng
+
+INTEGRATE
+
+Tích hợp
+
+LEARN
+
+Học kiến trúc
+
+SKIP
+
+Không dùng
+
+**Technology Solution Map**
+
+Xếp đúng vị trí và thời điểm sử dụng
+
+# **XII. Tổng kết hướng đi và thứ tự ưu tiên**
+
+| Thứ tự | Giai đoạn       | Kết quả cần đạt                                                |
+| ------ | --------------- | -------------------------------------------------------------- |
+| 1      | Foundation      | Browser và Runtime có năng lực thực thi thật                   |
+| 2      | Consolidation   | Tổng hợp nghiên cứu, xác định phần thiếu và củng cố hiện trạng |
+| 3      | Miro Alpha      | Bạn trực tiếp sử dụng Miro không cần Coding Agent              |
+| 4      | Miro Beta       | AI hiểu yêu cầu và phối hợp công cụ linh hoạt                  |
+| 5      | Miro Autonomous | AI tự thực hiện nhiệm vụ theo lịch và sự kiện                  |
+| 6      | Miro Connected  | Điều khiển từ xa và đồng bộ dữ liệu                            |
+| 7      | Miro Ecosystem  | Mở rộng Desktop, Research, Media, Publishing và integration    |
+
+Tôi cũng muốn chúng ta có một số tài liệu tổng hợp trung tâm, có thể là các file hiện có được cập nhật thay vì tạo mới hàng loạt:
+
+| Tài liệu                | Vai trò                                    |
+| ----------------------- | ------------------------------------------ |
+| Product Vision          | Miro là gì và phục vụ mục tiêu nào         |
+| Architecture Map        | Toàn bộ hệ thống liên kết ra sao           |
+| Capability Map          | Đã có những năng lực gì                    |
+| Current Project State   | Commit và mức độ nghiệm thu mới nhất       |
+| Master Roadmap          | Hướng phát triển theo từng giai đoạn       |
+| Open Issues             | Các vấn đề chưa giải quyết                 |
+| Technology Solution Map | Kho giải pháp kỹ thuật                     |
+| Decision Registry       | Những quyết định đã thống nhất             |
+| Research Inventory      | Toàn bộ nghiên cứu repository và công nghệ |
+| Frontend Design System  | Quy chuẩn UI/UX đã chốt                    |
+
+Chưa cần yêu cầu Agent tạo những tài liệu này ngay, đặc biệt khi Project Context Grounding Audit có thể đã xác định được các tài liệu tương đương.
+
+## **Vị trí của chúng ta hiện tại**
+
+**Foundation**
+
+Các milestone chính đã đạt
+
+2
+
+**Consolidation**
+
+Chúng ta đang ở đây
+
+3
+
+**Miro Alpha**
+
+Mục tiêu sản phẩm tiếp theo đề xuất
+
+4
+
+**Miro Beta**
+
+Chưa triển khai theo roadmap này
+
+5
+
+**Miro Autonomous**
+
+Tương lai
+
+6
+
+**Miro Connected**
+
+Tương lai
+
+7
+
+**Miro Ecosystem**
+
+Mở rộng theo nhu cầu
+
+Tôi chưa kiểm tra trực tiếp toàn bộ repository, commit `9b33700`, audit 38KB và các báo cáo nghiên cứu vẫn đang được tổng hợp. Vì vậy, bản đồ này là **Master Roadmap đề xuất V1**, được xây dựng từ những thông tin chúng ta đã trao đổi, không phải bản kiểm kê source cuối cùng.
+
+**Chúng ta chưa cần giao thêm nhiệm vụ triển khai ngay.** Khi các báo cáo tiếp theo hoàn thành, chúng ta sẽ đối chiếu chúng với bản đồ này: bổ sung vào đúng hệ thống, đánh dấu đúng trạng thái, cập nhật phần còn thiếu và điều chỉnh roadmap nếu cần.
+
+Như vậy, dù sau này bạn gửi thêm 10 hay 50 repository nghiên cứu, chúng ta vẫn biết chúng thuộc phần nào của Miro, giải quyết vấn đề gì và có thực sự cần thiết hay không, thay vì liên tục thay đổi hướng phát triển dự án.

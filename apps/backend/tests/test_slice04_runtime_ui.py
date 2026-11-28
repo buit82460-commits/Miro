@@ -25,10 +25,13 @@ def _payload(rid, msg="kiem tra tai khoan tiktok dang nhap"):
 def test_recent_lists_submitted_tasks():
     svc = app.state.task_service
     rec = svc.submit(_payload("slice04-recent-1"))
-    res = client.get("/tasks/recent?limit=5")
+    res = client.get("/tasks/recent?limit=100")
     assert res.status_code == 200, res.text
-    ids = [t.get("id") for t in res.json()]
-    assert rec["id"] in ids
+    # DB production dung chung giua cac lan chay: loc theo request_id
+    # thay vi doi task moi nhat nam trong top-5.
+    got = [t for t in res.json()
+           if t.get("request_id") == "slice04-recent-1"]
+    assert got and got[0]["id"] == rec["id"], res.text[:500]
 
 
 def test_runtime_status_redacts_credentials():

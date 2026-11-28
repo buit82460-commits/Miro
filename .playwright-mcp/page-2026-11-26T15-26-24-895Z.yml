@@ -1,0 +1,170 @@
+- generic [active] [ref=f10e1]:
+  - generic [ref=f10e2]:
+    - complementary "Primary navigation" [ref=f10e4]:
+      - generic [ref=f10e5]:
+        - generic [ref=f10e6]:
+          - button [ref=f10e7] [cursor=pointer]:
+            - generic "miro." [ref=f10e8]:
+              - text: miro
+              - generic [ref=f10e9]: .
+          - button "Thu gọn thanh điều hướng" [ref=f10e10] [cursor=pointer]
+        - generic [ref=f10e13]:
+          - generic [ref=f10e14]: Personal Operations
+          - generic [ref=f10e15]: LOCAL
+        - generic [ref=f10e16]:
+          - button "Bảng lệnh" [ref=f10e17] [cursor=pointer]:
+            - generic [ref=f10e18]: Tìm kiếm nhanh...
+            - generic [ref=f10e23]: ⌘K
+          - button "Hội thoại mới" [ref=f10e24] [cursor=pointer]
+      - navigation "Workspace sections" [ref=f10e27]:
+        - generic [ref=f10e28]:
+          - button "WORKSPACE" [ref=f10e29] [cursor=pointer]
+          - list [ref=f10e33]:
+            - listitem [ref=f10e34]:
+              - link "Tổng quan" [ref=f10e35] [cursor=pointer]:
+                - /url: /overview
+            - listitem [ref=f10e42]:
+              - link "AI Workspace" [ref=f10e43] [cursor=pointer]:
+                - /url: /workspace
+            - listitem [ref=f10e47]:
+              - link "Tác vụ" [ref=f10e48] [cursor=pointer]:
+                - /url: /tasks
+            - listitem [ref=f10e53]:
+              - link "Dự án" [ref=f10e54] [cursor=pointer]:
+                - /url: /projects
+        - generic [ref=f10e58]:
+          - button "TỰ ĐỘNG HÓA" [ref=f10e59] [cursor=pointer]
+          - list [ref=f10e63]:
+            - listitem [ref=f10e64]:
+              - link "Lịch trình" [ref=f10e65] [cursor=pointer]:
+                - /url: /schedules
+            - listitem [ref=f10e71]:
+              - link "Workflows" [ref=f10e72] [cursor=pointer]:
+                - /url: /workflows
+        - generic [ref=f10e78]:
+          - button "CÔNG CỤ" [ref=f10e79] [cursor=pointer]
+          - list [ref=f10e83]:
+            - listitem [ref=f10e84]:
+              - link "Trình duyệt" [ref=f10e85] [cursor=pointer]:
+                - /url: /browser
+            - listitem [ref=f10e90]:
+              - link "Nghiên cứu" [ref=f10e91] [cursor=pointer]:
+                - /url: /research
+            - listitem [ref=f10e96]:
+              - link "Media Studio" [ref=f10e97] [cursor=pointer]:
+                - /url: /media
+            - listitem [ref=f10e101]:
+              - link "Xuất bản" [ref=f10e102] [cursor=pointer]:
+                - /url: /publishing
+            - listitem [ref=f10e107]:
+              - link "Tri thức" [ref=f10e108] [cursor=pointer]:
+                - /url: /knowledge
+        - generic [ref=f10e112]:
+          - button "HỆ THỐNG" [ref=f10e113] [cursor=pointer]
+          - list [ref=f10e117]:
+            - listitem [ref=f10e118]:
+              - link "Hoạt động" [ref=f10e119] [cursor=pointer]:
+                - /url: /activity
+            - listitem [ref=f10e124]:
+              - link "Tích hợp" [ref=f10e125] [cursor=pointer]:
+                - /url: /integrations
+            - listitem [ref=f10e129]:
+              - link "Cài đặt" [ref=f10e130] [cursor=pointer]:
+                - /url: /settings
+      - generic [ref=f10e135]:
+        - generic [ref=f10e136]:
+          - generic [ref=f10e137]: Miro Runtime · Mô phỏng
+          - generic [ref=f10e138]: OK
+        - generic [ref=f10e139]:
+          - generic [ref=f10e140]:
+            - generic [ref=f10e141]: OP
+            - generic [ref=f10e142]:
+              - paragraph [ref=f10e143]: Operator
+              - paragraph [ref=f10e144]: Asia/Bangkok
+          - button "Switch theme" [ref=f10e146] [cursor=pointer]
+    - generic [ref=f10e149]:
+      - banner [ref=f10e150]:
+        - navigation "Breadcrumb" [ref=f10e152]:
+          - generic [ref=f10e153]: Hoạt động
+        - generic [ref=f10e154]:
+          - generic "Mọi tác vụ, trình duyệt và xuất bản đều được mô phỏng cục bộ. Không kết nối tài khoản thật." [ref=f10e155]: Chế độ Mô phỏng
+          - button "Giám sát tác vụ" [ref=f10e156] [cursor=pointer]:
+            - generic [ref=f10e159]: "0"
+            - generic [ref=f10e160]: đang chạy
+          - button "Cần xử lý" [ref=f10e161] [cursor=pointer]:
+            - generic [ref=f10e164]: "2"
+          - button "Thông báo" [ref=f10e165] [cursor=pointer]
+          - button "Trợ lý AI ngữ cảnh" [ref=f10e170] [cursor=pointer]:
+            - generic [ref=f10e173]: Miro AI
+      - main [ref=f10e174]:
+        - generic [ref=f10e176]:
+          - generic [ref=f10e177]:
+            - generic [ref=f10e178]:
+              - heading "Hoạt động" [level=1] [ref=f10e179]
+              - paragraph [ref=f10e180]: Nhật ký thực thi toàn hệ thống theo trình tự thời gian. Không hiển thị chuỗi suy luận nội bộ hay bí mật phiên.
+            - tablist [ref=f10e181]:
+              - tab "Tóm tắt" [selected] [ref=f10e182] [cursor=pointer]
+              - tab "Kỹ thuật" [ref=f10e184] [cursor=pointer]
+          - generic [ref=f10e186]:
+            - textbox "Tìm sự kiện, mã tác vụ, tài nguyên..." [ref=f10e191]
+            - combobox "Filter event type" [ref=f10e192]:
+              - option "Mọi loại sự kiện" [selected]
+              - option "Task lifecycle"
+              - option "Tool execution"
+              - option "Schedule execution"
+              - option "Resource update"
+              - option "Connection"
+              - option "Approval"
+              - option "Recovery"
+              - option "Error"
+          - table [ref=f10e194]:
+            - rowgroup [ref=f10e195]:
+              - row [ref=f10e196]:
+                - columnheader "Thời gian" [ref=f10e197]
+                - columnheader "Loại" [ref=f10e198]
+                - columnheader "Mô tả sự kiện" [ref=f10e199]
+                - columnheader "Tài nguyên / Tác vụ" [ref=f10e200]
+            - rowgroup [ref=f10e201]:
+              - row [ref=f10e202] [cursor=pointer]:
+                - cell "22:01 26-11" [ref=f10e203]
+                - cell "task_lifecycle" [ref=f10e204]
+                - cell [ref=f10e207]:
+                  - paragraph [ref=f10e208]: Khởi tạo tác vụ "Nghiên cứu 10 video KANS 377 (Profile 20)" (chat).
+                - cell "Profile 20 · KANS 377 Research" [ref=f10e209]
+              - row [ref=f10e210] [cursor=pointer]:
+                - cell "21:41 26-11" [ref=f10e211]
+                - cell "task_lifecycle" [ref=f10e212]
+                - cell [ref=f10e215]:
+                  - paragraph [ref=f10e216]: Hoàn tất tác vụ nghiên cứu 5 video mẫu KANS 377 (Đợt 1).
+                - cell "KANS 377 Research" [ref=f10e217]
+              - row [ref=f10e218] [cursor=pointer]:
+                - cell "21:31 26-11" [ref=f10e219]
+                - cell "approval" [ref=f10e220]
+                - cell [ref=f10e223]:
+                  - paragraph [ref=f10e224]: Tạo yêu cầu phê duyệt xuất bản cho "Review 14 ngày KANS 377".
+                - cell "TikTok · @miro.demo.beauty" [ref=f10e225]
+              - row [ref=f10e226] [cursor=pointer]:
+                - cell "21:08 26-11" [ref=f10e227]
+                - cell "tool_execution" [ref=f10e228]
+                - cell [ref=f10e231]:
+                  - paragraph [ref=f10e232]: Thu thập dừng ở 3/5 bản ghi hợp lệ — gắn trạng thái Hoàn tất một phần.
+                - cell "Affiliate Fashion Research" [ref=f10e233]
+              - row [ref=f10e234] [cursor=pointer]:
+                - cell "19:56 26-11" [ref=f10e235]
+                - cell "error" [ref=f10e236]
+                - cell [ref=f10e239]:
+                  - paragraph [ref=f10e240]: Mất kết nối Profile 23 trong khi thực thi đồng bộ định kỳ.
+                - cell "Profile 23" [ref=f10e241]
+    - region "Notifications alt+T"
+  - generic [ref=f10e246] [cursor=pointer]:
+    - button "Open Next.js Dev Tools" [ref=f10e247]
+    - generic [ref=f10e251]:
+      - button "Open issues overlay" [ref=f10e252]:
+        - generic [ref=f10e253]:
+          - generic [aria-hidden] [ref=f10e254]: "1"
+          - generic [ref=f10e255]: "2"
+        - generic [ref=f10e256]:
+          - text: Issue
+          - generic [aria-hidden] [ref=f10e257]: s
+      - button "Collapse issues badge" [ref=f10e258]
+  - alert [ref=f10e261]

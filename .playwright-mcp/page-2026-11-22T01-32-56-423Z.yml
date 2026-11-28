@@ -1,0 +1,326 @@
+- generic [ref=f7e1]:
+  - generic [ref=f7e9]:
+    - heading "Claude" [level=1] [ref=f7e11]
+    - generic [ref=f7e12]:
+      - complementary "Sidebar" [ref=f7e14]:
+        - generic [ref=f7e15]:
+          - button "Hide sidebar" [ref=f7e18] [cursor=pointer]:
+            - generic [aria-hidden] [ref=f7e22]: 
+          - link "Claude" [ref=f7e25] [cursor=pointer]:
+            - /url: /new
+        - generic [ref=f7e28]:
+          - heading "Navigation" [level=2] [ref=f7e29]
+          - generic [ref=f7e31]:
+            - generic [ref=f7e32]:
+              - link "New" [ref=f7e34] [cursor=pointer]:
+                - /url: /new
+                - generic [aria-hidden] [ref=f7e36]: 
+                - generic [aria-hidden] [ref=f7e42]:
+                  - generic [ref=f7e43]: Ctrl
+                  - generic [ref=f7e44]: +
+                  - generic [ref=f7e45]: Shift
+                  - generic [ref=f7e46]: +
+                  - generic [ref=f7e47]: O
+              - button "Search" [ref=f7e48] [cursor=pointer]:
+                - generic [aria-hidden] [ref=f7e50]: 
+                - generic [aria-hidden] [ref=f7e54]:
+                  - generic [ref=f7e55]: Ctrl
+                  - generic [ref=f7e56]: +
+                  - generic [ref=f7e57]: Shift
+                  - generic [ref=f7e58]: +
+                  - generic [ref=f7e59]: K
+              - button "Templates" [ref=f7e227] [cursor=pointer]
+              - iframe [ref=f7e240]
+            - generic [ref=f7e61]:
+              - link "Projects" [ref=f7e63] [cursor=pointer]:
+                - /url: /projects
+                - generic [aria-hidden] [ref=f7e65]: 
+              - link "Artifacts" [ref=f7e70] [cursor=pointer]:
+                - /url: /artifacts
+                - generic [aria-hidden] [ref=f7e72]: 
+              - link "Code Upgrade" [ref=f7e241] [cursor=pointer]:
+                - /url: /upgrade?feature=code&returnTo=%2Fcode
+                - generic [aria-hidden] [ref=f7e243]: 
+                - generic [ref=f7e244]:
+                  - generic [ref=f7e245]: Code
+                  - generic [ref=f7e248]: Upgrade
+              - link "Plugins" [ref=f7e250] [cursor=pointer]:
+                - /url: /plugins
+                - generic [aria-hidden] [ref=f7e81]: 
+            - generic [ref=f7e89]:
+              - generic:
+                - heading [level=3] [ref=f7e253]:
+                  - button "Pinned" [expanded] [ref=f7e254] [cursor=pointer]:
+                    - generic [aria-hidden]: 
+                - generic [ref=f7e258]:
+                  - generic [aria-hidden] [ref=f7e260]: 
+                  - generic [ref=f7e261]: Drag to pin
+              - generic [ref=f7e90]:
+                - generic [ref=f7e91]:
+                  - generic [ref=f7e93]:
+                    - heading [level=3] [ref=f7e94]:
+                      - button "Chats and tasks" [expanded] [ref=f7e95] [cursor=pointer]:
+                        - generic [aria-hidden]: 
+                    - button "Group and sort" [ref=f7e100] [cursor=pointer]:
+                      - generic [aria-hidden] [ref=f7e104]: 
+                  - generic [ref=f7e105]:
+                    - generic [ref=f7e264]:
+                      - link "Đọc và tiếp tục Idle" [ref=f7e265] [cursor=pointer]:
+                        - /url: /chat/90755ee4-e8b4-4eca-bffa-ee02eeb15333
+                        - generic [ref=f7e266]: Đọc và tiếp tục
+                        - img "Idle" [ref=f7e270]
+                      - generic:
+                        - button "More options for Đọc và tiếp tục":
+                          - generic:
+                            - generic [aria-hidden]: 
+                    - generic [ref=f7e274]:
+                      - link "Định dạng lại lộ trình học với cột Thuộc tính Idle" [ref=f7e275] [cursor=pointer]:
+                        - /url: /chat/39e3062e-ff23-4d52-9e8e-3fda4ae06695
+                        - generic [ref=f7e276]: Định dạng lại lộ trình học với cột Thuộc tính
+                        - img "Idle" [ref=f7e280]
+                      - generic:
+                        - button "More options for Định dạng lại lộ trình học với cột Thuộc tính":
+                          - generic:
+                            - generic [aria-hidden]: 
+                    - generic [ref=f7e284]:
+                      - link "Tổ chức cấu trúc dự án theo FSD architecture Idle" [ref=f7e285] [cursor=pointer]:
+                        - /url: /chat/ad3b9607-40c3-4722-aaca-544716027fca
+                        - generic [ref=f7e286]: Tổ chức cấu trúc dự án theo FSD architecture
+                        - img "Idle" [ref=f7e290]
+                      - generic:
+                        - button "More options for Tổ chức cấu trúc dự án theo FSD architecture":
+                          - generic:
+                            - generic [aria-hidden]: 
+                    - generic [ref=f7e294]:
+                      - link "Quy tắc viết file trong FSD Idle" [ref=f7e295] [cursor=pointer]:
+                        - /url: /chat/1b8af4c3-db50-4246-a1f7-12e8c067993b
+                        - generic [ref=f7e296]: Quy tắc viết file trong FSD
+                        - img "Idle" [ref=f7e300]
+                      - generic:
+                        - button "More options for Quy tắc viết file trong FSD":
+                          - generic:
+                            - generic [aria-hidden]: 
+                    - generic [ref=f7e304]:
+                      - link "Greeting Idle" [ref=f7e305] [cursor=pointer]:
+                        - /url: /chat/f0eb0d36-fbd1-4fd1-956b-2d31c5a8060a
+                        - generic [ref=f7e306]: Greeting
+                        - img "Idle" [ref=f7e310]
+                      - generic:
+                        - button "More options for Greeting":
+                          - generic:
+                            - generic [aria-hidden]: 
+                    - generic [ref=f7e314]:
+                      - link "Chuẩn hóa kiến trúc document-in và document-out theo FSD Idle" [ref=f7e315] [cursor=pointer]:
+                        - /url: /chat/e0656dbc-0ea9-41d3-a5a8-e7886530aa0d
+                        - generic [ref=f7e316]: Chuẩn hóa kiến trúc document-in và document-out theo FSD
+                        - img "Idle" [ref=f7e320]
+                      - generic:
+                        - button "More options for Chuẩn hóa kiến trúc document-in và document-out theo FSD":
+                          - generic:
+                            - generic [aria-hidden]: 
+                    - generic [ref=f7e324]:
+                      - link "Rollback và đồng bộ nhánh với develop Idle" [ref=f7e325] [cursor=pointer]:
+                        - /url: /chat/4b60b692-7876-4455-ab35-f3b001136e03
+                        - generic [ref=f7e326]: Rollback và đồng bộ nhánh với develop
+                        - img "Idle" [ref=f7e330]
+                      - generic:
+                        - button "More options for Rollback và đồng bộ nhánh với develop":
+                          - generic:
+                            - generic [aria-hidden]: 
+                    - generic [ref=f7e334]:
+                      - link "Kiểm tra UI và yêu cầu Idle" [ref=f7e335] [cursor=pointer]:
+                        - /url: /chat/3ce359da-f64d-4144-81f8-d0a9f6947fc9
+                        - generic [ref=f7e336]: Kiểm tra UI và yêu cầu
+                        - img "Idle" [ref=f7e340]
+                      - generic:
+                        - button "More options for Kiểm tra UI và yêu cầu":
+                          - generic:
+                            - generic [aria-hidden]: 
+                    - generic [ref=f7e344]:
+                      - link "Untitled Idle" [ref=f7e345] [cursor=pointer]:
+                        - /url: /chat/9760df8d-37ad-46fd-8452-86b15883afe7
+                        - generic [ref=f7e346]: Untitled
+                        - img "Idle" [ref=f7e350]
+                      - generic:
+                        - button "More options":
+                          - generic:
+                            - generic [aria-hidden]: 
+                    - generic [ref=f7e354]:
+                      - link "So sánh thay đổi giữa hai file Idle" [ref=f7e355] [cursor=pointer]:
+                        - /url: /chat/231525df-3696-43df-b1eb-d02ac9230883
+                        - generic [ref=f7e356]: So sánh thay đổi giữa hai file
+                        - img "Idle" [ref=f7e360]
+                      - generic:
+                        - button "More options for So sánh thay đổi giữa hai file":
+                          - generic:
+                            - generic [aria-hidden]: 
+                    - generic [ref=f7e364]:
+                      - link "Cập nhật file page.tsx cho retake/in Idle" [ref=f7e365] [cursor=pointer]:
+                        - /url: /chat/0145ed7e-72c5-4895-87e7-497ed28321d7
+                        - generic [ref=f7e366]: Cập nhật file page.tsx cho retake/in
+                        - img "Idle" [ref=f7e370]
+                      - generic:
+                        - button "More options for Cập nhật file page.tsx cho retake/in":
+                          - generic:
+                            - generic [aria-hidden]: 
+                    - generic [ref=f7e374]:
+                      - link "Lỗi checkbox mất khi chuyển trang và 404 API Idle" [ref=f7e375] [cursor=pointer]:
+                        - /url: /chat/b93c380f-0b1a-4c8a-9537-b0e5b9c5d891
+                        - generic [ref=f7e376]: Lỗi checkbox mất khi chuyển trang và 404 API
+                        - img "Idle" [ref=f7e380]
+                      - generic:
+                        - button "More options for Lỗi checkbox mất khi chuyển trang và 404 API":
+                          - generic:
+                            - generic [aria-hidden]: 
+                    - generic [ref=f7e384]:
+                      - link "Sắp xếp dữ liệu không chính xác trong draft-list Idle" [ref=f7e385] [cursor=pointer]:
+                        - /url: /chat/3143cbe2-57db-4627-8e4a-6dd7b049c845
+                        - generic [ref=f7e386]: Sắp xếp dữ liệu không chính xác trong draft-list
+                        - img "Idle" [ref=f7e390]
+                      - generic:
+                        - button "More options for Sắp xếp dữ liệu không chính xác trong draft-list":
+                          - generic:
+                            - generic [aria-hidden]: 
+                    - generic [ref=f7e394]:
+                      - link "Ẩn button thêm mới trong tab chờ tiếp nhận Idle" [ref=f7e395] [cursor=pointer]:
+                        - /url: /chat/2699884a-da85-422d-81ca-48a535c6bd78
+                        - generic [ref=f7e396]: Ẩn button thêm mới trong tab chờ tiếp nhận
+                        - img "Idle" [ref=f7e400]
+                      - generic:
+                        - button "More options for Ẩn button thêm mới trong tab chờ tiếp nhận":
+                          - generic:
+                            - generic [aria-hidden]: 
+                    - generic [ref=f7e404]:
+                      - link "Sửa lỗi sorting trong draft-list Idle" [ref=f7e405] [cursor=pointer]:
+                        - /url: /chat/3e4072fe-e965-4487-8f1e-3fd32b2c55d7
+                        - generic [ref=f7e406]: Sửa lỗi sorting trong draft-list
+                        - img "Idle" [ref=f7e410]
+                      - generic:
+                        - button "More options for Sửa lỗi sorting trong draft-list":
+                          - generic:
+                            - generic [aria-hidden]: 
+                    - generic [ref=f7e414]:
+                      - link "React Query caching và state synchronization fix Idle" [ref=f7e415] [cursor=pointer]:
+                        - /url: /chat/d48b7e3a-fb03-48cf-a75b-d5c7630e3e7e
+                        - generic [ref=f7e416]: React Query caching và state synchronization fix
+                        - img "Idle" [ref=f7e420]
+                      - generic:
+                        - button "More options for React Query caching và state synchronization fix":
+                          - generic:
+                            - generic [aria-hidden]: 
+                    - generic [ref=f7e424]:
+                      - link "Giải thích chi tiết chủ đề theo script Idle" [ref=f7e425] [cursor=pointer]:
+                        - /url: /chat/23c089ee-b8ed-4662-bf69-f09b6e954a14
+                        - generic [ref=f7e426]: Giải thích chi tiết chủ đề theo script
+                        - img "Idle" [ref=f7e430]
+                      - generic:
+                        - button "More options for Giải thích chi tiết chủ đề theo script":
+                          - generic:
+                            - generic [aria-hidden]: 
+                    - generic [ref=f7e434]:
+                      - link "CustomDatePicker alignment issue across pages Idle" [ref=f7e435] [cursor=pointer]:
+                        - /url: /chat/e76cbadf-d1fb-4ddd-8b01-8c407487b68b
+                        - generic [ref=f7e436]: CustomDatePicker alignment issue across pages
+                        - img "Idle" [ref=f7e440]
+                      - generic:
+                        - button "More options for CustomDatePicker alignment issue across pages":
+                          - generic:
+                            - generic [aria-hidden]: 
+                    - generic [ref=f7e444]:
+                      - link "Hiển thị trường dữ liệu theo loại văn bản Idle" [ref=f7e445] [cursor=pointer]:
+                        - /url: /chat/f8d7200c-a7f2-467f-8e07-7feafccb561c
+                        - generic [ref=f7e446]: Hiển thị trường dữ liệu theo loại văn bản
+                        - img "Idle" [ref=f7e450]
+                      - generic:
+                        - button "More options for Hiển thị trường dữ liệu theo loại văn bản":
+                          - generic:
+                            - generic [aria-hidden]: 
+                    - generic [ref=f7e454]:
+                      - link "Sắp xếp lại trường tìm kiếm văn bản thường và mật Idle" [ref=f7e455] [cursor=pointer]:
+                        - /url: /chat/9b765cdf-defb-4dcf-9376-a9e16431a898
+                        - generic [ref=f7e456]: Sắp xếp lại trường tìm kiếm văn bản thường và mật
+                        - img "Idle" [ref=f7e460]
+                      - generic:
+                        - button "More options for Sắp xếp lại trường tìm kiếm văn bản thường và mật":
+                          - generic:
+                            - generic [aria-hidden]: 
+                    - button "View all" [ref=f7e463] [cursor=pointer]
+                - status [ref=f7e140]
+          - generic [ref=f7e142]:
+            - button "haodaojrk5@gmail.com Free" [ref=f7e464] [cursor=pointer]:
+              - generic [ref=f7e467]:
+                - img [aria-hidden] [ref=f7e469]: H
+                - generic [ref=f7e470]:
+                  - generic [ref=f7e471]: haodaojrk5@gmail.com
+                  - generic [ref=f7e472]: Free
+                - generic [aria-hidden] [ref=f7e474]: 
+            - link "Get apps and extensions" [ref=f7e151] [cursor=pointer]:
+              - /url: /downloads
+              - generic [ref=f7e153]:
+                - generic [aria-hidden]: 
+        - separator "Resize sidebar" [ref=f7e154]
+      - main [ref=f7e157]:
+        - generic [ref=f7e159]:
+          - toolbar "Page tools" [ref=f7e162]:
+            - generic [ref=f7e166]:
+              - button "Templates" [ref=f7e475] [cursor=pointer]
+              - button "Use incognito" [ref=f7e167] [cursor=pointer]
+          - generic [ref=f7e180]:
+            - generic [ref=f7e486]:
+              - text: Free plan
+              - link "Upgrade" [ref=f7e489] [cursor=pointer]:
+                - /url: /upgrade/pro?from=header_pill&interval=monthly
+            - generic [ref=f7e181]:
+              - heading "New chat" [level=2] [ref=f7e182]
+              - generic [ref=f7e183]: Happy Sunday
+            - generic [ref=f7e189]:
+              - generic:
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - status
+                  - generic:
+                    - status
+                  - status [ref=f7e190]
+              - group [ref=f7e193]:
+                - generic [ref=f7e194]:
+                  - status
+                  - status [ref=f7e195]
+                  - status
+                  - generic [ref=f7e199]:
+                    - generic [ref=f7e202]:
+                      - generic [aria-hidden]: How can I help you today?
+                      - generic [ref=f7e203]:
+                        - textbox "Write your prompt to Claude" [ref=f7e490]:
+                          - paragraph [ref=f7e205]
+                        - status [ref=f7e206]
+                    - generic:
+                      - generic:
+                        - button "Add files, connectors, and more" [ref=f7e209] [cursor=pointer]:
+                          - generic [aria-hidden] [ref=f7e213]: 
+                        - radiogroup "Surface" [ref=f7e492]:
+                          - generic [ref=f7e494]:
+                            - radio "Chat" [checked] [ref=f7e495] [cursor=pointer]
+                            - radio [checked] [aria-hidden] [ref=f7e497]
+                            - radio "Cowork" [ref=f7e498] [cursor=pointer]
+                            - radio [aria-hidden] [ref=f7e500]
+                      - generic:
+                        - generic [ref=f7e501]:
+                          - 'button "Model: Sonnet 5.5 Medium" [ref=f7e506] [cursor=pointer]':
+                            - generic [ref=f7e510]:
+                              - generic [ref=f7e511]: Sonnet 5.5
+                              - generic [ref=f7e512]: Medium
+                          - group "Dictate" [ref=f7e515]:
+                            - button "Dictate" [ref=f7e518] [cursor=pointer]:
+                              - generic [ref=f7e520]:
+                                - generic [aria-hidden]: 
+                            - button "Microphone" [ref=f7e523] [cursor=pointer]:
+                              - generic [aria-hidden] [ref=f7e527]: 
+                        - button "Use voice mode" [ref=f7e529] [cursor=pointer]
+  - status [ref=f7e224]
+  - generic:
+    - generic:
+      - generic:
+        - status
+        - region "Notifications"

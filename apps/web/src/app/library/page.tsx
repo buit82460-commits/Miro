@@ -1,15 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import MiroNav from "@/components/miro-nav";
+import { YoucareShell } from "@/components/youcare/YoucareShell";
 import { useLibrary } from "@/hooks/data/useMiro";
 
 export default function LibraryPage() {
   const { data, isLoading, isError } = useLibrary();
   return (
-    <MiroNav>
-      <h1 data-testid="library-title">Thư viện</h1>
-      <p>Video trong kho — BE chưa có route /library production (giữ chỗ, không giả dữ liệu).</p>
+    <YoucareShell title="Thư viện" subtitle="Video trong kho — BE chưa có route /library production.">
+      <h1 data-testid="library-title" style={{ display: "none" }}>Thư viện</h1>
       {isLoading ? <p>Đang tải thư viện…</p> : null}
       {isError ? (
         <p style={{ color: "#B52E2E" }}>
@@ -35,6 +34,6 @@ export default function LibraryPage() {
           );
         })}
       </div>
-    </MiroNav>
+    </YoucareShell>
   );
 }

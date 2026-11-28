@@ -1,11 +1,11 @@
-import { fail, getStore, now, ok, pushHistory } from "@/lib/fixtures/store";
+import { beFetch, beForward, beUnavailable, pickParams } from "@/lib/be-proxy";
 
-export async function POST(_req: Request, ctx: { params: Promise<{ id: string }> }) {
+// POST /api/tasks/[id]/stop — BE-first. 409/422 forward nguyen (fail-closed).
+// BE down → 503, không cập nhật store mẫu.
+export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
-  const task = getStore().tasks.find((t) => t.id === id);
-  if (!task) return fail("Không tìm thấy task", 404);
-  task.status = "stopped";
-  task.updated_at = now();
-  pushHistory("stop", `dừng ${id}`);
-  return ok(task);
+  const q = pickParams(new URL(req.url), ["grace_seconds"]);
+  const be = await beFetch(`/tasks/${encodeURIComponent(id)}/stop${q}`, { method: "POST" });
+  if (be.ok) return beForward(be.status, be.body);
+  return beUnavailable();
 }

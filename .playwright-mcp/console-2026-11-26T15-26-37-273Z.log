@@ -1,0 +1,169 @@
+[      48ms] [ERROR] A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+%s%s https://react.dev/link/hydration-mismatch 
+
+  ...
+    <RedirectErrorBoundary router={{...}}>
+      <InnerLayoutRouter url="/workflows" tree={[...]} cacheNode={{lazyData:null, ...}} segmentPath={[...]}>
+        <SegmentViewNode type="page" pagePath="workflows/...">
+          <SegmentTrieNode>
+          <ClientPageRoot Component={function WorkflowsPageRoute} searchParams={{}} params={{}}>
+            <WorkflowsPageRoute params={Promise} searchParams={Promise}>
+              <MiroShell>
+                <AppShell>
+                  <div className="flex h-scr...">
+                    <div>
+                    <div className="flex flex-...">
+                      <GlobalHeader>
+                      <main className="flex-1 min...">
+                        <Suspense fallback={null}>
+                          <WorkflowsPage>
+                            <div
+                              className="h-full overflow-y-auto p-4 sm:p-6"
+-                             bis_skin_checked="1"
+                            >
+                              <div
+                                className="mx-auto max-w-[1280px] space-y-6"
+-                               bis_skin_checked="1"
+                              >
+                                <div
+                                  className="flex flex-wrap items-end justify-between gap-4"
+-                                 bis_skin_checked="1"
+                                >
+                                  <div
+-                                   bis_skin_checked="1"
+                                  >
+                                  ...
+                                <div
+                                  className="grid grid-cols-1 md:grid-cols-2 gap-4"
+-                                 bis_skin_checked="1"
+                                >
+                                  <Card className="p-5 flex f...">
+                                    <div
+                                      className="rounded-[10px] bg-[var(--color-surface-1)] border border-[var(--color..."
+-                                     bis_skin_checked="1"
+                                    >
+                                      <div
+                                        className="space-y-2"
+-                                       bis_skin_checked="1"
+                                      >
+                                        <div
+                                          className="flex items-start justify-between gap-2"
+-                                         bis_skin_checked="1"
+                                        >
+                                          <div
+                                            className="flex items-center gap-2"
+-                                           bis_skin_checked="1"
+                                          >
+                                          ...
+                                        ...
+                                      <div
+                                        className="flex items-center justify-between pt-3 border-t border-[var(--color..."
+-                                       bis_skin_checked="1"
+                                      >
+                                  <Card className="p-5 flex f...">
+                                    <div
+                                      className="rounded-[10px] bg-[var(--color-surface-1)] border border-[var(--color..."
+-                                     bis_skin_checked="1"
+                                    >
+                                      <div
+                                        className="space-y-2"
+-                                       bis_skin_checked="1"
+                                      >
+                                        <div
+                                          className="flex items-start justify-between gap-2"
+-                                         bis_skin_checked="1"
+                                        >
+                                          <div
+                                            className="flex items-center gap-2"
+-                                           bis_skin_checked="1"
+                                          >
+                                          ...
+                                        ...
+                                      <div
+                                        className="flex items-center justify-between pt-3 border-t border-[var(--color..."
+-                                       bis_skin_checked="1"
+                                      >
+                    ...
+        ...
+      ...
+ @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:57
+[     346ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:197
+[    2611ms] [ERROR] Unchecked runtime.lastError: Could not establish connection. Receiving end does not exist. @ http://127.0.0.1:3100/library:1
+[    2739ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:25631
+[    2834ms] [ERROR] A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+%s%s https://react.dev/link/hydration-mismatch 
+
+  ...
+    <HotReload assetPrefix="" globalError={[...]}>
+      <AppDevOverlayErrorBoundary globalError={[...]}>
+        <ReplaySsrOnlyErrors>
+        <DevRootHTTPAccessFallbackBoundary>
+          <HTTPAccessFallbackBoundary notFound={<NotAllowedRootHTTPFallbackError>}>
+            <HTTPAccessFallbackErrorBoundary pathname="/library" notFound={<NotAllowedRootHTTPFallbackError>} ...>
+              <RedirectBoundary>
+                <RedirectErrorBoundary router={{...}}>
+                  <Head headCacheNode={{lazyData:null, ...}}>
+                    <__next_viewport_boundary__>
+                    <MetadataTree>
+                      <__next_metadata_boundary__>
+                        <__next_metadata_boundary__>
+                          <div
+                            hidden={true}
+-                           bis_skin_checked="1"
+                          >
+                  <__next_root_layout_boundary__>
+                    <SegmentViewNode type="layout" pagePath="layout.tsx">
+                      <SegmentTrieNode>
+                      <link>
+                      <RootLayout>
+                        <html lang="vi" data-theme="midnight-lime" className="dark" suppressHydrationWarning={true}>
+                          <head>
+                          <body
+                            className="antialiased"
+-                           __processed_38e8e5e5-67b7-4f0c-bc1a-7092e3c2ea68__="true"
+-                           bis_register="W3sibWFzdGVyIjp0cnVlLCJleHRlbnNpb25JZCI6ImVwcGlvY2VtaG1ubGJoanBsY2drb2ZjaWll..."
+                          >
+                            ...
+                              <ClientPageRoot Component={function LibraryPage} searchParams={{}} params={{}}>
+                                <LibraryPage params={Promise} searchParams={Promise}>
+                                  <MiroNav>
+                                    <div
+                                      style={{display:"flex",minHeight:"100vh"}}
+-                                     bis_skin_checked="1"
+                                    >
+                                      <aside data-testid="miro-sidebar" style={{width:220, ...}}>
+                                        <div
+                                          style={{fontWeight:800,fontSize:20,marginBottom:16}}
+-                                         bis_skin_checked="1"
+                                        >
++                                         Miro
+                                        ...
+                                      <main style={{flex:1,padding:24, ...}}>
+                                        <h1>
+                                        <p>
+                                        <p>
+                                        <div
+                                          data-testid="library-grid"
+                                          style={{display:"grid",gridTemplateColumns:"repeat(aut...",gap:12}}
+-                                         bis_skin_checked="1"
+                                        >
+                  ...
+ @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:57

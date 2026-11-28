@@ -1,0 +1,131 @@
+- generic [ref=f13e2]:
+  - complementary "Primary navigation" [ref=f13e4]:
+    - generic [ref=f13e5]:
+      - generic [ref=f13e6]:
+        - button [ref=f13e7] [cursor=pointer]:
+          - generic "miro." [ref=f13e8]:
+            - text: miro
+            - generic [ref=f13e9]: .
+        - button "Thu gọn thanh điều hướng" [ref=f13e10] [cursor=pointer]
+      - generic [ref=f13e13]:
+        - generic [ref=f13e14]: Personal Operations
+        - generic [ref=f13e15]: LOCAL
+      - generic [ref=f13e16]:
+        - button "Bảng lệnh" [ref=f13e17] [cursor=pointer]:
+          - generic [ref=f13e18]: Tìm kiếm nhanh...
+          - generic [ref=f13e23]: ⌘K
+        - button "Hội thoại mới" [ref=f13e24] [cursor=pointer]
+    - navigation "Workspace sections" [ref=f13e27]:
+      - generic [ref=f13e28]:
+        - button "WORKSPACE" [ref=f13e29] [cursor=pointer]
+        - list [ref=f13e33]:
+          - listitem [ref=f13e34]:
+            - link "Tổng quan" [ref=f13e35] [cursor=pointer]:
+              - /url: /overview
+          - listitem [ref=f13e42]:
+            - link "AI Workspace" [ref=f13e43] [cursor=pointer]:
+              - /url: /workspace
+          - listitem [ref=f13e47]:
+            - link "Tác vụ" [ref=f13e48] [cursor=pointer]:
+              - /url: /tasks
+          - listitem [ref=f13e53]:
+            - link "Dự án" [ref=f13e54] [cursor=pointer]:
+              - /url: /projects
+      - generic [ref=f13e59]:
+        - button "TỰ ĐỘNG HÓA" [ref=f13e60] [cursor=pointer]
+        - list [ref=f13e64]:
+          - listitem [ref=f13e65]:
+            - link "Lịch trình" [ref=f13e66] [cursor=pointer]:
+              - /url: /schedules
+          - listitem [ref=f13e72]:
+            - link "Workflows" [ref=f13e73] [cursor=pointer]:
+              - /url: /workflows
+      - generic [ref=f13e79]:
+        - button "CÔNG CỤ" [ref=f13e80] [cursor=pointer]
+        - list [ref=f13e84]:
+          - listitem [ref=f13e85]:
+            - link "Trình duyệt" [ref=f13e86] [cursor=pointer]:
+              - /url: /browser
+          - listitem [ref=f13e91]:
+            - link "Nghiên cứu" [ref=f13e92] [cursor=pointer]:
+              - /url: /research
+          - listitem [ref=f13e97]:
+            - link "Media Studio" [ref=f13e98] [cursor=pointer]:
+              - /url: /media
+          - listitem [ref=f13e102]:
+            - link "Xuất bản" [ref=f13e103] [cursor=pointer]:
+              - /url: /publishing
+          - listitem [ref=f13e108]:
+            - link "Tri thức" [ref=f13e109] [cursor=pointer]:
+              - /url: /knowledge
+      - generic [ref=f13e113]:
+        - button "HỆ THỐNG" [ref=f13e114] [cursor=pointer]
+        - list [ref=f13e118]:
+          - listitem [ref=f13e119]:
+            - link "Hoạt động" [ref=f13e120] [cursor=pointer]:
+              - /url: /activity
+          - listitem [ref=f13e124]:
+            - link "Tích hợp" [ref=f13e125] [cursor=pointer]:
+              - /url: /integrations
+          - listitem [ref=f13e129]:
+            - link "Cài đặt" [ref=f13e130] [cursor=pointer]:
+              - /url: /settings
+    - generic [ref=f13e135]:
+      - generic [ref=f13e136]:
+        - generic [ref=f13e137]: Miro Runtime · Mô phỏng
+        - generic [ref=f13e138]: OK
+      - generic [ref=f13e139]:
+        - generic [ref=f13e140]:
+          - generic [ref=f13e141]: OP
+          - generic [ref=f13e142]:
+            - paragraph [ref=f13e143]: Operator
+            - paragraph [ref=f13e144]: Asia/Bangkok
+        - button "Switch theme" [ref=f13e146] [cursor=pointer]
+  - generic [ref=f13e149]:
+    - banner [ref=f13e150]:
+      - navigation "Breadcrumb" [ref=f13e152]:
+        - generic [ref=f13e153]: Dự án
+      - generic [ref=f13e154]:
+        - generic "Mọi tác vụ, trình duyệt và xuất bản đều được mô phỏng cục bộ. Không kết nối tài khoản thật." [ref=f13e155]: Chế độ Mô phỏng
+        - button "Giám sát tác vụ" [ref=f13e156] [cursor=pointer]:
+          - generic [ref=f13e159]: "0"
+          - generic [ref=f13e160]: đang chạy
+        - button "Cần xử lý" [ref=f13e161] [cursor=pointer]:
+          - generic [ref=f13e164]: "2"
+        - button "Thông báo" [ref=f13e165] [cursor=pointer]
+        - button "Trợ lý AI ngữ cảnh" [ref=f13e170] [cursor=pointer]:
+          - generic [ref=f13e173]: Miro AI
+    - main [ref=f13e174]:
+      - generic [ref=f13e176]:
+        - generic [ref=f13e178]:
+          - heading "Dự án" [level=1] [ref=f13e179]
+          - paragraph [ref=f13e180]: Tổ chức liên kết tác vụ, hội thoại, nghiên cứu, tư liệu media, lịch trình và tri thức theo từng mục tiêu.
+        - generic [ref=f13e181]:
+          - button "active KANS 377 Product Research Thu thập xu hướng nội dung, phân tích hook video và đối chiếu câu hỏi khách hàng xoay quanh dòng sản phẩm KANS 377. 2 tác vụ · 5 tài nguyên 22:18 26-11" [ref=f13e182] [cursor=pointer]:
+            - generic [ref=f13e183]:
+              - generic [ref=f13e184]: active
+              - generic [ref=f13e190]:
+                - heading "KANS 377 Product Research" [level=2] [ref=f13e191]
+                - paragraph [ref=f13e192]: Thu thập xu hướng nội dung, phân tích hook video và đối chiếu câu hỏi khách hàng xoay quanh dòng sản phẩm KANS 377.
+            - generic [ref=f13e193]:
+              - generic [ref=f13e194]: 2 tác vụ · 5 tài nguyên
+              - generic [ref=f13e195]: 22:18 26-11
+          - button "active Fashion Content Production Sản xuất video lookbook ngắn, phân tích khung hình bằng Media Studio và lên lịch xuất bản đa kênh. 1 tác vụ · 3 tài nguyên 21:51 26-11" [ref=f13e196] [cursor=pointer]:
+            - generic [ref=f13e197]:
+              - generic [ref=f13e198]: active
+              - generic [ref=f13e204]:
+                - heading "Fashion Content Production" [level=2] [ref=f13e205]
+                - paragraph [ref=f13e206]: Sản xuất video lookbook ngắn, phân tích khung hình bằng Media Studio và lên lịch xuất bản đa kênh.
+            - generic [ref=f13e207]:
+              - generic [ref=f13e208]: 1 tác vụ · 3 tài nguyên
+              - generic [ref=f13e209]: 21:51 26-11
+          - button "active Affiliate Content Operations Tự động hóa lịch quét sản phẩm, quản lý nhóm browser profile và tổng hợp báo cáo hoạt động hàng ngày. 1 tác vụ · 1 tài nguyên 20:26 26-11" [ref=f13e210] [cursor=pointer]:
+            - generic [ref=f13e211]:
+              - generic [ref=f13e212]: active
+              - generic [ref=f13e218]:
+                - heading "Affiliate Content Operations" [level=2] [ref=f13e219]
+                - paragraph [ref=f13e220]: Tự động hóa lịch quét sản phẩm, quản lý nhóm browser profile và tổng hợp báo cáo hoạt động hàng ngày.
+            - generic [ref=f13e221]:
+              - generic [ref=f13e222]: 1 tác vụ · 1 tài nguyên
+              - generic [ref=f13e223]: 20:26 26-11
+  - region "Notifications alt+T"

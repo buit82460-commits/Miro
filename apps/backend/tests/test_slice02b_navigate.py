@@ -61,6 +61,31 @@ def _run(coro):
     return asyncio.run(coro)
 
 
+def test_bug11_miro_ui_tab_never_execution_target(monkeypatch, tmp_path):
+    # BUG-11: autonomous Decide KHONG bao gio chon tab Miro UI
+    # (localhost/:3100 tasks-live...) lam execution tab. Chi con tab
+    # Miro UI -> NO_MANAGED_TAB fail-closed, khong navigate cuop tab user.
+    import urllib.request as _u
+
+    class _FakeResp:
+        def read(self):
+            return (b'{"ok": true, "tabs": [{"browser": "profile20-main",'
+                    b' "tab": 1302904467,'
+                    b' "url": "http://localhost:3100/tasks-live"}]}')
+
+    monkeypatch.setattr(_u, "urlopen", lambda *a, **k: _FakeResp())
+    store = TaskStore(Path(str(tmp_path)) / "tasks.db")
+    svc = TaskService(store, PermissionStore(), FakeRemote(),
+                      bridge={"instance_id": "profile20-main",
+                              "base": "http://127.0.0.1:18767"})
+    rec = svc.submit(TaskSubmitRequest.model_validate(
+        {"request_id": "req-bug11", "message": "tim kiem tiktok 5 video KANS",
+         "videos": [{"project_id": "p1", "title": "V"}]}))
+    out = _run(svc.run_browser_autonomous_search(
+        rec["id"], keyword="KANS", limit=5))
+    assert out["error"] == "NO_MANAGED_TAB", out
+
+
 def test_neg_navigate_outside_scope():
     r = _run(gateway.navigate_via_bridge(
         "", "", instance_id="profile20-main", tab_id=7,

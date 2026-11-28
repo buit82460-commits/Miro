@@ -309,3 +309,41 @@ Cô lập: FE 3100 ↔ BE 8770 ↔ bridge 18767 là một cụm duy nhất của
 - Worktree `C:/Miro` HIỆN TẠI đã chứa unmock FE-M1→M4 (unstaged, sau `73de3f4` → `a94c1e2` + diff hiện tại): `TasksPage` dùng `useBeTasks` + `RuntimeService`, `OverviewPage` dùng `useBeTasks`, `BrowserPage` dùng `useRuntimeStatus`; `miro.service.ts` chuẩn hóa qua `ConnectionsService/PlatformsService` (đọc BE, `[]`/502 thay vì seed). Các trang còn lại (media/research/schedules/workflows/projects/knowledge/...) vẫn `useMiroStore` mock.
 - Kết luận: **MOCK ONLY thuộc baseline `73de3f4`, KHÔNG mô tả đúng worktree hiện tại** (đã unmock một phần). Cấm dùng audit đó để revert/ghi đè diff unmock. Slice05 (`10d0e84`) chỉ thêm conversations P0-P1 + `AiWorkspacePage` +28 dòng, không liên quan MOCK ONLY.
 - Checkpoint đề xuất: CP-A = commit riêng diff unmock FE hiện tại sau khi regression (tên gợi ý `ui/unmock-m1-m4-partial`); CP-B = slice05 P0-P1 giữ nguyên branch, chưa merge cho tới khi DB path cô lập xong. Blocker duy nhất: hardcode `C:\Miro\var\tasks.db` hai bên (mục 2).
+
+## Agent C — AI Provider P0-P1 status notes (2026-11-27, đọc từ branch `slice05/p0-p1`, commit `10d0e84`, KHÔNG checkout, KHÔNG sửa kiến trúc)
+
+- Phạm vi đọc: `apps/backend/src/miro/{conversations/{provider,manager,store,router},llm/{types,fake,real,budget},agent/loop}` + `apps/web/src/{features/settings/AIProviderSettings,features/settings/SettingsPage,features/ai-workspace/AiWorkspacePage,lib/services/conversation.service}` + `tests/test_slice05_{p0,p1}.py`. Đây là **ghi nhận trạng thái implementation**, chưa phải verify ĐẠT/CHƯA (chưa chạy test suite trên worktree slice05).
+- Proposal `docs/foundation/slice05-architecture-proposal.md` KHÔNG sửa (đang chờ đồng thuận canonical).
+
+### 1. Provider support matrix (implementation thật)
+
+| Provider | Path | Probe | Tool-calling / streaming / usage | Ghi chú |
+|---|---|---|---|---|
+| `real` (OpenAI-compatible) | `POST {baseURL}/chat/completions` (`llm/real.py`), stdlib `urllib`, timeout 30s | `GET {baseURL}/models` → `GET /settings/ai-provider/capabilities` | `"unknown"` cả 3 (probe chỉ xác nhận HTTP 2xx + latency; **không** mặc nhiên đủ tool-calling/streaming — đúng spec §23) | `LLMDecision` P1 chỉ dùng `respond`/`clarify`; `tool_call/wait/finish/cancel` đã định nghĩa type nhưng loop P1 chưa dispatch tool → gặp `tool_call` chuyển thành `clarify` trung thực, không bịa kết quả |
+| `fake` (tests/CI only) | `llm/fake.py`, `name="fake"` | probe trả `tool_calling:false, streaming:false, usage:false` | Không dùng | Cấm expose như AI thật ở production; **không fallback Fake khi LLM thật lỗi** — `_loop_provider` (`conversations/router.py`) raise `PROVIDER_NOT_CONFIGURED` trung thực (D11) |
+| Chưa cấu hình | `AIProviderStore.build_real_adapter()` → `None` | — | — | Turn `failed` + event `turn.failed` với `PROVIDER_NOT_CONFIGURED`; `POST /settings/ai-provider/test` khi thiếu baseURL/key trả `ok:false, error:PROVIDER_NOT_CONFIGURED` |
+
+- Budget (`llm/budget.py`): per-turn 12 steps / 15 LLM calls / 300s active / est ~$0.50 + `daily_cost_cap` optional; cost chỉ cộng dồn khi `cost_usd` kèm `cost_unknown=False`, ngược lại `post_check` trả `cost_note: "chi phi chua xac dinh"` (đúng D12).
+
+### 2. Security notes (key không lộ)
+
+- Key sống **chỉ trong RAM Backend** (`AIProviderStore._key`, seed từ env `MIRO_AI_API_KEY`); `PUT /settings/ai-provider` nhận `key` nhưng strip khỏi config persist, **không log thô**.
+- `GET /settings/ai-provider` chỉ trả `{provider, baseURL, model, tool_calling, streaming, has_key:boolean}` — **key không bao giờ trả về FE/network log** (đúng acceptance B, spec §4.3).
+- FE `AIProviderSettings.tsx`: input `type=password`, `setKey('')` ngay sau save, placeholder `•••••• (đã có)` khi `has_key:true` — key cũ không hiển thị lại.
+- Lưu ý trung thực: `POST /settings/ai-provider/test` (P0/P1) **chỉ kiểm tra config-present tại Backend, chưa gọi network thật** (`provider.py::test_connection`); probe live thật nằm ở `GET /settings/ai-provider/capabilities` (gọi `GET {baseURL}/models` với key Backend). User bấm "Test kết nối" OK ≠ đã verify live model.
+- Chưa đọc thấy gửi cookie/secret/bridge-credential vào LLM context ở P0-P1 (RealAdapter chỉ gửi system prompt + messages user/assistant). Audit sâu khi P2 truyền tool evidence vào context.
+
+### 3. User instructions — Settings → AI Provider (khớp implementation)
+
+1. Mở **Settings → mục "AI Provider (Backend)"** (section `ai_provider`, thêm mới trong `SettingsPage.tsx`, tách khỏi mục "AI Models" vốn là mock FE `Miro Core/Fast/Deep Research` lưu localStorage).
+2. Nhập **Provider** (mặc định `openai-compatible`), **Base URL** (`https://...`), **Model** (model-id), **API key** (chỉ gửi khi đổi, không hiển thị lại) → **Lưu cấu hình**.
+3. Bấm **Test kết nối**: OK = Backend đã có đủ baseURL + key (chưa phải probe live — xem lưu ý §2); muốn probe live thì gọi `GET /settings/ai-provider/capabilities`.
+4. Chat qua **AI Workspace**: FE ưu tiên `ConversationService` (`POST /conversations` → `POST /{id}/messages`, poll `GET .../turns/{turn_id}`, lịch sử `GET /{id}`); BE cũ vắng mặt → tự fallback legacy mock, không vỡ flow. Chưa cấu hình provider → assistant báo lỗi cấu hình trung thực, không bịa câu trả lời.
+5. SSE stream: `GET /conversations/{id}/turns/{turn_id}/stream?after_seq=N` (replay + reconnect/dedup phía client bằng `seq`).
+
+### 4. Checkpoint đề xuất (KHÔNG push)
+
+- **CP-C1 (docs, đã xong ở entry này):** trạng thái AI Provider P0-P1 phản ánh đúng commit `10d0e84`; không lộ key trong mọi tài liệu/log.
+- **CP-C2 (đề xuất, chờ session chính):** chạy `pytest tests/test_slice05_p0.py tests/test_slice05_p1.py` **trong worktree `C:/Miro-slice05`** rồi ghi kết quả ĐẠT/CHƯA vào entry mới — tuyệt đối không chạy BE slice05 khi chưa cô lập DB path (blocker hardcode `C:\Miro\var\tasks.db` đã ghi ở mục Runtime map).
+- **CP-C3 (đề xuất):** khi merge slice05 về, kiểm tra xung đột `SettingsPage.tsx` (section mới) + `AiWorkspacePage.tsx` (Conversation-first + fallback) với diff unmock FE-M1→M4 trên `C:/Miro`.
+- Trạng thái bàn giao: **doc updates xong, chưa commit, chưa push** (theo yêu cầu task).

@@ -1,0 +1,166 @@
+- generic [ref=f14e2]:
+  - complementary "Primary navigation" [ref=f14e4]:
+    - generic [ref=f14e5]:
+      - generic [ref=f14e6]:
+        - button [ref=f14e7] [cursor=pointer]:
+          - generic "miro." [ref=f14e8]:
+            - text: miro
+            - generic [ref=f14e9]: .
+        - button "Thu gọn thanh điều hướng" [ref=f14e10] [cursor=pointer]
+      - generic [ref=f14e13]:
+        - generic [ref=f14e14]: Personal Operations
+        - generic [ref=f14e15]: LOCAL
+      - generic [ref=f14e16]:
+        - button "Bảng lệnh" [ref=f14e17] [cursor=pointer]:
+          - generic [ref=f14e18]: Tìm kiếm nhanh...
+          - generic [ref=f14e23]: ⌘K
+        - button "Hội thoại mới" [ref=f14e24] [cursor=pointer]
+    - navigation "Workspace sections" [ref=f14e27]:
+      - generic [ref=f14e28]:
+        - button "WORKSPACE" [ref=f14e29] [cursor=pointer]
+        - list [ref=f14e33]:
+          - listitem [ref=f14e34]:
+            - link "Tổng quan" [ref=f14e35] [cursor=pointer]:
+              - /url: /overview
+          - listitem [ref=f14e42]:
+            - link "AI Workspace" [ref=f14e43] [cursor=pointer]:
+              - /url: /workspace
+          - listitem [ref=f14e47]:
+            - link "Tác vụ" [ref=f14e48] [cursor=pointer]:
+              - /url: /tasks
+          - listitem [ref=f14e53]:
+            - link "Dự án" [ref=f14e54] [cursor=pointer]:
+              - /url: /projects
+      - generic [ref=f14e58]:
+        - button "TỰ ĐỘNG HÓA" [ref=f14e59] [cursor=pointer]
+        - list [ref=f14e63]:
+          - listitem [ref=f14e64]:
+            - link "Lịch trình" [ref=f14e65] [cursor=pointer]:
+              - /url: /schedules
+          - listitem [ref=f14e72]:
+            - link "Workflows" [ref=f14e73] [cursor=pointer]:
+              - /url: /workflows
+      - generic [ref=f14e79]:
+        - button "CÔNG CỤ" [ref=f14e80] [cursor=pointer]
+        - list [ref=f14e84]:
+          - listitem [ref=f14e85]:
+            - link "Trình duyệt" [ref=f14e86] [cursor=pointer]:
+              - /url: /browser
+          - listitem [ref=f14e91]:
+            - link "Nghiên cứu" [ref=f14e92] [cursor=pointer]:
+              - /url: /research
+          - listitem [ref=f14e97]:
+            - link "Media Studio" [ref=f14e98] [cursor=pointer]:
+              - /url: /media
+          - listitem [ref=f14e102]:
+            - link "Xuất bản" [ref=f14e103] [cursor=pointer]:
+              - /url: /publishing
+          - listitem [ref=f14e108]:
+            - link "Tri thức" [ref=f14e109] [cursor=pointer]:
+              - /url: /knowledge
+      - generic [ref=f14e113]:
+        - button "HỆ THỐNG" [ref=f14e114] [cursor=pointer]
+        - list [ref=f14e118]:
+          - listitem [ref=f14e119]:
+            - link "Hoạt động" [ref=f14e120] [cursor=pointer]:
+              - /url: /activity
+          - listitem [ref=f14e124]:
+            - link "Tích hợp" [ref=f14e125] [cursor=pointer]:
+              - /url: /integrations
+          - listitem [ref=f14e129]:
+            - link "Cài đặt" [ref=f14e130] [cursor=pointer]:
+              - /url: /settings
+    - generic [ref=f14e135]:
+      - generic [ref=f14e136]:
+        - generic [ref=f14e137]: Miro Runtime · Mô phỏng
+        - generic [ref=f14e138]: OK
+      - generic [ref=f14e139]:
+        - generic [ref=f14e140]:
+          - generic [ref=f14e141]: OP
+          - generic [ref=f14e142]:
+            - paragraph [ref=f14e143]: Operator
+            - paragraph [ref=f14e144]: Asia/Bangkok
+        - button "Switch theme" [ref=f14e146] [cursor=pointer]
+  - generic [ref=f14e149]:
+    - banner [ref=f14e150]:
+      - navigation "Breadcrumb" [ref=f14e152]:
+        - generic [ref=f14e153]: Lịch trình
+      - generic [ref=f14e154]:
+        - generic "Mọi tác vụ, trình duyệt và xuất bản đều được mô phỏng cục bộ. Không kết nối tài khoản thật." [ref=f14e155]: Chế độ Mô phỏng
+        - button "Giám sát tác vụ" [ref=f14e156] [cursor=pointer]:
+          - generic [ref=f14e159]: "0"
+          - generic [ref=f14e160]: đang chạy
+        - button "Cần xử lý" [ref=f14e161] [cursor=pointer]:
+          - generic [ref=f14e164]: "2"
+        - button "Thông báo" [ref=f14e165] [cursor=pointer]
+        - button "Trợ lý AI ngữ cảnh" [ref=f14e170] [cursor=pointer]:
+          - generic [ref=f14e173]: Miro AI
+    - main [ref=f14e174]:
+      - generic [ref=f14e175]:
+        - generic [ref=f14e176]:
+          - generic [ref=f14e177]:
+            - heading "Lịch trình" [level=1] [ref=f14e178]
+            - paragraph [ref=f14e179]: Quản lý lịch tự động hóa theo múi giờ IANA. Lịch tạo từ Chat và tạo thủ công đồng bộ chung một kho dữ liệu.
+          - button "Tạo lịch trình" [ref=f14e180] [cursor=pointer]
+        - generic [ref=f14e183]:
+          - textbox "Tìm lịch trình hoặc profile..." [ref=f14e188]
+          - tablist [ref=f14e189]:
+            - tab "Danh sách" [selected] [ref=f14e190] [cursor=pointer]
+            - tab "Lịch" [ref=f14e192] [cursor=pointer]
+        - table [ref=f14e195]:
+          - rowgroup [ref=f14e196]:
+            - row [ref=f14e197]:
+              - columnheader "Tên lịch trình" [ref=f14e198]
+              - columnheader "Bật/Tắt" [ref=f14e199]
+              - columnheader "Tần suất" [ref=f14e200]
+              - columnheader "Lần chạy tới" [ref=f14e201]
+              - columnheader "Tài nguyên" [ref=f14e202]
+              - columnheader "Trạng thái" [ref=f14e203]
+              - columnheader "Thao tác" [ref=f14e204]
+          - rowgroup [ref=f14e205]:
+            - row [ref=f14e206] [cursor=pointer]:
+              - cell [ref=f14e207]:
+                - paragraph [ref=f14e208]: Quét xu hướng KANS 377 sáng hàng ngày
+                - paragraph [ref=f14e209]: 08:00 · Asia/Bangkok
+              - cell [ref=f14e210]:
+                - switch "Toggle Quét xu hướng KANS 377 sáng hàng ngày" [checked] [ref=f14e211]
+              - cell "daily" [ref=f14e213]
+              - cell "08:26 27-11" [ref=f14e214]
+              - cell "Profile 20 · TikTok Research Main" [ref=f14e215]
+              - cell "active" [ref=f14e216]
+              - cell [ref=f14e219]:
+                - generic [ref=f14e220]:
+                  - button "Run Quét xu hướng KANS 377 sáng hàng ngày" [ref=f14e221]
+                  - button "Duplicate Quét xu hướng KANS 377 sáng hàng ngày" [ref=f14e224]
+                  - button "Delete Quét xu hướng KANS 377 sáng hàng ngày" [ref=f14e228]
+            - row [ref=f14e232] [cursor=pointer]:
+              - cell [ref=f14e233]:
+                - paragraph [ref=f14e234]: Tổng hợp Lookbook Fashion mỗi thứ Hai
+                - paragraph [ref=f14e235]: 09:30 · Asia/Bangkok
+              - cell [ref=f14e236]:
+                - switch "Toggle Tổng hợp Lookbook Fashion mỗi thứ Hai" [checked] [ref=f14e237]
+              - cell "weekly" [ref=f14e239]
+              - cell "10:26 28-11" [ref=f14e240]
+              - cell "Profile 21 · Fashion Media Collector" [ref=f14e241]
+              - cell "active" [ref=f14e242]
+              - cell [ref=f14e245]:
+                - generic [ref=f14e246]:
+                  - button "Run Tổng hợp Lookbook Fashion mỗi thứ Hai" [ref=f14e247]
+                  - button "Duplicate Tổng hợp Lookbook Fashion mỗi thứ Hai" [ref=f14e250]
+                  - button "Delete Tổng hợp Lookbook Fashion mỗi thứ Hai" [ref=f14e254]
+            - row [ref=f14e258] [cursor=pointer]:
+              - cell [ref=f14e259]:
+                - paragraph [ref=f14e260]: Kiểm tra hàng đợi xuất bản Affiliate
+                - paragraph [ref=f14e261]: 17:00 · Asia/Bangkok
+              - cell [ref=f14e262]:
+                - switch "Toggle Kiểm tra hàng đợi xuất bản Affiliate" [ref=f14e263]
+              - cell "weekdays" [ref=f14e265]
+              - cell "20:26 27-11" [ref=f14e266]
+              - cell "Profile 22 · Affiliate Publishing Drafts" [ref=f14e267]
+              - cell "paused" [ref=f14e268]
+              - cell [ref=f14e271]:
+                - generic [ref=f14e272]:
+                  - button "Run Kiểm tra hàng đợi xuất bản Affiliate" [ref=f14e273]
+                  - button "Duplicate Kiểm tra hàng đợi xuất bản Affiliate" [ref=f14e276]
+                  - button "Delete Kiểm tra hàng đợi xuất bản Affiliate" [ref=f14e280]
+  - region "Notifications alt+T"

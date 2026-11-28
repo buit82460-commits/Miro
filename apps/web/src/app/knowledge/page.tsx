@@ -1,11 +1,9 @@
 "use client";
-import { MiroShell } from "@/components/miro-shell";
-import { KnowledgePage } from "@/features/knowledge/KnowledgePage";
-
+import { YoucareShell, EmptyState } from "@/components/youcare/YoucareShell";
 export default function KnowledgePageRoute() {
   return (
-    <MiroShell>
-      <KnowledgePage />
-    </MiroShell>
+    <YoucareShell title="Tri thức" subtitle="Kho tri thức — BE chưa có endpoint riêng, hiển thị trung thực.">
+      <EmptyState text="BE chưa có API knowledge riêng. Trang này giữ trống trung thực — không tạo tài liệu mẫu." />
+    </YoucareShell>
   );
 }

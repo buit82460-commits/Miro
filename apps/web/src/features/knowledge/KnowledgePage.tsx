@@ -96,6 +96,9 @@ export function KnowledgePage() {
           <p className="text-[11px] text-[var(--color-text-muted)]">
             Phân tách rõ thẩm quyền giữa hướng dẫn người dùng, tri thức dự án và ghi chú AI.
           </p>
+          <p className="text-[11px] text-[var(--color-text-muted)]">
+            Lưu cục bộ trên máy này — BE chưa hỗ trợ endpoint knowledge.
+          </p>
         </div>
 
         <div className="space-y-1">

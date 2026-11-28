@@ -1,33 +1,24 @@
-import { fail, getStore, nextId, ok, pushHistory } from "@/lib/fixtures/store";
+import { beFetch, beForward, beUnavailable } from "@/lib/be-proxy";
+import { fail } from "@/lib/fixtures/store";
 
-function now() {
-  return new Date().toISOString();
-}
-
+// Compat: POST /api/tasks/chat → BE POST /tasks/run-message (NL entry).
+// Body cu {message, task_id?} → {message, tab_id:0}. BE tra {ok,error,route,task_id,...}.
+// TAB_UNKNOWN/NO_ROUTE_MATCH van co task_id → UI poll task, KHONG tu post lai.
+// GET: forward BE /tasks/recent; BE down → 503, không trả fixture mẫu.
 export async function GET() {
-  return ok(getStore().tasks);
+  const be = await beFetch("/tasks/recent?limit=20");
+  if (be.ok) return beForward(be.status, be.body);
+  return beUnavailable();
 }
 
 export async function POST(req: Request) {
   const body = (await req.json().catch(() => ({}))) as { message?: string; task_id?: string };
   if (!body.message || body.message.length > 4000) return fail("Nội dung chat chưa hợp lệ", 422);
-  const nowIso = now();
-  if (body.task_id) {
-    const t = getStore().tasks.find((x) => x.id === body.task_id);
-    if (!t) return fail("Không tìm thấy task", 404);
-    t.status = "running";
-    t.updated_at = nowIso;
-    pushHistory("chat", `chat tiếp vào ${t.id}`);
-    return ok(t, 200);
-  }
-  const task = {
-    id: nextId("task"),
-    title: body.message.slice(0, 80),
-    status: "running" as const,
-    revision: 1,
-    updated_at: nowIso,
-  };
-  getStore().tasks.unshift(task);
-  pushHistory("chat", `tạo ${task.id} từ chat`);
-  return ok(task, 201);
+  const be = await beFetch("/tasks/run-message", {
+    method: "POST",
+    body: JSON.stringify({ message: body.message, tab_id: 0 }),
+  });
+  if (be.ok) return beForward(be.status, be.body);
+  // BE down → 503 fail-closed, không bịa task fixture.
+  return beUnavailable();
 }

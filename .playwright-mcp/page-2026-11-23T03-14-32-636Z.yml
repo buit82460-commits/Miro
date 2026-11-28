@@ -1,0 +1,14 @@
+- banner [ref=e3]:
+  - generic [ref=e5]:
+    - generic [ref=e6]:
+      - button "Hướng dẫn" [ref=e8] [cursor=pointer]
+      - generic [ref=e10]:
+        - link:
+          - /url: /
+    - search [ref=e12]:
+      - generic [ref=e14]:
+        - generic [ref=e15]:
+          - combobox [ref=e17]: huong dan dung muse ai
+          - button [ref=e20] [cursor=pointer]
+          - button [ref=e22] [cursor=pointer]
+        - button "Search" [ref=e27] [cursor=pointer]

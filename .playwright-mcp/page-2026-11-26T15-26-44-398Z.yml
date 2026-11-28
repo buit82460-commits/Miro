@@ -1,0 +1,20 @@
+- generic [ref=f18e2]:
+  - complementary [ref=f18e3]:
+    - link "Miro" [ref=f18e4] [cursor=pointer]:
+      - /url: /
+    - navigation [ref=f18e5]:
+      - link "Công việc" [ref=f18e6] [cursor=pointer]:
+        - /url: /
+      - link "Thư viện" [ref=f18e7] [cursor=pointer]:
+        - /url: /library
+      - link "Xuất bản" [ref=f18e8] [cursor=pointer]:
+        - /url: /publish
+      - link "Cài đặt" [ref=f18e9] [cursor=pointer]:
+        - /url: /settings
+  - generic [ref=f18e10]:
+    - generic [ref=f18e11]:
+      - heading "Editor" [level=1] [ref=f18e12]
+      - button "Ẩn sidebar" [ref=f18e13]
+      - link "← Công việc" [ref=f18e14] [cursor=pointer]:
+        - /url: /
+    - paragraph [ref=f18e15]: Đang tải project…

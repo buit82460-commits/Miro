@@ -1,0 +1,143 @@
+- generic [ref=f12e2]:
+  - complementary "Primary navigation" [ref=f12e4]:
+    - generic [ref=f12e5]:
+      - generic [ref=f12e6]:
+        - button [ref=f12e7] [cursor=pointer]:
+          - generic "miro." [ref=f12e8]:
+            - text: miro
+            - generic [ref=f12e9]: .
+        - button "Thu gọn thanh điều hướng" [ref=f12e10] [cursor=pointer]
+      - generic [ref=f12e13]:
+        - generic [ref=f12e14]: Personal Operations
+        - generic [ref=f12e15]: LOCAL
+      - generic [ref=f12e16]:
+        - button "Bảng lệnh" [ref=f12e17] [cursor=pointer]:
+          - generic [ref=f12e18]: Tìm kiếm nhanh...
+          - generic [ref=f12e23]: ⌘K
+        - button "Hội thoại mới" [ref=f12e24] [cursor=pointer]
+    - navigation "Workspace sections" [ref=f12e27]:
+      - generic [ref=f12e28]:
+        - button "WORKSPACE" [ref=f12e29] [cursor=pointer]
+        - list [ref=f12e33]:
+          - listitem [ref=f12e34]:
+            - link "Tổng quan" [ref=f12e35] [cursor=pointer]:
+              - /url: /overview
+          - listitem [ref=f12e42]:
+            - link "AI Workspace" [ref=f12e43] [cursor=pointer]:
+              - /url: /workspace
+          - listitem [ref=f12e47]:
+            - link "Tác vụ" [ref=f12e48] [cursor=pointer]:
+              - /url: /tasks
+          - listitem [ref=f12e53]:
+            - link "Dự án" [ref=f12e54] [cursor=pointer]:
+              - /url: /projects
+      - generic [ref=f12e58]:
+        - button "TỰ ĐỘNG HÓA" [ref=f12e59] [cursor=pointer]
+        - list [ref=f12e63]:
+          - listitem [ref=f12e64]:
+            - link "Lịch trình" [ref=f12e65] [cursor=pointer]:
+              - /url: /schedules
+          - listitem [ref=f12e71]:
+            - link "Workflows" [ref=f12e72] [cursor=pointer]:
+              - /url: /workflows
+      - generic [ref=f12e78]:
+        - button "CÔNG CỤ" [ref=f12e79] [cursor=pointer]
+        - list [ref=f12e83]:
+          - listitem [ref=f12e84]:
+            - link "Trình duyệt" [ref=f12e85] [cursor=pointer]:
+              - /url: /browser
+          - listitem [ref=f12e90]:
+            - link "Nghiên cứu" [ref=f12e91] [cursor=pointer]:
+              - /url: /research
+          - listitem [ref=f12e96]:
+            - link "Media Studio" [ref=f12e97] [cursor=pointer]:
+              - /url: /media
+          - listitem [ref=f12e101]:
+            - link "Xuất bản" [ref=f12e102] [cursor=pointer]:
+              - /url: /publishing
+          - listitem [ref=f12e107]:
+            - link "Tri thức" [ref=f12e108] [cursor=pointer]:
+              - /url: /knowledge
+      - generic [ref=f12e112]:
+        - button "HỆ THỐNG" [ref=f12e113] [cursor=pointer]
+        - list [ref=f12e117]:
+          - listitem [ref=f12e118]:
+            - link "Hoạt động" [ref=f12e119] [cursor=pointer]:
+              - /url: /activity
+          - listitem [ref=f12e123]:
+            - link "Tích hợp" [ref=f12e124] [cursor=pointer]:
+              - /url: /integrations
+          - listitem [ref=f12e128]:
+            - link "Cài đặt" [ref=f12e129] [cursor=pointer]:
+              - /url: /settings
+    - generic [ref=f12e135]:
+      - generic [ref=f12e136]:
+        - generic [ref=f12e137]: Miro Runtime · Mô phỏng
+        - generic [ref=f12e138]: OK
+      - generic [ref=f12e139]:
+        - generic [ref=f12e140]:
+          - generic [ref=f12e141]: OP
+          - generic [ref=f12e142]:
+            - paragraph [ref=f12e143]: Operator
+            - paragraph [ref=f12e144]: Asia/Bangkok
+        - button "Switch theme" [ref=f12e146] [cursor=pointer]
+  - generic [ref=f12e149]:
+    - banner [ref=f12e150]:
+      - navigation "Breadcrumb" [ref=f12e152]:
+        - generic [ref=f12e153]: Cài đặt
+      - generic [ref=f12e154]:
+        - generic "Mọi tác vụ, trình duyệt và xuất bản đều được mô phỏng cục bộ. Không kết nối tài khoản thật." [ref=f12e155]: Chế độ Mô phỏng
+        - button "Giám sát tác vụ" [ref=f12e156] [cursor=pointer]:
+          - generic [ref=f12e159]: "0"
+          - generic [ref=f12e160]: đang chạy
+        - button "Cần xử lý" [ref=f12e161] [cursor=pointer]:
+          - generic [ref=f12e164]: "2"
+        - button "Thông báo" [ref=f12e165] [cursor=pointer]
+        - button "Trợ lý AI ngữ cảnh" [ref=f12e170] [cursor=pointer]:
+          - generic [ref=f12e173]: Miro AI
+    - main [ref=f12e174]:
+      - generic [ref=f12e175]:
+        - complementary [ref=f12e176]:
+          - paragraph [ref=f12e177]: Cài đặt
+          - button "Chung (General)" [ref=f12e178] [cursor=pointer]
+          - button "Giao diện (Appearance)" [ref=f12e179] [cursor=pointer]
+          - button "Ngôn ngữ (Language)" [ref=f12e180] [cursor=pointer]
+          - button "Workspace" [ref=f12e181] [cursor=pointer]
+          - button "AI Models" [ref=f12e182] [cursor=pointer]
+          - button "Hành vi Agent" [ref=f12e183] [cursor=pointer]
+          - button "Trình duyệt" [ref=f12e184] [cursor=pointer]
+          - button "Tự động hóa" [ref=f12e185] [cursor=pointer]
+          - button "Quyền hạn" [ref=f12e186] [cursor=pointer]
+          - button "Bảo mật" [ref=f12e187] [cursor=pointer]
+          - button "Thông báo" [ref=f12e188] [cursor=pointer]
+          - button "Lưu trữ cục bộ" [ref=f12e189] [cursor=pointer]
+          - button "Đồng bộ đám mây" [ref=f12e190] [cursor=pointer]
+          - button "Runtime" [ref=f12e191] [cursor=pointer]
+          - button "Về Miro" [ref=f12e192] [cursor=pointer]
+        - generic [ref=f12e194]:
+          - generic [ref=f12e195]:
+            - heading "Giao diện (Appearance)" [level=1] [ref=f12e196]
+            - paragraph [ref=f12e197]: Mọi tùy chỉnh được lưu cục bộ trên trình duyệt của bạn.
+          - generic [ref=f12e198]:
+            - generic [ref=f12e199]:
+              - generic [ref=f12e200]:
+                - paragraph [ref=f12e201]: Chủ đề màu sắc (Theme)
+                - paragraph [ref=f12e202]: Chọn giữa Midnight Lime (mặc định), Navy Cream, Light Mode hoặc theo hệ điều hành.
+              - generic [ref=f12e204]:
+                - button "Midnight Lime" [ref=f12e205] [cursor=pointer]
+                - button "Navy Cream" [ref=f12e206] [cursor=pointer]
+                - button "Light Mode" [ref=f12e207] [cursor=pointer]
+                - button "System" [ref=f12e208] [cursor=pointer]
+            - generic [ref=f12e209]:
+              - generic [ref=f12e210]:
+                - paragraph [ref=f12e211]: Mật độ bảng dữ liệu (Density)
+                - paragraph [ref=f12e212]: Thoải mái (44–48px) hoặc Gọn (36px) cho bảng tác vụ và nghiên cứu.
+              - combobox "Density mode" [ref=f12e215]:
+                - option "Comfortable" [selected]
+                - option "Compact"
+            - generic [ref=f12e216]:
+              - generic [ref=f12e217]:
+                - paragraph [ref=f12e218]: Thu gọn thanh điều hướng mặc định
+                - paragraph [ref=f12e219]: Chuyển thanh điều hướng trái sang dạng icon 56px để mở rộng không gian làm việc.
+              - switch "Toggle compact sidebar" [ref=f12e221] [cursor=pointer]
+  - region "Notifications alt+T"

@@ -4,9 +4,26 @@ import {
   EditorService,
   LibraryService,
   PublishService,
-  SettingsService,
   TasksService,
 } from "@/lib/services/miro.service";
+
+export {
+  useClonePlatform,
+  useConnectionAccounts as useConnections,
+  useConnectionAccount,
+  useConnectionDefault,
+  useCreateAccount,
+  usePauseAccount,
+  usePatchCapability,
+  usePlatforms,
+  usePlatformsHistory,
+  useReconnectAccount,
+  useRevokeAccount,
+  useRollbackRegistry,
+  useSetDefaultAccount,
+  useUpsertPlatform,
+  useVerifyAccount,
+} from "@/hooks/data/useConnections";
 
 // ---- Khu vực Công việc: chat / task / duyệt / dừng ----
 export const useTasks = () =>
@@ -94,44 +111,6 @@ export const useApproveProject = (projectId: string) => {
     mutationFn: () => EditorService.approve(projectId),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.projectDetail(projectId) });
-    },
-  });
-};
-
-// ---- Khu vực Cài đặt & kết nối ----
-export const useConnections = () =>
-  useQuery({ queryKey: QUERY_KEYS.connections, queryFn: () => SettingsService.connections() });
-
-export const usePlatforms = () =>
-  useQuery({ queryKey: QUERY_KEYS.platforms, queryFn: () => SettingsService.platforms() });
-
-export const useUpsertPlatform = () => {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: SettingsService.upsertPlatform,
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: QUERY_KEYS.platforms });
-    },
-  });
-};
-
-export const useClonePlatform = () => {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, ...input }: { id: string; new_id?: string }) =>
-      SettingsService.clonePlatform(id, { new_id: input.new_id ?? "" }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: QUERY_KEYS.platforms });
-    },
-  });
-};
-
-export const useRollbackRegistry = () => {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: SettingsService.rollbackRegistry,
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: QUERY_KEYS.platforms });
     },
   });
 };

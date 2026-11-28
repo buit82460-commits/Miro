@@ -1,0 +1,266 @@
+- generic [ref=f7e1]:
+  - generic [ref=f7e2]:
+    - complementary "Primary navigation" [ref=f7e4]:
+      - generic [ref=f7e5]:
+        - generic [ref=f7e6]:
+          - button [ref=f7e7] [cursor=pointer]:
+            - generic "miro." [ref=f7e8]:
+              - text: miro
+              - generic [ref=f7e9]: .
+          - button "Thu gọn thanh điều hướng" [ref=f7e10] [cursor=pointer]
+        - generic [ref=f7e13]:
+          - generic [ref=f7e14]: Personal Operations
+          - generic [ref=f7e15]: LOCAL
+        - generic [ref=f7e16]:
+          - button "Bảng lệnh" [ref=f7e17] [cursor=pointer]:
+            - generic [ref=f7e18]: Tìm kiếm nhanh...
+            - generic [ref=f7e23]: ⌘K
+          - button "Hội thoại mới" [ref=f7e24] [cursor=pointer]
+      - navigation "Workspace sections" [ref=f7e27]:
+        - generic [ref=f7e28]:
+          - button "WORKSPACE" [ref=f7e29] [cursor=pointer]
+          - list [ref=f7e33]:
+            - listitem [ref=f7e34]:
+              - link "Tổng quan" [ref=f7e35] [cursor=pointer]:
+                - /url: /overview
+            - listitem [ref=f7e42]:
+              - link "AI Workspace" [ref=f7e43] [cursor=pointer]:
+                - /url: /workspace
+            - listitem [ref=f7e47]:
+              - link "Tác vụ" [ref=f7e48] [cursor=pointer]:
+                - /url: /tasks
+            - listitem [ref=f7e54]:
+              - link "Dự án" [ref=f7e55] [cursor=pointer]:
+                - /url: /projects
+        - generic [ref=f7e59]:
+          - button "TỰ ĐỘNG HÓA" [ref=f7e60] [cursor=pointer]
+          - list [ref=f7e64]:
+            - listitem [ref=f7e65]:
+              - link "Lịch trình" [ref=f7e66] [cursor=pointer]:
+                - /url: /schedules
+            - listitem [ref=f7e72]:
+              - link "Workflows" [ref=f7e73] [cursor=pointer]:
+                - /url: /workflows
+        - generic [ref=f7e79]:
+          - button "CÔNG CỤ" [ref=f7e80] [cursor=pointer]
+          - list [ref=f7e84]:
+            - listitem [ref=f7e85]:
+              - link "Trình duyệt" [ref=f7e86] [cursor=pointer]:
+                - /url: /browser
+            - listitem [ref=f7e91]:
+              - link "Nghiên cứu" [ref=f7e92] [cursor=pointer]:
+                - /url: /research
+            - listitem [ref=f7e97]:
+              - link "Media Studio" [ref=f7e98] [cursor=pointer]:
+                - /url: /media
+            - listitem [ref=f7e102]:
+              - link "Xuất bản" [ref=f7e103] [cursor=pointer]:
+                - /url: /publishing
+            - listitem [ref=f7e108]:
+              - link "Tri thức" [ref=f7e109] [cursor=pointer]:
+                - /url: /knowledge
+        - generic [ref=f7e113]:
+          - button "HỆ THỐNG" [ref=f7e114] [cursor=pointer]
+          - list [ref=f7e118]:
+            - listitem [ref=f7e119]:
+              - link "Hoạt động" [ref=f7e120] [cursor=pointer]:
+                - /url: /activity
+            - listitem [ref=f7e124]:
+              - link "Tích hợp" [ref=f7e125] [cursor=pointer]:
+                - /url: /integrations
+            - listitem [ref=f7e129]:
+              - link "Cài đặt" [ref=f7e130] [cursor=pointer]:
+                - /url: /settings
+      - generic [ref=f7e135]:
+        - generic [ref=f7e136]:
+          - generic [ref=f7e137]: Miro Runtime · Mô phỏng
+          - generic [ref=f7e138]: OK
+        - generic [ref=f7e139]:
+          - generic [ref=f7e140]:
+            - generic [ref=f7e141]: OP
+            - generic [ref=f7e142]:
+              - paragraph [ref=f7e143]: Operator
+              - paragraph [ref=f7e144]: Asia/Bangkok
+          - button "Switch theme" [ref=f7e146] [cursor=pointer]
+    - generic [ref=f7e149]:
+      - banner [ref=f7e150]:
+        - navigation "Breadcrumb" [ref=f7e152]:
+          - generic [ref=f7e153]: Tác vụ
+        - generic [ref=f7e154]:
+          - generic "Mọi tác vụ, trình duyệt và xuất bản đều được mô phỏng cục bộ. Không kết nối tài khoản thật." [ref=f7e155]: Chế độ Mô phỏng
+          - button "Giám sát tác vụ" [ref=f7e156] [cursor=pointer]:
+            - generic [ref=f7e159]: "0"
+            - generic [ref=f7e160]: đang chạy
+          - button "Cần xử lý" [ref=f7e161] [cursor=pointer]:
+            - generic [ref=f7e164]: "2"
+          - button "Thông báo" [ref=f7e165] [cursor=pointer]
+          - button "Trợ lý AI ngữ cảnh" [ref=f7e170] [cursor=pointer]:
+            - generic [ref=f7e173]: Miro AI
+      - main [ref=f7e174]:
+        - generic [ref=f7e175]:
+          - generic [ref=f7e176]:
+            - generic [ref=f7e177]:
+              - generic [ref=f7e178]:
+                - heading "Tác vụ" [level=1] [ref=f7e179]
+                - paragraph [ref=f7e180]: Quản lý tập trung mọi tác vụ từ Chat, Thủ công, Lịch trình và Workflow.
+              - button "Tạo tác vụ" [active] [ref=f7e181] [cursor=pointer]
+            - generic [ref=f7e184]:
+              - generic [ref=f7e185]:
+                - textbox "Tìm theo tên tác vụ, ID hoặc tài nguyên..." [ref=f7e190]
+                - combobox "Filter by status" [ref=f7e191]:
+                  - option "Mọi trạng thái" [selected]
+                  - option "Đang thực thi"
+                  - option "Hàng đợi"
+                  - option "Chờ phê duyệt"
+                  - option "Chờ tài nguyên"
+                  - option "Tạm dừng"
+                  - option "Hoàn tất"
+                  - option "Hoàn tất một phần"
+                  - option "Thất bại"
+                - combobox "Filter by trigger" [ref=f7e192]:
+                  - option "Mọi nguồn" [selected]
+                  - option "Chat"
+                  - option "Manual"
+                  - option "Schedule"
+                  - option "Workflow"
+              - tablist [ref=f7e193]:
+                - tab "Danh sách" [selected] [ref=f7e194] [cursor=pointer]
+                - tab "Bảng" [ref=f7e196] [cursor=pointer]
+            - table [ref=f7e199]:
+              - rowgroup [ref=f7e200]:
+                - row [ref=f7e201]:
+                  - columnheader "Tác vụ" [ref=f7e202]:
+                    - button "Tác vụ" [ref=f7e432] [cursor=pointer]
+                  - columnheader "Trạng thái" [ref=f7e208]:
+                    - button "Trạng thái" [ref=f7e437] [cursor=pointer]
+                  - columnheader "Tiến độ" [ref=f7e214]:
+                    - button "Tiến độ" [ref=f7e442] [cursor=pointer]
+                  - columnheader "Ưu tiên" [ref=f7e220]:
+                    - button "Ưu tiên" [ref=f7e447] [cursor=pointer]
+                  - columnheader "Nguồn kích hoạt" [ref=f7e226]:
+                    - button "Nguồn kích hoạt" [ref=f7e452] [cursor=pointer]
+                  - columnheader "Tài nguyên" [ref=f7e232]:
+                    - button "Tài nguyên" [ref=f7e457] [cursor=pointer]
+                  - columnheader "Thời gian tạo" [ref=f7e238]:
+                    - button "Thời gian tạo" [ref=f7e462] [cursor=pointer]
+                  - columnheader "Thao tác" [ref=f7e244]
+              - rowgroup [ref=f7e245]:
+                - row [ref=f7e383] [cursor=pointer]:
+                  - cell [ref=f7e384]:
+                    - generic [ref=f7e385]:
+                      - paragraph [ref=f7e386]: Nghiên cứu 10 video KANS 377 (Profile 20)
+                      - paragraph [ref=f7e387]: task-ktfgx24lf
+                  - cell "Hoàn tất" [ref=f7e388]
+                  - cell [ref=f7e394]:
+                    - paragraph [ref=f7e398]: 10/10 (100%)
+                  - cell "high" [ref=f7e399]
+                  - cell "chat" [ref=f7e400]
+                  - cell "Profile 20 · KANS 377 Research" [ref=f7e401]
+                  - cell "22:01 26-11" [ref=f7e403]
+                  - cell [ref=f7e404]
+                - row [ref=f7e405] [cursor=pointer]:
+                  - cell [ref=f7e247]:
+                    - generic [ref=f7e248]:
+                      - paragraph [ref=f7e249]: "Xuất bản TikTok: Review 14 ngày KANS 377"
+                      - paragraph [ref=f7e250]: task-publish-approval
+                  - cell "Chờ phê duyệt" [ref=f7e251]
+                  - cell [ref=f7e256]:
+                    - paragraph [ref=f7e260]: Đang chờ phê duyệt trước khi xuất bản mô phỏng
+                  - cell "high" [ref=f7e261]
+                  - cell "workflow" [ref=f7e262]
+                  - cell "TikTok · @miro.demo.beauty" [ref=f7e263]
+                  - cell "21:28 26-11" [ref=f7e406]
+                  - cell [ref=f7e266]:
+                    - 'button "Cancel Xuất bản TikTok: Review 14 ngày KANS 377" [ref=f7e268]'
+                - row [ref=f7e407] [cursor=pointer]:
+                  - cell [ref=f7e272]:
+                    - generic [ref=f7e273]:
+                      - paragraph [ref=f7e274]: Nghiên cứu 5 video mẫu KANS 377 (Đợt 1)
+                      - paragraph [ref=f7e275]: task-kans-completed
+                  - cell "Hoàn tất" [ref=f7e276]
+                  - cell [ref=f7e282]:
+                    - paragraph [ref=f7e286]: 5/5 (100%)
+                  - cell "medium" [ref=f7e287]
+                  - cell "chat" [ref=f7e288]
+                  - cell "KANS 377 Research" [ref=f7e289]
+                  - cell "21:16 26-11" [ref=f7e408]
+                  - cell [ref=f7e292]
+                - row [ref=f7e409] [cursor=pointer]:
+                  - cell [ref=f7e294]:
+                    - generic [ref=f7e295]:
+                      - paragraph [ref=f7e296]: Khảo sát 5 video áo khoác tối giản (Kết quả một phần)
+                      - paragraph [ref=f7e297]: task-partial-fashion
+                  - cell "Hoàn tất một phần" [ref=f7e298]
+                  - cell [ref=f7e303]:
+                    - paragraph [ref=f7e307]: 3/5 (60%)
+                  - cell "medium" [ref=f7e308]
+                  - cell "manual" [ref=f7e309]
+                  - cell "Affiliate Fashion Research" [ref=f7e310]
+                  - cell "20:54 26-11" [ref=f7e410]
+                  - cell [ref=f7e313]:
+                    - button "Retry Khảo sát 5 video áo khoác tối giản (Kết quả một phần)" [ref=f7e315]
+                - row [ref=f7e411] [cursor=pointer]:
+                  - cell [ref=f7e320]:
+                    - generic [ref=f7e321]:
+                      - paragraph [ref=f7e322]: Đồng bộ chỉ số định kỳ trên Profile 23
+                      - paragraph [ref=f7e323]: task-failed-profile23
+                  - cell "Thất bại" [ref=f7e324]
+                  - cell [ref=f7e331]:
+                    - paragraph [ref=f7e335]: 1/3 (33%)
+                  - cell "high" [ref=f7e336]
+                  - cell "schedule" [ref=f7e337]
+                  - cell "Profile 23 · Backup Scraper Node" [ref=f7e338]
+                  - cell "19:56 26-11" [ref=f7e412]
+                  - cell [ref=f7e341]:
+                    - button "Retry Đồng bộ chỉ số định kỳ trên Profile 23" [ref=f7e343]
+          - dialog "Tạo tác vụ mới (Mô phỏng)" [ref=f7e467]:
+            - generic [ref=f7e468]:
+              - generic [ref=f7e469]:
+                - generic [ref=f7e470]:
+                  - heading "Tạo tác vụ mới (Mô phỏng)" [level=2] [ref=f7e471]
+                  - paragraph [ref=f7e472]: Khởi chạy trực tiếp tác vụ mà không cần thông qua giao diện trò chuyện.
+                - button "Close modal" [ref=f7e473] [cursor=pointer]
+              - generic [ref=f7e478]:
+                - generic [ref=f7e479]:
+                  - generic [ref=f7e480]: Loại tác vụ mô phỏng
+                  - combobox "Loại tác vụ mô phỏng" [ref=f7e481]:
+                    - option "Nghiên cứu 10 video TikTok (Count-based)" [selected]
+                    - option "Cấu hình lịch trình tự động (Stage-based)"
+                    - option "Xuất bản nội dung cần phê duyệt (Approval)"
+                    - option "Thu thập 5 bản ghi (Kết quả một phần 3/5)"
+                    - option "Kiểm tra Profile 23 (Lỗi kết nối & Khôi phục)"
+                    - option "Phân tích video trong Media Studio"
+                - generic [ref=f7e482]:
+                  - generic [ref=f7e483]: Hướng dẫn thực thi
+                  - textbox "Hướng dẫn thực thi" [ref=f7e484]:
+                    - /placeholder: "Ví dụ: Tìm và phân tích 10 video KANS 377 trên TikTok bằng Profile 20"
+                - generic [ref=f7e485]:
+                  - generic [ref=f7e486]:
+                    - generic [ref=f7e487]: Browser Profile
+                    - combobox "Browser Profile" [ref=f7e488]:
+                      - option "Profile 20 (connected)" [selected]
+                      - option "Profile 21 (connected)"
+                      - option "Profile 22 (unverified)"
+                      - option "Profile 23 (disconnected)"
+                  - generic [ref=f7e489]:
+                    - generic [ref=f7e490]: Dự án
+                    - combobox "Dự án" [ref=f7e491]:
+                      - option "KANS 377 Product Research" [selected]
+                      - option "Fashion Content Production"
+                      - option "Affiliate Content Operations"
+              - generic [ref=f7e492]:
+                - button "Hủy" [ref=f7e493] [cursor=pointer]
+                - button "Khởi chạy tác vụ" [ref=f7e494] [cursor=pointer]
+    - region "Notifications alt+T"
+  - generic [ref=f7e417] [cursor=pointer]:
+    - button "Open Next.js Dev Tools" [ref=f7e418]
+    - generic [ref=f7e422]:
+      - button "Open issues overlay" [ref=f7e423]:
+        - generic [ref=f7e424]:
+          - generic [aria-hidden] [ref=f7e425]: "1"
+          - generic [ref=f7e426]: "2"
+        - generic [ref=f7e427]:
+          - text: Issue
+          - generic [aria-hidden] [ref=f7e428]: s
+      - button "Collapse issues badge" [ref=f7e429]
+  - alert [ref=f7e347]

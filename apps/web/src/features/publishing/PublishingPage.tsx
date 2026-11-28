@@ -1,341 +1,171 @@
 "use client";
-import { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from '@/lib/router-compat';
+import { useCallback, useEffect, useState } from "react";
 import {
-  CheckCircle2,
-  Plus,
-  Send,
-  ShieldAlert,
-} from 'lucide-react';
-import { toast } from 'sonner';
-import type { Publication, PublishingPlatform } from '../../domain/types';
-import { useMiroStore } from '../../stores/useMiroStore';
-import { useTranslation } from '../../i18n/useTranslation';
-import { launchTaskFromInstruction } from '../../proto-services/mock/executionEngine';
-import { formatTimeInZone } from '../../lib/format';
-import { generateId, cn } from '../../lib/utils';
-import {
-  Button,
-  Card,
-  Input,
-  SegmentedTabs,
-  Select,
-  StatusTag,
-  Textarea,
-} from '../../components/miro-ui/primitives';
+  approveThreads,
+  createPublication,
+  createRender,
+  fetchDayPlan,
+  fetchThreadsHistory,
+  mapThreadsError,
+  prepareThreads,
+  publishThreads,
+  reconcileThreads,
+  type ThreadsApproval,
+  type ThreadsHistoryResult,
+} from "@/lib/threads/flow";
 
-const PLATFORMS: PublishingPlatform[] = ['TikTok', 'Facebook', 'Instagram', 'YouTube', 'Threads'];
-
+// Publishing — BE-first, không mock/fixture.
+// Luồng: prepare → approve → publish dry-run → reconcile → history.
+// Post thật chỉ sau approval tươi (allow_post=true); UNKNOWN → chỉ Reconcile (read-only).
 export function PublishingPage() {
-  const { publicationId } = useParams();
-  const navigate = useNavigate();
-  const { t } = useTranslation();
+  const [assetPath, setAssetPath] = useState("");
+  const [projectId, setProjectId] = useState("");
+  const [requestId, setRequestId] = useState(`req-${Date.now()}`);
+  const [revision, setRevision] = useState(0);
+  const [contentHash, setContentHash] = useState("");
+  const [text, setText] = useState("");
+  const [owner, setOwner] = useState("");
+  const [shortcode, setShortcode] = useState("");
+  const [approval, setApproval] = useState<ThreadsApproval | null>(null);
+  const [publicationId, setPublicationId] = useState(`pub-${Date.now()}`);
+  const [attemptId, setAttemptId] = useState(`att-${Date.now()}`);
+  const [renderId, setRenderId] = useState("");
+  const [msg, setMsg] = useState("");
+  const [msgKind, setMsgKind] = useState<"info" | "error">("info");
+  const [busy, setBusy] = useState(false);
+  const [history, setHistory] = useState<ThreadsHistoryResult | null>(null);
+  const [dayPlan, setDayPlan] = useState<{ date?: string; status?: string } | null>(null);
 
-  const publications = useMiroStore((s) => s.publications);
-  const mediaAssets = useMiroStore((s) => s.mediaAssets);
-  const approvals = useMiroStore((s) => s.approvals);
-  const timezone = useMiroStore((s) => s.settings.timezone);
-  const upsertPublication = useMiroStore((s) => s.upsertPublication);
-  const updatePublication = useMiroStore((s) => s.updatePublication);
-  const resolveApproval = useMiroStore((s) => s.resolveApproval);
-  const setActiveContext = useMiroStore((s) => s.setActiveContext);
+  const say = (m: string, kind: "info" | "error" = "info") => {
+    setMsg(m);
+    setMsgKind(kind);
+  };
 
-  const [view, setView] = useState<'all' | 'draft' | 'queue' | 'history'>('all');
-  const [platformFilter, setPlatformFilter] = useState<string>('all');
-
-  const selectedPub =
-    (publicationId ? publications.find((p) => p.id === publicationId) : null) ?? publications[0];
+  const loadDayPlan = useCallback(async () => {
+    try {
+      setDayPlan(await fetchDayPlan());
+    } catch {
+      setDayPlan(null);
+    }
+  }, []);
 
   useEffect(() => {
-    setActiveContext(
-      selectedPub
-        ? {
-            resourceKind: 'publishing',
-            resourceId: selectedPub.id,
-            resourceLabel: `${selectedPub.platform} · ${selectedPub.title}`,
-            projectId: selectedPub.projectId,
-          }
-        : { resourceLabel: undefined }
-    );
-  }, [selectedPub, setActiveContext]);
+    loadDayPlan();
+  }, [loadDayPlan]);
 
-  const filtered = useMemo(() => {
-    return publications.filter((p) => {
-      if (platformFilter !== 'all' && p.platform !== platformFilter) return false;
-      if (view === 'draft' && p.status !== 'draft') return false;
-      if (view === 'queue' && p.status !== 'queued' && p.status !== 'waiting_approval' && p.status !== 'approved') return false;
-      if (view === 'history' && p.status !== 'published' && p.status !== 'rejected') return false;
-      return true;
-    });
-  }, [publications, platformFilter, view]);
-
-  const handleCreate = () => {
-    const id = generateId('pub');
-    const created: Publication = {
-      id,
-      title: 'Bản nháp xuất bản mới',
-      platform: 'TikTok',
-      account: '@miro.demo.beauty',
-      mediaAssetId: mediaAssets[0]?.id,
-      mediaLabel: mediaAssets[0]?.name ?? 'Chưa đính kèm media',
-      caption: 'Nhập nội dung mô tả tại đây...',
-      hashtags: ['#KANS377', '#demo'],
-      scheduledFor: new Date(Date.now() + 4 * 3600_000).toISOString(),
-      status: 'draft',
-      projectId: 'proj-kans-377',
-      validationIssues: [],
-    };
-    upsertPublication(created);
-    navigate(`/publishing/${id}`);
-    toast.success('Đã tạo bản nháp xuất bản mô phỏng');
-  };
-
-  const handleSubmitForApproval = (pub: Publication) => {
-    if (!pub.caption.trim()) {
-      toast.error('Caption không được để trống.');
-      return;
+  const run = async (fn: () => Promise<string>) => {
+    setBusy(true);
+    setMsg("");
+    try {
+      say(await fn());
+    } catch (e) {
+      const f = mapThreadsError(e);
+      say(`${f.code}: ${f.message} Hành động: ${f.action}`, "error");
+    } finally {
+      setBusy(false);
     }
-    const tk = launchTaskFromInstruction({
-      instruction: `Xuất bản mô phỏng "${pub.title}" lên ${pub.platform} (${pub.account})`,
-      overrideScenario: 'publish_approval',
-      projectId: pub.projectId,
-      trigger: 'manual',
-      openLive: false,
-    });
-    updatePublication(pub.id, { status: 'waiting_approval', taskId: tk.id, approvalId: tk.approvalId });
-    toast.info('Đã gửi yêu cầu phê duyệt xuất bản tới Trung tâm phê duyệt');
   };
 
-  const pendingApproval = selectedPub
-    ? approvals.find((a) => a.targetResourceId === selectedPub.id && a.status === 'pending')
-    : undefined;
+  const need = (v: string, name: string) => {
+    if (!v.trim()) throw new Error(`422: Thiếu ${name}`);
+    return v;
+  };
 
   return (
-    <div className="h-full flex flex-col p-4 sm:p-6 gap-4 overflow-hidden">
-      {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-3 shrink-0">
+    <div className="h-full overflow-y-auto p-4 sm:p-6">
+      <div className="mx-auto max-w-[1080px] space-y-5">
         <div>
-          <h1 className="text-h1 text-[var(--color-text-primary)]">{t.nav.publishing}</h1>
+          <h1 className="text-h1 text-[var(--color-text-primary)]">Xuất bản (BE thật)</h1>
           <p className="text-[13px] text-[var(--color-text-secondary)]">
-            Chuẩn bị nội dung đa nền tảng và kiểm duyệt an toàn. Mọi thao tác đăng đều được mô phỏng cục bộ.
+            Prepare → Approve → Publish dry-run → Reconcile → History. BE down → lỗi 502,
+            không dữ liệu mẫu. Post thật chỉ sau approval tươi. UNKNOWN → chỉ Reconcile (read-only).
+            {dayPlan ? ` Day-plan: ${dayPlan.date ?? "?"} (${dayPlan.status ?? "?"})` : " Day-plan: chưa tải được."}
           </p>
         </div>
-        <Button variant="primary" onClick={handleCreate}>
-          <Plus className="w-4 h-4" />
-          <span>Tạo bài xuất bản</span>
-        </Button>
-      </div>
 
-      {/* Filters */}
-      <div className="flex flex-wrap items-center justify-between gap-2.5 shrink-0">
-        <SegmentedTabs
-          value={view}
-          onChange={setView}
-          items={[
-            { value: 'all', label: t.common.all, count: publications.length },
-            { value: 'draft', label: 'Bản nháp' },
-            { value: 'queue', label: 'Hàng đợi & Chờ duyệt' },
-            { value: 'history', label: 'Lịch sử' },
-          ]}
-        />
-        <select
-          aria-label="Filter platform"
-          value={platformFilter}
-          onChange={(e) => setPlatformFilter(e.target.value)}
-          className="h-9 rounded-[6px] bg-[var(--color-surface-2)] border border-[var(--color-border)] px-2.5 text-[13px] text-[var(--color-text-secondary)]"
-        >
-          <option value="all">Tất cả nền tảng</option>
-          {PLATFORMS.map((pl) => (
-            <option key={pl} value={pl}>{pl}</option>
-          ))}
-        </select>
-      </div>
+        {msg ? (
+          <p data-testid="publishing-msg" className={msgKind === "error" ? "text-[var(--color-error)]" : "text-[var(--color-success)]"}>
+            {msg}
+          </p>
+        ) : null}
 
-      {/* Main Split: List + Editor + Platform Preview */}
-      <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-4 overflow-hidden">
-        {/* Left List (3 cols) */}
-        <div className="lg:col-span-3 overflow-y-auto space-y-2 pr-1">
-          {filtered.map((p) => (
-            <button
-              key={p.id}
-              type="button"
-              onClick={() => navigate(`/publishing/${p.id}`)}
-              className={cn(
-                'w-full rounded-[8px] border p-3 text-left space-y-1.5 transition-colors cursor-pointer',
-                p.id === selectedPub?.id
-                  ? 'bg-[var(--color-accent-subtle)]/70 border-[var(--color-accent-border)]'
-                  : 'bg-[var(--color-surface-1)] border-[var(--color-border)] hover:bg-[var(--color-hover)]'
-              )}
-            >
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-[11px] font-medium text-[var(--color-text-muted)]">{p.platform}</span>
-                <StatusTag
-                  tone={
-                    p.status === 'published'
-                      ? 'success'
-                      : p.status === 'waiting_approval'
-                      ? 'warning'
-                      : p.status === 'rejected'
-                      ? 'error'
-                      : 'neutral'
-                  }
-                >
-                  {p.status}
-                </StatusTag>
-              </div>
-              <p className="text-[13px] font-medium text-[var(--color-text-primary)] line-clamp-2">{p.title}</p>
-              <p className="font-mono-tech text-[11px] text-[var(--color-text-muted)]">
-                {formatTimeInZone(p.scheduledFor, timezone)}
-              </p>
-            </button>
-          ))}
-        </div>
+        <section className="rounded-[8px] border border-[var(--color-border)] bg-[var(--color-surface-1)] p-4 space-y-3">
+          <h2 className="text-h4">1 · Prepare + Render + Publication</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            <input aria-label="asset_path" placeholder="asset_path" value={assetPath} onChange={(e) => setAssetPath(e.target.value)} className="h-9 rounded-[6px] border border-[var(--color-border)] bg-[var(--color-surface-2)] px-2.5 text-[13px]" />
+            <input aria-label="project_id" placeholder="project_id" value={projectId} onChange={(e) => setProjectId(e.target.value)} className="h-9 rounded-[6px] border border-[var(--color-border)] bg-[var(--color-surface-2)] px-2.5 text-[13px]" />
+            <input aria-label="request_id" placeholder="request_id" value={requestId} onChange={(e) => setRequestId(e.target.value)} className="h-9 rounded-[6px] border border-[var(--color-border)] bg-[var(--color-surface-2)] px-2.5 text-[13px]" />
+            <input aria-label="content_hash" placeholder="content_hash" value={contentHash} onChange={(e) => setContentHash(e.target.value)} className="h-9 rounded-[6px] border border-[var(--color-border)] bg-[var(--color-surface-2)] px-2.5 text-[13px]" />
+            <input aria-label="expected_revision" type="number" placeholder="expected_revision" value={revision} onChange={(e) => setRevision(Number(e.target.value))} className="h-9 rounded-[6px] border border-[var(--color-border)] bg-[var(--color-surface-2)] px-2.5 text-[13px]" />
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button type="button" disabled={busy} onClick={() => run(async () => {
+              const r = await prepareThreads({ asset_path: need(assetPath, "asset_path"), project_id: need(projectId, "project_id"), request_id: need(requestId, "request_id"), expected_revision: revision, content_hash: need(contentHash, "content_hash") });
+              if (r.render?.render_id) setRenderId(r.render.render_id);
+              return `Prepare OK — render ${r.render?.render_id ?? "?"}${r.replayed ? " (replayed)" : ""}.`;
+            })} className="h-9 rounded-[6px] bg-[var(--color-accent)] px-3 text-[13px]">Prepare</button>
+            <button type="button" disabled={busy} onClick={() => run(async () => {
+              const r = await createRender({ request_id: need(requestId, "request_id"), project_id: need(projectId, "project_id"), expected_revision: revision, content_hash: need(contentHash, "content_hash") });
+              setRenderId(r.render_id);
+              return `Render OK — ${r.render_id} (${r.status})${r.replayed ? " (replayed)" : ""}.`;
+            })} className="h-9 rounded-[6px] border border-[var(--color-border)] px-3 text-[13px]">Tạo render</button>
+            <button type="button" disabled={busy} onClick={() => run(async () => {
+              const r = await createPublication({ publication_id: need(publicationId, "publication_id"), attempt_id: need(attemptId, "attempt_id"), render_id: need(renderId, "render_id"), channel: "threads" });
+              return `Publication OK — ${r.publication_id}/${r.attempt_id} (${r.status})${r.replayed ? " (replayed)" : ""}.`;
+            })} className="h-9 rounded-[6px] border border-[var(--color-border)] px-3 text-[13px]">Tạo publication</button>
+          </div>
+        </section>
 
-        {/* Center Editor (5 cols) */}
-        {selectedPub && (
-          <Card className="lg:col-span-5 overflow-y-auto space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-h4 text-[var(--color-text-primary)]">Trình soạn xuất bản</h2>
-              <StatusTag tone="neutral">Simulated Only</StatusTag>
-            </div>
+        <section className="rounded-[8px] border border-[var(--color-border)] bg-[var(--color-surface-1)] p-4 space-y-3">
+          <h2 className="text-h4">2 · Approve intent (scope=threads_post)</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+            <input aria-label="text" placeholder="text" value={text} onChange={(e) => setText(e.target.value)} className="h-9 rounded-[6px] border border-[var(--color-border)] bg-[var(--color-surface-2)] px-2.5 text-[13px]" />
+            <input aria-label="owner" placeholder="owner" value={owner} onChange={(e) => setOwner(e.target.value)} className="h-9 rounded-[6px] border border-[var(--color-border)] bg-[var(--color-surface-2)] px-2.5 text-[13px]" />
+            <input aria-label="shortcode" placeholder="shortcode" value={shortcode} onChange={(e) => setShortcode(e.target.value)} className="h-9 rounded-[6px] border border-[var(--color-border)] bg-[var(--color-surface-2)] px-2.5 text-[13px]" />
+          </div>
+          <button type="button" disabled={busy} onClick={() => run(async () => {
+            const a = await approveThreads({ text: need(text, "text"), owner: need(owner, "owner"), shortcode: need(shortcode, "shortcode") }, revision);
+            setApproval(a);
+            return `Approve OK — scope=${a.scope} revision=${a.revision}. Post thật đã mở (approval tươi).`;
+          })} className="h-9 rounded-[6px] bg-[var(--color-accent)] px-3 text-[13px]">Duyệt intent</button>
+        </section>
 
-            {pendingApproval && (
-              <div className="rounded-[8px] bg-[var(--color-warning-bg)] border border-[var(--color-warning)]/40 p-3 space-y-2">
-                <p className="text-[12px] font-medium text-[var(--color-warning)] flex items-center gap-1.5">
-                  <ShieldAlert className="w-3.5 h-3.5" />
-                  <span>Đang chờ phê duyệt xuất bản</span>
-                </p>
-                <div className="flex items-center gap-2">
-                  <Button variant="primary" size="sm" onClick={() => resolveApproval(pendingApproval.id, 'approved')}>
-                    {t.actions.approve}
-                  </Button>
-                  <Button variant="destructive" size="sm" onClick={() => resolveApproval(pendingApproval.id, 'rejected')}>
-                    {t.actions.reject}
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            <Input
-              label="Tiêu đề nội bộ"
-              value={selectedPub.title}
-              onChange={(e) => updatePublication(selectedPub.id, { title: e.target.value })}
-            />
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <Select
-                label="Nền tảng"
-                value={selectedPub.platform}
-                onChange={(e) =>
-                  updatePublication(selectedPub.id, { platform: e.target.value as PublishingPlatform })
-                }
-              >
-                {PLATFORMS.map((pl) => (
-                  <option key={pl} value={pl}>{pl}</option>
-                ))}
-              </Select>
-              <Input
-                label="Tài khoản mẫu"
-                value={selectedPub.account}
-                onChange={(e) => updatePublication(selectedPub.id, { account: e.target.value })}
-              />
-            </div>
-
-            <Select
-              label="Tư liệu Media đính kèm"
-              value={selectedPub.mediaAssetId ?? ''}
-              onChange={(e) => {
-                const asset = mediaAssets.find((m) => m.id === e.target.value);
-                updatePublication(selectedPub.id, {
-                  mediaAssetId: e.target.value,
-                  mediaLabel: asset ? `${asset.name} (${asset.durationSec}s)` : 'Bài viết văn bản',
-                });
-              }}
-            >
-              <option value="">Bài viết văn bản</option>
-              {mediaAssets.map((m) => (
-                <option key={m.id} value={m.id}>{m.name} ({m.durationSec}s)</option>
+        <section className="rounded-[8px] border border-[var(--color-border)] bg-[var(--color-surface-1)] p-4 space-y-3">
+          <h2 className="text-h4">3 · Publish (dry-run mặc định) + Reconcile + History</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+            <input aria-label="publication_id" placeholder="publication_id" value={publicationId} onChange={(e) => setPublicationId(e.target.value)} className="h-9 rounded-[6px] border border-[var(--color-border)] bg-[var(--color-surface-2)] px-2.5 text-[13px]" />
+            <input aria-label="attempt_id" placeholder="attempt_id" value={attemptId} onChange={(e) => setAttemptId(e.target.value)} className="h-9 rounded-[6px] border border-[var(--color-border)] bg-[var(--color-surface-2)] px-2.5 text-[13px]" />
+            <input aria-label="render_id" placeholder="render_id" value={renderId} onChange={(e) => setRenderId(e.target.value)} className="h-9 rounded-[6px] border border-[var(--color-border)] bg-[var(--color-surface-2)] px-2.5 text-[13px]" />
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button type="button" disabled={busy} onClick={() => run(async () => {
+              const p = await publishThreads({ publication_id: need(publicationId, "publication_id"), attempt_id: need(attemptId, "attempt_id"), render_id: need(renderId, "render_id"), text, owner: need(owner, "owner"), shortcode: need(shortcode, "shortcode"), allow_post: false });
+              return `Dry-run OK — ${p.status ?? "xong"} (chưa đăng thật). Dùng Reconcile để đối soát.`;
+            })} className="h-9 rounded-[6px] bg-[var(--color-accent)] px-3 text-[13px]">Publish dry-run</button>
+            <button type="button" disabled={busy || !approval} title={approval ? "Approval tươi — cho phép post thật" : "Cần duyệt intent trước"} onClick={() => run(async () => {
+              if (!approval) throw new Error("422: Cần approval tươi trước khi đăng thật");
+              const p = await publishThreads({ publication_id: need(publicationId, "publication_id"), attempt_id: need(attemptId, "attempt_id"), render_id: need(renderId, "render_id"), text, owner: need(owner, "owner"), shortcode: need(shortcode, "shortcode"), approval, allow_post: true });
+              return `Post thật: ${p.status ?? "xong"} — đối soát qua History/Reconcile.`;
+            })} className="h-9 rounded-[6px] border border-[var(--color-border)] px-3 text-[13px]">Đăng thật (cần approval tươi)</button>
+            <button type="button" disabled={busy} onClick={() => run(async () => {
+              const r = await reconcileThreads({ text, owner: need(owner, "owner"), shortcode: need(shortcode, "shortcode") });
+              return `Reconcile OK — ${r.status ?? "xong"} (read-only, không đăng lại).`;
+            })} className="h-9 rounded-[6px] border border-[var(--color-border)] px-3 text-[13px]">Reconcile (read-only)</button>
+            <button type="button" disabled={busy} onClick={() => run(async () => {
+              const h = await fetchThreadsHistory(need(publicationId, "publication_id"), need(renderId, "render_id"));
+              setHistory(h);
+              return `History OK — ${h.journals?.length ?? 0} journal.`;
+            })} className="h-9 rounded-[6px] border border-[var(--color-border)] px-3 text-[13px]">Xem history</button>
+          </div>
+          {history ? (
+            <div className="text-[12px] font-mono-tech space-y-1">
+              {(history.journals ?? []).map((j, i) => (
+                <p key={i}>{j.file} · {j.shortcode ?? ""} · {j.status ?? ""} · {j.post_id ?? "no-post-id"}</p>
               ))}
-            </Select>
-
-            <Textarea
-              label="Caption"
-              rows={5}
-              value={selectedPub.caption}
-              onChange={(e) => updatePublication(selectedPub.id, { caption: e.target.value })}
-            />
-
-            <Input
-              label="Hashtags (cách nhau bằng dấu cách)"
-              value={selectedPub.hashtags.join(' ')}
-              onChange={(e) =>
-                updatePublication(selectedPub.id, {
-                  hashtags: e.target.value.split(/\s+/).filter(Boolean),
-                })
-              }
-            />
-
-            <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-[var(--color-border-subtle)]">
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => {
-                  updatePublication(selectedPub.id, { status: 'queued' });
-                  toast.success('Đã đưa vào hàng đợi xuất bản');
-                }}
-              >
-                Đưa vào hàng đợi
-              </Button>
-              <Button
-                variant="primary"
-                size="sm"
-                disabled={selectedPub.status === 'published'}
-                onClick={() => handleSubmitForApproval(selectedPub)}
-              >
-                <Send className="w-3.5 h-3.5" />
-                <span>Gửi phê duyệt & Xuất bản (Mô phỏng)</span>
-              </Button>
+              {(history.journals ?? []).length === 0 ? <p>Chưa có journal nào.</p> : null}
             </div>
-          </Card>
-        )}
-
-        {/* Right Platform Preview (4 cols) */}
-        {selectedPub && (
-          <Card className="lg:col-span-4 overflow-y-auto space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-h4 text-[var(--color-text-primary)]">Xem trước · {selectedPub.platform}</h3>
-              <span className="font-mono-tech text-[11px] text-[var(--color-text-muted)]">Mock Preview</span>
-            </div>
-
-            <div className="mx-auto w-full max-w-[280px] rounded-[12px] bg-[var(--color-canvas)] border border-[var(--color-border-strong)] p-4 space-y-3">
-              <div className="flex items-center justify-between text-[12px]">
-                <span className="font-medium text-[var(--color-text-primary)]">{selectedPub.account}</span>
-                <span className="text-[11px] text-[var(--color-text-muted)]">{selectedPub.platform}</span>
-              </div>
-              <div className="rounded-[8px] bg-[#1E2B18] border border-[var(--color-border)] aspect-[9/12] p-3 flex flex-col justify-between">
-                <span className="font-mono-tech text-[10px] text-white/75">{selectedPub.mediaLabel}</span>
-                <div className="space-y-1">
-                  <p className="text-[12px] text-white leading-4 line-clamp-4">{selectedPub.caption}</p>
-                  <p className="text-[11px] text-[#C6F432]">{selectedPub.hashtags.join(' ')}</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-1.5 text-[12px]">
-              <p className="font-medium text-[var(--color-text-secondary)]">Kiểm tra hợp lệ</p>
-              {selectedPub.validationIssues.length === 0 ? (
-                <p className="flex items-center gap-1.5 text-[var(--color-success)]">
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span>Đạt điều kiện xuất bản mô phỏng.</span>
-                </p>
-              ) : (
-                selectedPub.validationIssues.map((iss, idx) => (
-                  <p key={idx} className="text-[var(--color-warning)]">• {iss}</p>
-                ))
-              )}
-            </div>
-          </Card>
-        )}
+          ) : null}
+        </section>
       </div>
     </div>
   );

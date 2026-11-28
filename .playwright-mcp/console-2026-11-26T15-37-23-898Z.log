@@ -1,0 +1,109 @@
+[     783ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:25631
+[     928ms] [ERROR] Unchecked runtime.lastError: Could not establish connection. Receiving end does not exist. @ http://127.0.0.1:3100/tasks-live:1
+[     935ms] [ERROR] A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+%s%s https://react.dev/link/hydration-mismatch 
+
+  ...
+    <HotReload assetPrefix="" globalError={[...]}>
+      <AppDevOverlayErrorBoundary globalError={[...]}>
+        <ReplaySsrOnlyErrors>
+        <DevRootHTTPAccessFallbackBoundary>
+          <HTTPAccessFallbackBoundary notFound={<NotAllowedRootHTTPFallbackError>}>
+            <HTTPAccessFallbackErrorBoundary pathname="/tasks-live" notFound={<NotAllowedRootHTTPFallbackError>} ...>
+              <RedirectBoundary>
+                <RedirectErrorBoundary router={{...}}>
+                  <Head headCacheNode={{lazyData:null, ...}}>
+                    <__next_viewport_boundary__>
+                    <MetadataTree>
+                      <__next_metadata_boundary__>
+                        <__next_metadata_boundary__>
+                          <div
+                            hidden={true}
+-                           bis_skin_checked="1"
+                          >
+                  ...
+                    <SegmentViewNode type="page" pagePath="tasks-live...">
+                      <SegmentTrieNode>
+                      <ClientPageRoot Component={function TasksLivePage} searchParams={{}} params={{}}>
+                        <TasksLivePage params={Promise} searchParams={Promise}>
+                          <MiroNav>
+                            <div style={{display:"flex", ...}} suppressHydrationWarning={true}>
+                              <aside>
+                              <main style={{flex:1,padding:24, ...}} suppressHydrationWarning={true}>
+                                <h1>
+                                <p>
+                                <div
+                                  style={{display:"flex",gap:8,maxWidth:720,marginBottom:8}}
+-                                 bis_skin_checked="1"
+                                >
+                                <h2>
+                                <p>
+                                <div
+                                  style={{display:"flex",gap:8,maxWidth:720,marginBottom:8}}
+-                                 bis_skin_checked="1"
+                                >
+                                <div
+                                  style={{display:"flex",gap:8,marginBottom:8}}
+-                                 bis_skin_checked="1"
+                                >
+                                ...
+                    ...
+                  ...
+ @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:57
+[    4700ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:197
+[    5681ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:3100/_next/static/webpack/ffa4e96152207096.webpack.hot-update.json:1
+[    5960ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:197
+[    7838ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:3100/_next/static/webpack/ffa4e96152207096.webpack.hot-update.json:1
+[    9678ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://127.0.0.1:3100/tasks-live:1
+[   10217ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ webpack-internal:///(pages-dir-browser)/./node_modules/react-dom/cjs/react-dom-client.development.js:31149
+[   10371ms] TypeError: Cannot read properties of undefined (reading 'call')
+    at __webpack_require__ (file://C:\Miro\apps\web\.next\server\webpack-runtime.js:25:43)
+    at eval (webpack-internal:///(rsc)/./node_modules/next/dist/server/app-render/encryption-utils.js:40:35)
+    at <unknown> (rsc)/./node_modules/next/dist/server/app-render/encryption-utils.js (C:\Miro\apps\web\.next\server\vendor-chunks\next.js:851:1)
+    at __webpack_require__ (file://C:\Miro\apps\web\.next\server\webpack-runtime.js:25:43)
+    at eval (webpack-internal:///(rsc)/./node_modules/next/dist/build/webpack/loaders/next-app-loader/index.js?name=app%2Ftasks-live%2Fpage&page=%2Ftasks-live%2Fpage&appPaths=%2Ftasks-live%2Fpage&pagePath=private-next-app-dir%2Ftasks-live%2Fpage.tsx&appDir=C%3A%5CMiro%5Capps%5Cweb%5Csrc%5Capp&pageExtensions=tsx&pageExtensions=ts&pageExtensions=jsx&pageExtensions=js&rootDir=C%3A%5CMiro%5Capps%5Cweb&isDev=true&tsconfigPath=tsconfig.json&basePath=&assetPrefix=&nextConfigOutput=&preferredRegion=&middlewareConfig=e30%3D&isGlobalNotFoundEnabled=!:30:103)
+    at <unknown> (rsc)/./node_modules/next/dist/build/webpack/loaders/next-app-loader/index.js?name=app%2Ftasks-live%2Fpage&page=%2Ftasks-live%2Fpage&appPaths=%2Ftasks-live%2Fpage&pagePath=private-next-app-dir%2Ftasks-live%2Fpage.tsx&appDir=C%3A%5CMiro%5Capps%5Cweb%5Csrc%5Capp&pageExtensions=tsx&pageExtensions=ts&pageExtensions=jsx&pageExtensions=js&rootDir=C%3A%5CMiro%5Capps%5Cweb&isDev=true&tsconfigPath=tsconfig.json&basePath=&assetPrefix=&nextConfigOutput=&preferredRegion=&middlewareConfig=e30%3D&isGlobalNotFoundEnabled=! (C:\Miro\apps\web\.next\server\app\tasks-live\page.js:22:1)
+    at __webpack_require__ (file://C:\Miro\apps\web\.next\server\webpack-runtime.js:25:43)
+    at __webpack_exec__ (file://C:\Miro\apps\web\.next\server\app\tasks-live\page.js:487:39)
+    at <unknown> (file://C:\Miro\apps\web\.next\server\app\tasks-live\page.js:488:926)
+    at __webpack_require__.X (file://C:\Miro\apps\web\.next\server\webpack-runtime.js:155:21)
+    at <unknown> (file://C:\Miro\apps\web\.next\server\app\tasks-live\page.js:488:47)
+    at Object.<anonymous> (file://C:\Miro\apps\web\.next\server\app\tasks-live\page.js:491:3)
+    at Module._compile (node:internal/modules/cjs/loader:1761:14)
+    at Object..js (node:internal/modules/cjs/loader:1893:10)
+    at Module.load (node:internal/modules/cjs/loader:1481:32)
+    at Module._load (node:internal/modules/cjs/loader:1300:12)
+    at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:245:24)
+    at Module.<anonymous> (node:internal/modules/cjs/loader:1504:12)
+    at mod.require (file://C:\Miro\apps\web\node_modules\next\dist\server\require-hook.js:68:28)
+    at require (node:internal/modules/helpers:152:16)
+    at requirePage (file://C:\Miro\apps\web\node_modules\next\dist\server\require.js:99:80)
+    at loadComponentsImpl (file://C:\Miro\apps\web\node_modules\next\dist\server\load-components.js:132:57)
+    at async DevServer.findPageComponentsImpl (file://C:\Miro\apps\web\node_modules\next\dist\server\next-server.js:905:36)
+    at async DevServer.findPageComponents (file://C:\Miro\apps\web\node_modules\next\dist\server\dev\next-dev-server.js:706:16)
+    at async DevServer.renderPageComponent (file://C:\Miro\apps\web\node_modules\next\dist\server\base-server.js:1465:24)
+    at async DevServer.renderToResponseImpl (file://C:\Miro\apps\web\node_modules\next\dist\server\base-server.js:1519:32)
+    at async DevServer.pipeImpl (file://C:\Miro\apps\web\node_modules\next\dist\server\base-server.js:1023:25)
+    at async NextNodeServer.handleCatchallRenderRequest (file://C:\Miro\apps\web\node_modules\next\dist\server\next-server.js:394:17)
+    at async DevServer.handleRequestImpl (file://C:\Miro\apps\web\node_modules\next\dist\server\base-server.js:914:17)
+    at async (file://C:\Miro\apps\web\node_modules\next\dist\server\dev\next-dev-server.js:400:20)
+    at async Span.traceAsyncFn (file://C:\Miro\apps\web\node_modules\next\dist\trace\trace.js:157:20)
+    at async DevServer.handleRequest (file://C:\Miro\apps\web\node_modules\next\dist\server\dev\next-dev-server.js:396:24)
+    at async invokeRender (file://C:\Miro\apps\web\node_modules\next\dist\server\lib\router-server.js:240:21)
+    at async handleRequest (file://C:\Miro\apps\web\node_modules\next\dist\server\lib\router-server.js:437:24)
+    at async requestHandlerImpl (file://C:\Miro\apps\web\node_modules\next\dist\server\lib\router-server.js:485:13)
+    at async Server.requestListener (file://C:\Miro\apps\web\node_modules\next\dist\server\lib\start-server.js:226:13)
+[   10376ms] [LOG] [HMR] connected @ webpack-internal:///(pages-dir-browser)/./node_modules/next/dist/client/dev/hot-reloader/pages/websocket.js:46
+[   10747ms] [ERROR] Unchecked runtime.lastError: Could not establish connection. Receiving end does not exist. @ http://127.0.0.1:3100/tasks-live:1
+[   16398ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(pages-dir-browser)/./node_modules/next/dist/client/dev/hot-reloader/pages/hot-reloader-pages.js:207
+[   17015ms] [LOG] [Fast Refresh] done in 617ms @ webpack-internal:///(pages-dir-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:14

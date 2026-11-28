@@ -1,3 +1,7 @@
+// DEPRECATED — production dùng BE, không thêm dữ liệu mẫu mới.
+// File này chỉ giữ lại để E2E fixture cũ không vỡ (route fixture nội bộ).
+// Mọi UI production đọc trực tiếp từ BE (http://127.0.0.1:8770); KHÔNG import
+// store này cho màn hình production mới, KHÔNG thêm seed/sample mới vào đây.
 // Fixture/mock nội bộ theo contract BE. Chạy dev + E2E không cần runtime thật.
 // Khi nối runtime thật: trỏ NEXT_PUBLIC_API_BASE sang BE, các route này không dùng nữa.
 

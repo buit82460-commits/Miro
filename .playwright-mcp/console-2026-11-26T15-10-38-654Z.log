@@ -1,0 +1,274 @@
+[     774ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:25631
+[     917ms] [ERROR] Unchecked runtime.lastError: Could not establish connection. Receiving end does not exist. @ http://127.0.0.1:3100/workspace:1
+[    1013ms] [ERROR] A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+%s%s https://react.dev/link/hydration-mismatch 
+
+  ...
+    <HotReload assetPrefix="" globalError={[...]}>
+      <AppDevOverlayErrorBoundary globalError={[...]}>
+        <ReplaySsrOnlyErrors>
+        <DevRootHTTPAccessFallbackBoundary>
+          <HTTPAccessFallbackBoundary notFound={<NotAllowedRootHTTPFallbackError>}>
+            <HTTPAccessFallbackErrorBoundary pathname="/workspace" notFound={<NotAllowedRootHTTPFallbackError>} ...>
+              <RedirectBoundary>
+                <RedirectErrorBoundary router={{...}}>
+                  <Head headCacheNode={{lazyData:null, ...}}>
+                    <__next_viewport_boundary__>
+                    <MetadataTree>
+                      <__next_metadata_boundary__>
+                        <__next_metadata_boundary__>
+                          <div
+                            hidden={true}
+-                           bis_skin_checked="1"
+                          >
+                  <__next_root_layout_boundary__>
+                    <SegmentViewNode type="layout" pagePath="layout.tsx">
+                      <SegmentTrieNode>
+                      <link>
+                      <RootLayout>
+                        <html lang="vi" data-theme="midnight-lime" className="dark" suppressHydrationWarning={true}>
+                          <head>
+                          <body
+                            className="antialiased"
+-                           __processed_fba91778-e896-41d8-95a9-c22e875b52a8__="true"
+-                           bis_register="W3sibWFzdGVyIjp0cnVlLCJleHRlbnNpb25JZCI6ImVwcGlvY2VtaG1ubGJoanBsY2drb2ZjaWll..."
+                          >
+                            ...
+                              <AiWorkspacePageRoute params={Promise} searchParams={Promise}>
+                                <MiroShell>
+                                  <AppShell>
+                                    <div
+                                      className="flex h-screen w-screen overflow-hidden bg-[var(--color-canvas)] text-..."
+-                                     bis_skin_checked="1"
+                                    >
+                                      <div
+                                        className="hidden lg:flex h-full shrink-0"
+-                                       bis_skin_checked="1"
+                                      >
+                                        <GlobalSidebar>
+                                          <aside aria-label="Primary na..." className="flex flex-...">
+                                            <div
+                                              className="px-3 pt-3 pb-2 space-y-2.5 shrink-0"
+-                                             bis_skin_checked="1"
+                                            >
+                                              <div
+                                                className="flex items-center justify-between gap-2 h-8"
+-                                               bis_skin_checked="1"
+                                              >
+                                              <div
+                                                className="flex items-center justify-between rounded-[6px] bg-[var(--c..."
+-                                               bis_skin_checked="1"
+                                              >
+                                              <div
+                                                className="flex gap-1.5 flex-col"
+-                                               bis_skin_checked="1"
+                                              >
+                                            <nav className="flex-1 ove..." aria-label="Workspace ...">
+                                              <div
+                                                className="space-y-0.5"
+-                                               bis_skin_checked="1"
+                                              >
+                                              <div
+                                                className="space-y-0.5"
+-                                               bis_skin_checked="1"
+                                              >
+                                              <div
+                                                className="space-y-0.5"
+-                                               bis_skin_checked="1"
+                                              >
+                                              <div
+                                                className="space-y-0.5"
+-                                               bis_skin_checked="1"
+                                              >
+                                            <div
+                                              className="p-2.5 border-t border-[var(--color-border)] space-y-2 shrink-0"
+-                                             bis_skin_checked="1"
+                                            >
+                                              <div
+                                                className="flex items-center justify-between px-2 py-1 text-[11px] tex..."
+-                                               bis_skin_checked="1"
+                                              >
+                                              <div
+                                                className="flex items-center justify-between gap-2 px-1"
+-                                               bis_skin_checked="1"
+                                              >
+                                                <div
+                                                  className="flex items-center gap-2 min-w-0"
+-                                                 bis_skin_checked="1"
+                                                >
+                                                  <div
+                                                    className="flex h-7 w-7 shrink-0 items-center justify-center round..."
+-                                                   bis_skin_checked="1"
+                                                  >
++                                                   OP
+                                                  <div
+                                                    className="min-w-0"
+-                                                   bis_skin_checked="1"
+                                                  >
+                                                <div
+                                                  className="flex items-center gap-0.5 shrink-0"
+-                                                 bis_skin_checked="1"
+                                                >
+                                      <div
+                                        className="flex flex-1 flex-col min-w-0 h-full overflow-hidden"
+-                                       bis_skin_checked="1"
+                                      >
+                                        <GlobalHeader>
+                                          <header className="flex items...">
+                                            <div
+                                              className="flex items-center gap-2.5 min-w-0"
+-                                             bis_skin_checked="1"
+                                            >
+                                              <Button>
+                                              <div
+                                                className="lg:hidden"
+-                                               bis_skin_checked="1"
+                                              >
+                                              ...
+                                            <div
+                                              className="flex items-center gap-1.5 shrink-0"
+-                                             bis_skin_checked="1"
+                                            >
+                                        ...
+                                      ...
+                  ...
+ @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:57
+[    1103ms] [ERROR] A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+%s%s https://react.dev/link/hydration-mismatch 
+
+  ...
+    <RedirectErrorBoundary router={{...}}>
+      <InnerLayoutRouter url="/workspace" tree={[...]} cacheNode={{lazyData:null, ...}} segmentPath={[...]}>
+        <SegmentViewNode type="page" pagePath="workspace/...">
+          <SegmentTrieNode>
+          <ClientPageRoot Component={function AiWorkspacePageRoute} searchParams={{}} params={{}}>
+            <AiWorkspacePageRoute params={Promise} searchParams={Promise}>
+              <MiroShell>
+                <AppShell>
+                  <div className="flex h-scr...">
+                    <div>
+                    <div className="flex flex-...">
+                      <GlobalHeader>
+                      <main className="flex-1 min...">
+                        <Suspense fallback={null}>
+                          <AiWorkspacePage>
+                            <div
+                              ref={{current:null}}
+                              className="flex h-full w-full overflow-hidden relative"
+-                             bis_skin_checked="1"
+                            >
+                              <div
+                                className="flex flex-col h-full min-w-0 flex-1 overflow-hidden"
+                                style={undefined}
+-                               bis_skin_checked="1"
+                              >
+                                <div
+                                  className="flex items-center justify-between gap-2 px-4 h-11 border-b border-[var(--..."
+-                                 bis_skin_checked="1"
+                                >
+                                  <div
+                                    className="flex items-center gap-2 min-w-0"
+-                                   bis_skin_checked="1"
+                                  >
+                                  <div
+                                    className="flex items-center gap-1.5"
+-                                   bis_skin_checked="1"
+                                  >
+                                <div
+                                  className="flex-1 overflow-y-auto miro-welcome-atmosphere px-4 sm:px-6 py-6 flex fle..."
+-                                 bis_skin_checked="1"
+                                >
+                                  <div
+                                    className="w-full max-w-[780px] space-y-5"
+-                                   bis_skin_checked="1"
+                                  >
+                                    <div
+                                      className="space-y-2.5 text-center"
+-                                     bis_skin_checked="1"
+                                    >
+                                      <div
+                                        className="inline-flex items-center justify-center"
+-                                       bis_skin_checked="1"
+                                      >
+                                      ...
+                                    <div
+                                      className="rounded-[14px] bg-[var(--color-surface-2)] border border-[var(--color..."
+-                                     bis_skin_checked="1"
+                                    >
+                                      <textarea>
+                                      <div
+                                        className="mt-2.5 flex flex-wrap items-center justify-between gap-2 pt-2 borde..."
+-                                       bis_skin_checked="1"
+                                      >
+                                        <div
+                                          className="flex flex-wrap items-center gap-1.5 min-w-0"
+-                                         bis_skin_checked="1"
+                                        >
+                                        ...
+                                    <div
+                                      className="space-y-2.5"
+-                                     bis_skin_checked="1"
+                                    >
+                                      <div
+                                        className="flex items-center justify-between text-[12px] text-[var(--color-tex..."
+-                                       bis_skin_checked="1"
+                                      >
+                                      <div
+                                        className="grid grid-cols-1 sm:grid-cols-2 gap-2.5"
+-                                       bis_skin_checked="1"
+                                      >
+                                        <button type="button" onClick={function onClick} className="group flex...">
+                                          <div
+                                            className="space-y-1"
+-                                           bis_skin_checked="1"
+                                          >
+                                          ...
+                                        <button type="button" onClick={function onClick} className="group flex...">
+                                          <div
+                                            className="space-y-1"
+-                                           bis_skin_checked="1"
+                                          >
+                                          ...
+                                        <button type="button" onClick={function onClick} className="group flex...">
+                                          <div
+                                            className="space-y-1"
+-                                           bis_skin_checked="1"
+                                          >
+                                          ...
+                                        <button type="button" onClick={function onClick} className="group flex...">
+                                          <div
+                                            className="space-y-1"
+-                                           bis_skin_checked="1"
+                                          >
+                                          ...
+                                    <div
+                                      className="space-y-2 pt-2"
+-                                     bis_skin_checked="1"
+                                    >
+                                      <p>
+                                      <div
+                                        className="flex flex-wrap gap-2"
+-                                       bis_skin_checked="1"
+                                      >
+                    ...
+        ...
+      ...
+ @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:57

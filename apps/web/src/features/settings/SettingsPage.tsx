@@ -61,7 +61,7 @@ export function SettingsPage() {
   const handleReset = () => {
     resetDemoData();
     setConfirmReset(false);
-    toast.success('Đã khôi phục toàn bộ dữ liệu mẫu Miro về trạng thái ban đầu.');
+    toast.success('Đã làm mới dữ liệu cục bộ về trạng thái ban đầu.');
   };
 
   return (
@@ -233,7 +233,7 @@ export function SettingsPage() {
           {(section === 'ai_models' || section === 'agent_behavior') && (
             <div>
               <SettingRow
-                title="Mô hình suy luận mô phỏng mặc định"
+                title="Mô hình suy luận mặc định"
                 description="Lựa chọn mô hình hiển thị trong thanh soạn thảo AI Workspace."
                 control={
                   <Select
@@ -241,9 +241,9 @@ export function SettingsPage() {
                     value={settings.defaultModel}
                     onChange={(e) => updateSettings({ defaultModel: e.target.value })}
                   >
-                    <option value="Miro Core (Simulated)">Miro Core (Simulated)</option>
-                    <option value="Miro Fast (Simulated)">Miro Fast (Simulated)</option>
-                    <option value="Miro Deep Research (Simulated)">Miro Deep Research (Simulated)</option>
+                    <option value="Miro Core">Miro Core</option>
+                    <option value="Miro Fast">Miro Fast</option>
+                    <option value="Miro Deep Research">Miro Deep Research</option>
                   </Select>
                 }
               />
@@ -260,7 +260,7 @@ export function SettingsPage() {
               />
               <SettingRow
                 title="Cho phép chạy nền khi chuyển trang"
-                description="Tác vụ mô phỏng tiếp tục tiến triển khi bạn đóng Live Workspace hoặc chuyển sang trang khác."
+                description="Tác vụ tiếp tục tiến triển khi bạn đóng Live Workspace hoặc chuyển sang trang khác."
                 control={
                   <Switch
                     checked={settings.allowBackgroundExecution}
@@ -303,7 +303,7 @@ export function SettingsPage() {
                 }
               />
               <SettingRow
-                title="Chính sách bảo mật nguyên mẫu"
+                title="Chính sách bảo mật"
                 description="Không lưu cookie thật, không yêu cầu mật khẩu hay API key trong giao diện frontend."
                 control={<span className="font-mono-tech text-[12px] text-[var(--color-success)]">ENFORCED</span>}
               />
@@ -340,8 +340,8 @@ export function SettingsPage() {
           {(section === 'local_storage' || section === 'cloud_sync' || section === 'runtime' || section === 'about') && (
             <div>
               <SettingRow
-                title="Khôi phục dữ liệu mẫu (Reset Demo Data)"
-                description="Đưa toàn bộ tác vụ, lịch trình, nghiên cứu, phê duyệt và hội thoại về bộ dữ liệu mẫu gốc."
+                title="Làm mới dữ liệu cục bộ"
+                description="Đưa toàn bộ tác vụ, lịch trình, nghiên cứu, phê duyệt và hội thoại về trạng thái ban đầu."
                 control={
                   <Button variant="destructive" size="sm" onClick={() => setConfirmReset(true)}>
                     <RotateCcw className="w-3.5 h-3.5" />
@@ -351,7 +351,7 @@ export function SettingsPage() {
               />
               <SettingRow
                 title="Cloud Sync & Desktop Runtime"
-                description="Nguyên mẫu trình duyệt hiện chạy hoàn toàn cục bộ. Tác vụ mô phỏng không tiếp tục sau khi đóng tab trình duyệt."
+                description="Ứng dụng hiện chạy hoàn toàn cục bộ. Tác vụ không tiếp tục sau khi đóng tab trình duyệt."
                 control={<span className="font-mono-tech text-[12px] text-[var(--color-text-muted)]">LOCAL PROTOTYPE</span>}
               />
               <SettingRow
@@ -368,7 +368,7 @@ export function SettingsPage() {
         open={confirmReset}
         onClose={() => setConfirmReset(false)}
         title={t.actions.resetDemo}
-        description="Hành động này sẽ xóa toàn bộ chỉnh sửa hiện tại trong localStorage và nạp lại bộ dữ liệu mẫu ban đầu."
+        description="Hành động này sẽ xóa toàn bộ chỉnh sửa hiện tại trong localStorage và nạp lại trạng thái ban đầu."
         footer={
           <>
             <Button variant="secondary" onClick={() => setConfirmReset(false)}>Hủy</Button>

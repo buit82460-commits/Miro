@@ -1,10 +1,16 @@
 import { fail, getStore, ok, pushHistory } from "@/lib/fixtures/store";
+import { tryBe } from "@/lib/be";
 
 export async function PUT(req: Request, ctx: { params: Promise<{ id: string; clipId: string }> }) {
   const { id, clipId } = await ctx.params;
+  const patch = (await req.json().catch(() => ({}))) as { start?: number; end?: number; text?: string };
+  const be = await tryBe(`/projects/${encodeURIComponent(id)}/subtitles/${encodeURIComponent(clipId)}`, {
+    method: "PUT",
+    body: patch,
+  });
+  if (be) return be;
   const p = getStore().projects.find((x) => x.id === id);
   if (!p) return fail("Không tìm thấy project", 404);
-  const patch = (await req.json().catch(() => ({}))) as { start?: number; end?: number; text?: string };
   if (typeof patch.text !== "string" || !patch.text.trim()) return fail("Nhập nội dung phụ đề", 422);
   let found = false;
   for (const t of p.tracks) {

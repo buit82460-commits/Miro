@@ -1,0 +1,346 @@
+[     679ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:25631
+[     787ms] [ERROR] Unchecked runtime.lastError: Could not establish connection. Receiving end does not exist. @ http://127.0.0.1:3100/workspace:1
+[     910ms] [ERROR] A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+%s%s https://react.dev/link/hydration-mismatch 
+
+  ...
+    <HotReload assetPrefix="" globalError={[...]}>
+      <AppDevOverlayErrorBoundary globalError={[...]}>
+        <ReplaySsrOnlyErrors>
+        <DevRootHTTPAccessFallbackBoundary>
+          <HTTPAccessFallbackBoundary notFound={<NotAllowedRootHTTPFallbackError>}>
+            <HTTPAccessFallbackErrorBoundary pathname="/workspace" notFound={<NotAllowedRootHTTPFallbackError>} ...>
+              <RedirectBoundary>
+                <RedirectErrorBoundary router={{...}}>
+                  <Head headCacheNode={{lazyData:null, ...}}>
+                    <__next_viewport_boundary__>
+                    <MetadataTree>
+                      <__next_metadata_boundary__>
+                        <__next_metadata_boundary__>
+                          <div
+                            hidden={true}
+-                           bis_skin_checked="1"
+                          >
+                  <__next_root_layout_boundary__>
+                    <SegmentViewNode type="layout" pagePath="layout.tsx">
+                      <SegmentTrieNode>
+                      <link>
+                      <RootLayout>
+                        <html lang="vi" data-theme="midnight-lime" className="dark" suppressHydrationWarning={true}>
+                          <head>
+                          <body
+                            className="antialiased"
+-                           __processed_b4e7b27d-2d2c-4ece-8042-dbc9663f6020__="true"
+-                           bis_register="W3sibWFzdGVyIjp0cnVlLCJleHRlbnNpb25JZCI6ImVwcGlvY2VtaG1ubGJoanBsY2drb2ZjaWll..."
+                          >
+                            ...
+                              <AiWorkspacePageRoute params={Promise} searchParams={Promise}>
+                                <MiroShell>
+                                  <AppShell>
+                                    <div
+                                      className="flex h-screen w-screen overflow-hidden bg-[var(--color-canvas)] text-..."
+-                                     bis_skin_checked="1"
+                                    >
+                                      <div
+                                        className="hidden lg:flex h-full shrink-0"
+-                                       bis_skin_checked="1"
+                                      >
+                                        <GlobalSidebar>
+                                          <aside aria-label="Primary na..." className="flex flex-...">
+                                            <div
+                                              className="px-3 pt-3 pb-2 space-y-2.5 shrink-0"
+-                                             bis_skin_checked="1"
+                                            >
+                                              <div
+                                                className="flex items-center justify-between gap-2 h-8"
+-                                               bis_skin_checked="1"
+                                              >
+                                              <div
+                                                className="flex items-center justify-between rounded-[6px] bg-[var(--c..."
+-                                               bis_skin_checked="1"
+                                              >
+                                              <div
+                                                className="flex gap-1.5 flex-col"
+-                                               bis_skin_checked="1"
+                                              >
+                                            <nav className="flex-1 ove..." aria-label="Workspace ...">
+                                              <div
+                                                className="space-y-0.5"
+-                                               bis_skin_checked="1"
+                                              >
+                                              <div
+                                                className="space-y-0.5"
+-                                               bis_skin_checked="1"
+                                              >
+                                              <div
+                                                className="space-y-0.5"
+-                                               bis_skin_checked="1"
+                                              >
+                                              <div
+                                                className="space-y-0.5"
+-                                               bis_skin_checked="1"
+                                              >
+                                            <div
+                                              className="p-2.5 border-t border-[var(--color-border)] space-y-2 shrink-0"
+-                                             bis_skin_checked="1"
+                                            >
+                                              <div
+                                                className="flex items-center justify-between px-2 py-1 text-[11px] tex..."
+-                                               bis_skin_checked="1"
+                                              >
+                                              <div
+                                                className="flex items-center justify-between gap-2 px-1"
+-                                               bis_skin_checked="1"
+                                              >
+                                                <div
+                                                  className="flex items-center gap-2 min-w-0"
+-                                                 bis_skin_checked="1"
+                                                >
+                                                  <div
+                                                    className="flex h-7 w-7 shrink-0 items-center justify-center round..."
+-                                                   bis_skin_checked="1"
+                                                  >
++                                                   OP
+                                                  <div
+                                                    className="min-w-0"
+-                                                   bis_skin_checked="1"
+                                                  >
+                                                <div
+                                                  className="flex items-center gap-0.5 shrink-0"
+-                                                 bis_skin_checked="1"
+                                                >
+                                      <div
+                                        className="flex flex-1 flex-col min-w-0 h-full overflow-hidden"
+-                                       bis_skin_checked="1"
+                                      >
+                                        <GlobalHeader>
+                                          <header className="flex items...">
+                                            <div
+                                              className="flex items-center gap-2.5 min-w-0"
+-                                             bis_skin_checked="1"
+                                            >
+                                              <Button>
+                                              <div
+                                                className="lg:hidden"
+-                                               bis_skin_checked="1"
+                                              >
+                                              ...
+                                            <div
+                                              className="flex items-center gap-1.5 shrink-0"
+-                                             bis_skin_checked="1"
+                                            >
+                                        ...
+                                      ...
+                  ...
+ @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:57
+[     993ms] [ERROR] A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+%s%s https://react.dev/link/hydration-mismatch 
+
+  ...
+    <RedirectErrorBoundary router={{...}}>
+      <InnerLayoutRouter url="/workspace" tree={[...]} cacheNode={{lazyData:null, ...}} segmentPath={[...]}>
+        <SegmentViewNode type="page" pagePath="workspace/...">
+          <SegmentTrieNode>
+          <ClientPageRoot Component={function AiWorkspacePageRoute} searchParams={{}} params={{}}>
+            <AiWorkspacePageRoute params={Promise} searchParams={Promise}>
+              <MiroShell>
+                <AppShell>
+                  <div className="flex h-scr...">
+                    <div>
+                    <div className="flex flex-...">
+                      <GlobalHeader>
+                      <main className="flex-1 min...">
+                        <Suspense fallback={null}>
+                          <AiWorkspacePage>
+                            <div
+                              ref={{current:null}}
+                              className="flex h-full w-full overflow-hidden relative"
+-                             bis_skin_checked="1"
+                            >
+                              <div
+                                className="flex flex-col h-full min-w-0 flex-1 overflow-hidden"
+                                style={undefined}
+-                               bis_skin_checked="1"
+                              >
+                                <div
+                                  className="flex items-center justify-between gap-2 px-4 h-11 border-b border-[var(--..."
+-                                 bis_skin_checked="1"
+                                >
+                                  <div
+                                    className="flex items-center gap-2 min-w-0"
+-                                   bis_skin_checked="1"
+                                  >
+                                  <div
+                                    className="flex items-center gap-1.5"
+-                                   bis_skin_checked="1"
+                                  >
+                                <div
+                                  className="flex-1 overflow-y-auto miro-welcome-atmosphere px-4 sm:px-6 py-6 flex fle..."
+-                                 bis_skin_checked="1"
+                                >
+                                  <div
+                                    className="w-full max-w-[780px] space-y-5"
+-                                   bis_skin_checked="1"
+                                  >
+                                    <div
+                                      className="space-y-2.5 text-center"
+-                                     bis_skin_checked="1"
+                                    >
+                                      <div
+                                        className="inline-flex items-center justify-center"
+-                                       bis_skin_checked="1"
+                                      >
+                                      ...
+                                    <div
+                                      className="rounded-[14px] bg-[var(--color-surface-2)] border border-[var(--color..."
+-                                     bis_skin_checked="1"
+                                    >
+                                      <textarea>
+                                      <div
+                                        className="mt-2.5 flex flex-wrap items-center justify-between gap-2 pt-2 borde..."
+-                                       bis_skin_checked="1"
+                                      >
+                                        <div
+                                          className="flex flex-wrap items-center gap-1.5 min-w-0"
+-                                         bis_skin_checked="1"
+                                        >
+                                        ...
+                                    <div
+                                      className="space-y-2.5"
+-                                     bis_skin_checked="1"
+                                    >
+                                      <div
+                                        className="flex items-center justify-between text-[12px] text-[var(--color-tex..."
+-                                       bis_skin_checked="1"
+                                      >
+                                      <div
+                                        className="grid grid-cols-1 sm:grid-cols-2 gap-2.5"
+-                                       bis_skin_checked="1"
+                                      >
+                                        <button type="button" onClick={function onClick} className="group flex...">
+                                          <div
+                                            className="space-y-1"
+-                                           bis_skin_checked="1"
+                                          >
+                                          ...
+                                        <button type="button" onClick={function onClick} className="group flex...">
+                                          <div
+                                            className="space-y-1"
+-                                           bis_skin_checked="1"
+                                          >
+                                          ...
+                                        <button type="button" onClick={function onClick} className="group flex...">
+                                          <div
+                                            className="space-y-1"
+-                                           bis_skin_checked="1"
+                                          >
+                                          ...
+                                        <button type="button" onClick={function onClick} className="group flex...">
+                                          <div
+                                            className="space-y-1"
+-                                           bis_skin_checked="1"
+                                          >
+                                          ...
+                                    <div
+                                      className="space-y-2 pt-2"
+-                                     bis_skin_checked="1"
+                                    >
+                                      <p>
+                                      <div
+                                        className="flex flex-wrap gap-2"
+-                                       bis_skin_checked="1"
+                                      >
+                    ...
+        ...
+      ...
+ @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:57
+[   26767ms] [LOG] inject success @ chrome-extension://penohjgblobinadflplocjekaclnoemh/assets/inject.ts.js:1
+[   26847ms] [WARNING] Reflect is already polyfilled. @ https://sf16-website-login.neutral.ttwstatic.com/obj/tiktok_web_login_static/tiktok/webapp/main/react-v18/webapp-desktop/static/js/webapp-desktop.8f4eae92.js:1
+[   26882ms] [WARNING] AppContext will be overwritten @ https://sf16-website-login.neutral.ttwstatic.com/obj/tiktok_web_login_static/tiktok/webapp/main/react-v18/webapp-desktop/static/js/webapp-desktop.8f4eae92.js:1
+[   26883ms] [WARNING] AppContext will be overwritten @ https://sf16-website-login.neutral.ttwstatic.com/obj/tiktok_web_login_static/tiktok/webapp/main/react-v18/webapp-desktop/static/js/webapp-desktop.8f4eae92.js:1
+[   26883ms] [WARNING] AppContext will be overwritten @ https://sf16-website-login.neutral.ttwstatic.com/obj/tiktok_web_login_static/tiktok/webapp/main/react-v18/webapp-desktop/static/js/webapp-desktop.8f4eae92.js:1
+[   26885ms] [WARNING] AppContext will be overwritten @ https://sf16-website-login.neutral.ttwstatic.com/obj/tiktok_web_login_static/tiktok/webapp/main/react-v18/webapp-desktop/static/js/webapp-desktop.8f4eae92.js:1
+[   26885ms] [WARNING] AppContext will be overwritten @ https://sf16-website-login.neutral.ttwstatic.com/obj/tiktok_web_login_static/tiktok/webapp/main/react-v18/webapp-desktop/static/js/webapp-desktop.8f4eae92.js:1
+[   26895ms] [WARNING] AppContext will be overwritten @ https://sf16-website-login.neutral.ttwstatic.com/obj/tiktok_web_login_static/tiktok/webapp/main/react-v18/webapp-desktop/static/js/webapp-desktop.8f4eae92.js:1
+[   26896ms] [WARNING] AppContext will be overwritten @ https://sf16-website-login.neutral.ttwstatic.com/obj/tiktok_web_login_static/tiktok/webapp/main/react-v18/webapp-desktop/static/js/webapp-desktop.8f4eae92.js:1
+[   26904ms] [WARNING] AppContext will be overwritten @ https://sf16-website-login.neutral.ttwstatic.com/obj/tiktok_web_login_static/tiktok/webapp/main/react-v18/webapp-desktop/static/js/webapp-desktop.8f4eae92.js:1
+[   26906ms] [WARNING] AppContext will be overwritten @ https://sf16-website-login.neutral.ttwstatic.com/obj/tiktok_web_login_static/tiktok/webapp/main/react-v18/webapp-desktop/static/js/webapp-desktop.8f4eae92.js:1
+[   26907ms] [WARNING] loadable: `loadableReady()` requires state, please use `getScriptTags` or `getScriptElements` server-side @ https://sf16-website-login.neutral.ttwstatic.com/obj/tiktok_web_login_static/tiktok/webapp/main/react-v18/webapp-desktop/static/js/51116.fd9ebbc8.js:2
+[   26923ms] [ERROR] Permissions policy violation: unload is not allowed in this document. @ https://sf16-website-login.neutral.ttwstatic.com/obj/tiktok_web_login_static/tiktok/webapp/main/react-v18/webapp-desktop/static/js/secsdk_runtime_bundler_1104_ebc73ad6.js:7
+[   26932ms] [LOG] %c %s color: yellow; background-color: black; [instance: default] appid: 1988, userInfo:{"user_unique_id":"7703779053191824916","user_type":12,"user_id":"7455898227439748104","user_is_login":true,"device_id":"7703779053191824916"} @ https://sf16-website-login.neutral.ttwstatic.com/obj/tiktok_web_login_static/tiktok/webapp/main/react-v18/webapp-desktop/static/js/npm-dp-byted-tea-sdk-oversea.f4e273c4.js:1
+[   26932ms] [LOG] %c %s color: yellow; background-color: black; [instance: default] appid: 1988, sdk is ready, version is 5.3.17, you can report now !!! @ https://sf16-website-login.neutral.ttwstatic.com/obj/tiktok_web_login_static/tiktok/webapp/main/react-v18/webapp-desktop/static/js/npm-dp-byted-tea-sdk-oversea.f4e273c4.js:1
+[   26965ms] [ERROR] Permissions policy violation: unload is not allowed in this document. @ https://sf16-website-login.neutral.ttwstatic.com/obj/tiktok_web_login_static/tiktok/webapp/main/react-v18/webapp-desktop/static/js/secsdk_runtime_bundler_1104_ebc73ad6.js:7
+[   26968ms] [ERROR] Permissions policy violation: unload is not allowed in this document. @ https://sf16-website-login.neutral.ttwstatic.com/obj/tiktok_web_login_static/tiktok/webapp/main/react-v18/webapp-desktop/static/js/secsdk_runtime_bundler_1104_ebc73ad6.js:7
+[   27433ms] [LOG] EventListener Installed @ chrome-extension://penohjgblobinadflplocjekaclnoemh/assets/content.ts.js:1
+[   27862ms] [ERROR] Permissions policy violation: unload is not allowed in this document. @ https://sf16-website-login.neutral.ttwstatic.com/obj/tiktok_web_login_static/tiktok/webapp/main/react-v18/webapp-desktop/static/js/secsdk_runtime_bundler_1104_ebc73ad6.js:7
+[   27865ms] [ERROR] Unchecked runtime.lastError: Could not establish connection. Receiving end does not exist. @ https://www.tiktok.com/search?q=KANS%20377:1
+[   27908ms] [INFO] . @ https://sf16-website-login.neutral.ttwstatic.com/obj/tiktok_web_login_static/webmssdk/1.0.0.422/webmssdk.js:1
+[   27915ms] [ERROR] Permissions policy violation: unload is not allowed in this document. @ https://sf16-website-login.neutral.ttwstatic.com/obj/tiktok_web_login_static/tiktok/webapp/main/react-v18/webapp-desktop/static/js/secsdk_runtime_bundler_1104_ebc73ad6.js:7
+[   27957ms] [WARNING] AppContext will be overwritten @ https://sf16-website-login.neutral.ttwstatic.com/obj/tiktok_web_login_static/tiktok/webapp/main/react-v18/webapp-desktop/static/js/webapp-desktop.8f4eae92.js:1
+[   27958ms] [WARNING] AppContext will be overwritten @ https://sf16-website-login.neutral.ttwstatic.com/obj/tiktok_web_login_static/tiktok/webapp/main/react-v18/webapp-desktop/static/js/webapp-desktop.8f4eae92.js:1
+[   27958ms] [WARNING] AppContext will be overwritten @ https://sf16-website-login.neutral.ttwstatic.com/obj/tiktok_web_login_static/tiktok/webapp/main/react-v18/webapp-desktop/static/js/webapp-desktop.8f4eae92.js:1
+[   27958ms] [WARNING] AppContext will be overwritten @ https://sf16-website-login.neutral.ttwstatic.com/obj/tiktok_web_login_static/tiktok/webapp/main/react-v18/webapp-desktop/static/js/webapp-desktop.8f4eae92.js:1
+[   27958ms] [WARNING] AppContext will be overwritten @ https://sf16-website-login.neutral.ttwstatic.com/obj/tiktok_web_login_static/tiktok/webapp/main/react-v18/webapp-desktop/static/js/webapp-desktop.8f4eae92.js:1
+[   27958ms] [WARNING] AppContext will be overwritten @ https://sf16-website-login.neutral.ttwstatic.com/obj/tiktok_web_login_static/tiktok/webapp/main/react-v18/webapp-desktop/static/js/webapp-desktop.8f4eae92.js:1
+[   27958ms] [WARNING] AppContext will be overwritten @ https://sf16-website-login.neutral.ttwstatic.com/obj/tiktok_web_login_static/tiktok/webapp/main/react-v18/webapp-desktop/static/js/webapp-desktop.8f4eae92.js:1
+[   27959ms] [WARNING] AppContext will be overwritten @ https://sf16-website-login.neutral.ttwstatic.com/obj/tiktok_web_login_static/tiktok/webapp/main/react-v18/webapp-desktop/static/js/webapp-desktop.8f4eae92.js:1
+[   27959ms] [WARNING] AppContext will be overwritten @ https://sf16-website-login.neutral.ttwstatic.com/obj/tiktok_web_login_static/tiktok/webapp/main/react-v18/webapp-desktop/static/js/webapp-desktop.8f4eae92.js:1
+[   28170ms] [LOG] ws.opened @ https://sf16-website-login.neutral.ttwstatic.com/obj/tiktok_web_login_static/webmssdk/1.0.0.422/webmssdk.js:1
+[   28273ms] Uncaught (in promise) TypeError: a.init is not a function
+    at <anonymous> (https://sf16-website-login.neutral.ttwstatic.com/obj/tiktok_web_login_static/tiktok/webapp/main/react-v18/webapp-desktop/static/js/async/89240.635e074a.js:2:623150)
+    at l (https://sf16-website-login.neutral.ttwstatic.com/obj/tiktok_web_login_static/tiktok/webapp/main/react-v18/webapp-desktop/static/js/async/89240.635e074a.js:2:616566)
+    at <anonymous> (https://sf16-website-login.neutral.ttwstatic.com/obj/tiktok_web_login_static/tiktok/webapp/main/react-v18/webapp-desktop/static/js/async/89240.635e074a.js:2:617863)
+    at <anonymous> (https://sf16-website-login.neutral.ttwstatic.com/obj/tiktok_web_login_static/tiktok/webapp/main/react-v18/webapp-desktop/static/js/async/89240.635e074a.js:2:616904)
+    at <anonymous> (https://sf16-website-login.neutral.ttwstatic.com/obj/tiktok_web_login_static/tiktok/webapp/main/react-v18/webapp-desktop/static/js/51116.fd9ebbc8.js:6:171426)
+    at p (https://sf16-website-login.neutral.ttwstatic.com/obj/tiktok_web_login_static/tiktok/webapp/main/react-v18/webapp-desktop/static/js/51116.fd9ebbc8.js:6:171223)
+    at value (https://sf16-website-login.neutral.ttwstatic.com/obj/tiktok_web_login_static/tiktok/webapp/main/react-v18/webapp-desktop/static/js/async/89240.635e074a.js:2:622738)
+    at value (https://sf16-website-login.neutral.ttwstatic.com/obj/tiktok_web_login_static/tiktok/webapp/main/react-v18/webapp-desktop/static/js/async/89240.635e074a.js:2:622650)
+    at <anonymous> (https://sf16-website-login.neutral.ttwstatic.com/obj/tiktok_web_login_static/tiktok/webapp/main/react-v18/webapp-desktop/static/js/async/89240.635e074a.js:2:688875)
+    at l (https://sf16-website-login.neutral.ttwstatic.com/obj/tiktok_web_login_static/tiktok/webapp/main/react-v18/webapp-desktop/static/js/async/89240.635e074a.js:2:681549)
+    at <anonymous> (https://sf16-website-login.neutral.ttwstatic.com/obj/tiktok_web_login_static/tiktok/webapp/main/react-v18/webapp-desktop/static/js/async/89240.635e074a.js:2:682846)
+    at <anonymous> (https://sf16-website-login.neutral.ttwstatic.com/obj/tiktok_web_login_static/tiktok/webapp/main/react-v18/webapp-desktop/static/js/async/89240.635e074a.js:2:681887)
+    at s (https://sf16-website-login.neutral.ttwstatic.com/obj/tiktok_web_login_static/tiktok/webapp/main/react-v18/webapp-desktop/static/js/51116.fd9ebbc8.js:6:171279)
+[   28284ms] [WARNING] {error: Response} @ https://sf16-website-login.neutral.ttwstatic.com/obj/tiktok_web_login_static/tiktok/webapp/main/react-v18/webapp-desktop/static/js/async/92835.9315fa46.js:1
+[   28435ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://sf16-website-login.neutral.ttwstatic.com/slardar/fe/sdk-web/plugins/common-monitors.1.16.9.js:1
+[   28436ms] [ERROR] Refused to execute script from 'https://sf16-website-login.neutral.ttwstatic.com/slardar/fe/sdk-web/plugins/common-monitors.1.16.9.js' because its MIME type ('application/json') is not executable, and strict MIME type checking is enabled. @ https://www.tiktok.com/search?q=KANS%20377:1
+[   28448ms] [LOG] Error. Unable to find the experiment:  webapp_auto_dark_mode @ https://sf16-website-login.neutral.ttwstatic.com/obj/tiktok_web_login_static/webmssdk/1.0.0.422/webmssdk.js:1
+[   31660ms] [WARNING] The powerPreference option is currently ignored when calling requestAdapter() on Windows. See https://crbug.com/369219127 @ https://sf16-website-login.neutral.ttwstatic.com/obj/tiktok_web_login_static/ttweb_webmssdk_ex/1.0.0.3017/webmssdk_ex.js:1
+[   31661ms] [WARNING] The powerPreference option is currently ignored when calling requestAdapter() on Windows. See https://crbug.com/369219127 @ https://sf16-website-login.neutral.ttwstatic.com/obj/tiktok_web_login_static/ttweb_webmssdk_ex/1.0.0.3017/webmssdk_ex.js:1
+[   33456ms] [ERROR] Permissions policy violation: unload is not allowed in this document. @ https://sf16-website-login.neutral.ttwstatic.com/obj/tiktok_web_login_static/tiktok/webapp/main/react-v18/webapp-desktop/static/js/secsdk_runtime_bundler_1104_ebc73ad6.js:7
+[   33458ms] [ERROR] Permissions policy violation: unload is not allowed in this document. @ https://sf16-website-login.neutral.ttwstatic.com/obj/tiktok_web_login_static/tiktok/webapp/main/react-v18/webapp-desktop/static/js/secsdk_runtime_bundler_1104_ebc73ad6.js:7
+[   33555ms] [ERROR] Permissions policy violation: unload is not allowed in this document. @ https://sf16-website-login.neutral.ttwstatic.com/obj/tiktok_web_login_static/tiktok/webapp/main/react-v18/webapp-desktop/static/js/secsdk_runtime_bundler_1104_ebc73ad6.js:7
+[   33735ms] [LOG] [PNS] get restriction setting and effected count response {extra: Object, log_pb: Object, privacy_restriction: Object, privacy_settings: Object, status_code: 0} {extra: Object, interaction_video_count: Object, log_pb: Object, no_pa_control_settings: Object, status_code: 0} @ https://sf16-website-login.neutral.ttwstatic.com/obj/tiktok_web_login_static/webmssdk/1.0.0.422/webmssdk.js:1
+[   37110ms] [ERROR] Permissions policy violation: unload is not allowed in this document. @ https://sf16-website-login.neutral.ttwstatic.com/obj/tiktok_web_login_static/tiktok/webapp/main/react-v18/webapp-desktop/static/js/secsdk_runtime_bundler_1104_ebc73ad6.js:7
+[   37112ms] [LOG] %c %s color: yellow; background-color: black; [instance: cookie_banner_tea_sdk] appid: 345918, userInfo:{"user_unique_id":"7703779104173377032","web_id":"7703779104173377032"} @ https://sf16-website-login.neutral.ttwstatic.com/obj/tiktok_web_login_static/webmssdk/1.0.0.422/webmssdk.js:1
+[   37112ms] [LOG] %c %s color: yellow; background-color: black; [instance: cookie_banner_tea_sdk] appid: 345918, sdk is ready, version is 5.3.17, you can report now !!! @ https://sf16-website-login.neutral.ttwstatic.com/obj/tiktok_web_login_static/webmssdk/1.0.0.422/webmssdk.js:1
+[   37149ms] [ERROR] Permissions policy violation: unload is not allowed in this document. @ https://sf16-website-login.neutral.ttwstatic.com/obj/tiktok_web_login_static/tiktok/webapp/main/react-v18/webapp-desktop/static/js/secsdk_runtime_bundler_1104_ebc73ad6.js:7
+[   37150ms] [ERROR] Permissions policy violation: unload is not allowed in this document. @ https://sf16-website-login.neutral.ttwstatic.com/obj/tiktok_web_login_static/tiktok/webapp/main/react-v18/webapp-desktop/static/js/secsdk_runtime_bundler_1104_ebc73ad6.js:7
+[   37157ms] [ERROR] Permissions policy violation: unload is not allowed in this document. @ https://sf16-website-login.neutral.ttwstatic.com/obj/tiktok_web_login_static/tiktok/webapp/main/react-v18/webapp-desktop/static/js/secsdk_runtime_bundler_1104_ebc73ad6.js:7
+[   37158ms] [ERROR] Permissions policy violation: unload is not allowed in this document. @ https://sf16-website-login.neutral.ttwstatic.com/obj/tiktok_web_login_static/tiktok/webapp/main/react-v18/webapp-desktop/static/js/secsdk_runtime_bundler_1104_ebc73ad6.js:7
+[   37380ms] [LOG] [PNS] get restriction setting and effected count response {extra: Object, log_pb: Object, privacy_restriction: Object, privacy_settings: Object, status_code: 0} {extra: Object, interaction_video_count: Object, log_pb: Object, no_pa_control_settings: Object, status_code: 0} @ https://sf16-website-login.neutral.ttwstatic.com/obj/tiktok_web_login_static/webmssdk/1.0.0.422/webmssdk.js:1
+[   43020ms] [WARNING] [i18n] missing key [en] Webapp Close_button Close_button @ https://sf16-website-login.neutral.ttwstatic.com/obj/tiktok_web_login_static/tiktok/webapp/main/react-v18/webapp-desktop/static/js/biz.common.lib.7803cbbc.js:1
+[   43021ms] [WARNING] The 'deprecatedStyle' prop is deprecated. Please use the associated style props instead (e.g. "marginInline", "flex") @ https://sf16-website-login.neutral.ttwstatic.com/obj/tiktok_web_login_static/tiktok/webapp/main/react-v18/webapp-desktop/static/js/async/16119.4be2579f.js:1
+[   43039ms] [WARNING] The 'deprecatedStyle' prop is deprecated. Please use the associated style props instead (e.g. "marginInline", "flex") @ https://sf16-website-login.neutral.ttwstatic.com/obj/tiktok_web_login_static/tiktok/webapp/main/react-v18/webapp-desktop/static/js/async/16119.4be2579f.js:1
+[   43074ms] [WARNING] The 'deprecatedStyle' prop is deprecated. Please use the associated style props instead (e.g. "marginInline", "flex") @ https://sf16-website-login.neutral.ttwstatic.com/obj/tiktok_web_login_static/tiktok/webapp/main/react-v18/webapp-desktop/static/js/async/16119.4be2579f.js:1
+[   43366ms] [WARNING] Reflect is already polyfilled. @ https://sf16-website-login.neutral.ttwstatic.com/obj/tiktok_web_login_static/tiktok/web/tiktok_fe_login_vmok/static/js/async/3191.3ad731c5.js:1
+[   43393ms] [WARNING] The 'deprecatedStyle' prop is deprecated. Please use the associated style props instead (e.g. "marginInline", "flex") @ https://sf16-website-login.neutral.ttwstatic.com/obj/tiktok_web_login_static/tiktok/webapp/main/react-v18/webapp-desktop/static/js/async/16119.4be2579f.js:1
+[   56931ms] [ERROR] error Error: Timeout
+    at https://sf16-website-login.neutral.ttwstatic.com/obj/tiktok_web_login_static/tiktok/webapp/main/react-v18/webapp-desktop/static/js/slardar.8879cd84.js:2:83622 @ https://sf16-website-login.neutral.ttwstatic.com/obj/tiktok_web_login_static/tiktok/webapp/main/react-v18/webapp-desktop/static/js/webapp-desktop.8f4eae92.js:1

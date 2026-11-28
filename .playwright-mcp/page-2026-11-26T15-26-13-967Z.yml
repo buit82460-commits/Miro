@@ -1,0 +1,130 @@
+- generic [ref=f6e2]:
+  - complementary "Primary navigation" [ref=f6e4]:
+    - generic [ref=f6e5]:
+      - generic [ref=f6e6]:
+        - button [ref=f6e7] [cursor=pointer]:
+          - generic "miro." [ref=f6e8]:
+            - text: miro
+            - generic [ref=f6e9]: .
+        - button "Thu gọn thanh điều hướng" [ref=f6e10] [cursor=pointer]
+      - generic [ref=f6e13]:
+        - generic [ref=f6e14]: Personal Operations
+        - generic [ref=f6e15]: LOCAL
+      - generic [ref=f6e16]:
+        - button "Bảng lệnh" [ref=f6e17] [cursor=pointer]:
+          - generic [ref=f6e18]: Tìm kiếm nhanh...
+          - generic [ref=f6e23]: ⌘K
+        - button "Hội thoại mới" [ref=f6e24] [cursor=pointer]
+    - navigation "Workspace sections" [ref=f6e27]:
+      - generic [ref=f6e28]:
+        - button "WORKSPACE" [ref=f6e29] [cursor=pointer]
+        - list [ref=f6e33]:
+          - listitem [ref=f6e34]:
+            - link "Tổng quan" [ref=f6e35] [cursor=pointer]:
+              - /url: /overview
+          - listitem [ref=f6e42]:
+            - link "AI Workspace" [ref=f6e43] [cursor=pointer]:
+              - /url: /workspace
+          - listitem [ref=f6e47]:
+            - link "Tác vụ" [ref=f6e48] [cursor=pointer]:
+              - /url: /tasks
+          - listitem [ref=f6e53]:
+            - link "Dự án" [ref=f6e54] [cursor=pointer]:
+              - /url: /projects
+      - generic [ref=f6e58]:
+        - button "TỰ ĐỘNG HÓA" [ref=f6e59] [cursor=pointer]
+        - list [ref=f6e63]:
+          - listitem [ref=f6e64]:
+            - link "Lịch trình" [ref=f6e65] [cursor=pointer]:
+              - /url: /schedules
+          - listitem [ref=f6e71]:
+            - link "Workflows" [ref=f6e72] [cursor=pointer]:
+              - /url: /workflows
+      - generic [ref=f6e78]:
+        - button "CÔNG CỤ" [ref=f6e79] [cursor=pointer]
+        - list [ref=f6e83]:
+          - listitem [ref=f6e84]:
+            - link "Trình duyệt" [ref=f6e85] [cursor=pointer]:
+              - /url: /browser
+          - listitem [ref=f6e90]:
+            - link "Nghiên cứu" [ref=f6e91] [cursor=pointer]:
+              - /url: /research
+          - listitem [ref=f6e97]:
+            - link "Media Studio" [ref=f6e98] [cursor=pointer]:
+              - /url: /media
+          - listitem [ref=f6e102]:
+            - link "Xuất bản" [ref=f6e103] [cursor=pointer]:
+              - /url: /publishing
+          - listitem [ref=f6e108]:
+            - link "Tri thức" [ref=f6e109] [cursor=pointer]:
+              - /url: /knowledge
+      - generic [ref=f6e113]:
+        - button "HỆ THỐNG" [ref=f6e114] [cursor=pointer]
+        - list [ref=f6e118]:
+          - listitem [ref=f6e119]:
+            - link "Hoạt động" [ref=f6e120] [cursor=pointer]:
+              - /url: /activity
+          - listitem [ref=f6e124]:
+            - link "Tích hợp" [ref=f6e125] [cursor=pointer]:
+              - /url: /integrations
+          - listitem [ref=f6e129]:
+            - link "Cài đặt" [ref=f6e130] [cursor=pointer]:
+              - /url: /settings
+    - generic [ref=f6e135]:
+      - generic [ref=f6e136]:
+        - generic [ref=f6e137]: Miro Runtime · Mô phỏng
+        - generic [ref=f6e138]: OK
+      - generic [ref=f6e139]:
+        - generic [ref=f6e140]:
+          - generic [ref=f6e141]: OP
+          - generic [ref=f6e142]:
+            - paragraph [ref=f6e143]: Operator
+            - paragraph [ref=f6e144]: Asia/Bangkok
+        - button "Switch theme" [ref=f6e146] [cursor=pointer]
+  - generic [ref=f6e149]:
+    - banner [ref=f6e150]:
+      - navigation "Breadcrumb" [ref=f6e152]:
+        - generic [ref=f6e153]: Nghiên cứu
+      - generic [ref=f6e154]:
+        - generic "Mọi tác vụ, trình duyệt và xuất bản đều được mô phỏng cục bộ. Không kết nối tài khoản thật." [ref=f6e155]: Chế độ Mô phỏng
+        - button "Giám sát tác vụ" [ref=f6e156] [cursor=pointer]:
+          - generic [ref=f6e159]: "0"
+          - generic [ref=f6e160]: đang chạy
+        - button "Cần xử lý" [ref=f6e161] [cursor=pointer]:
+          - generic [ref=f6e164]: "2"
+        - button "Thông báo" [ref=f6e165] [cursor=pointer]
+        - button "Trợ lý AI ngữ cảnh" [ref=f6e170] [cursor=pointer]:
+          - generic [ref=f6e173]: Miro AI
+    - main [ref=f6e174]:
+      - generic [ref=f6e176]:
+        - generic [ref=f6e177]:
+          - generic [ref=f6e178]:
+            - heading "Nghiên cứu" [level=1] [ref=f6e179]
+            - paragraph [ref=f6e180]: Quản lý bảng thu thập và bằng chứng quan sát. Toàn bộ chỉ số đều được gắn nhãn dữ liệu mẫu mô phỏng.
+          - button "Nghiên cứu mới (10 video mẫu)" [ref=f6e181] [cursor=pointer]
+        - table [ref=f6e185]:
+          - rowgroup [ref=f6e186]:
+            - row [ref=f6e187]:
+              - columnheader "Tên dự án nghiên cứu" [ref=f6e188]
+              - columnheader "Loại" [ref=f6e189]
+              - columnheader "Bản ghi thu thập" [ref=f6e190]
+              - columnheader "Trạng thái" [ref=f6e191]
+              - columnheader "Cập nhật cuối" [ref=f6e192]
+          - rowgroup [ref=f6e193]:
+            - row [ref=f6e194] [cursor=pointer]:
+              - cell [ref=f6e195]:
+                - paragraph [ref=f6e196]: KANS 377 — Phân tích nội dung TikTok (Đợt 1)
+                - paragraph [ref=f6e197]: "TikTok · Query: \"KANS 377 review\""
+              - cell "Short-form Video Audit" [ref=f6e198]
+              - cell "5/5" [ref=f6e199]
+              - cell "completed" [ref=f6e200]
+              - cell "22:11 26-11" [ref=f6e203]
+            - row [ref=f6e204] [cursor=pointer]:
+              - cell [ref=f6e205]:
+                - paragraph [ref=f6e206]: Affiliate Fashion — Khảo sát 5 video đầu phễu (Một phần)
+                - paragraph [ref=f6e207]: "TikTok · Query: \"áo khoác tweed tối giản\""
+              - cell "Competitor Hooks" [ref=f6e208]
+              - cell "3/5" [ref=f6e209]
+              - cell "partial" [ref=f6e210]
+              - cell "21:38 26-11" [ref=f6e213]
+  - region "Notifications alt+T"

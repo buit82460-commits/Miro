@@ -6,7 +6,6 @@ import {
   ExternalLink,
   History,
   MessageSquarePlus,
-  MonitorPlay,
   Paperclip,
   SendHorizontal,
   X,
@@ -15,38 +14,32 @@ import { toast } from 'sonner';
 import { submitInstructionToBackend } from '../../proto-services/backend/miroBackend';
 import { useMiroStore } from '../../stores/useMiroStore';
 import { useTranslation } from '../../i18n/useTranslation';
-import { launchTaskFromInstruction } from '../../proto-services/mock/executionEngine';
 import { formatTimeInZone } from '../../lib/format';
 import { MiroWordmark } from '../../components/miro-shared/MiroWordmark';
-import { LiveTaskCard } from '../../components/miro-shared/LiveTaskCard';
 import { LiveWorkspacePanel } from '../../components/miro-shared/LiveWorkspacePanel';
 import { Button, StatusTag } from '../../components/miro-ui/primitives';
 import { cn } from '../../lib/utils';
 
-const SUGGESTED_SCENARIOS = [
+const SUGGESTED_PROMPTS = [
   {
-    tag: 'Kịch bản A · Schedules + Takeover',
-    title: 'Tạo lịch nghiên cứu KANS 377 lúc 8:00 sáng',
-    prompt: 'Tạo lịch nghiên cứu 10 video TikTok về KANS 377 vào 8 giờ sáng mỗi ngày.',
-    scenario: 'schedule_create' as const,
+    tag: 'Tìm kiếm',
+    title: 'Tìm và tổng hợp video theo chủ đề',
+    prompt: 'Tìm 5 video TikTok về chủ đề dưỡng sáng da và tổng hợp điểm chung.',
   },
   {
-    tag: 'Kịch bản B · Browser + Background',
-    title: 'Tìm & phân tích 10 video KANS 377 (Profile 20)',
-    prompt: 'Tìm và phân tích 10 video KANS 377 trên TikTok bằng Profile 20.',
-    scenario: 'tiktok_research' as const,
+    tag: 'Lịch trình',
+    title: 'Lập lịch theo dõi định kỳ',
+    prompt: 'Lập lịch theo dõi 5 video mỗi sáng và báo cáo tóm tắt.',
   },
   {
-    tag: 'Kịch bản E · Approval Center',
-    title: 'Chuẩn bị xuất bản TikTok cần phê duyệt',
-    prompt: 'Xuất bản video Review 14 ngày KANS 377 lên kênh TikTok @miro.demo.beauty.',
-    scenario: 'publish_approval' as const,
+    tag: 'Phân tích',
+    title: 'Phân tích một video cụ thể',
+    prompt: 'Phân tích video TikTok này: dán URL video vào tin nhắn.',
   },
   {
-    tag: 'Kịch bản F · Partial Result',
-    title: 'Thu thập 5 bản ghi (Hoàn tất một phần 3/5)',
-    prompt: 'Thu thập 5 video mẫu về xu hướng dưỡng sáng mùa thu bằng Profile 21.',
-    scenario: 'partial_research' as const,
+    tag: 'Xuất bản',
+    title: 'Chuẩn bị bài đăng cần phê duyệt',
+    prompt: 'Soạn caption kèm hashtag cho bài đăng, chờ tôi phê duyệt trước khi đăng.',
   },
 ];
 
@@ -59,22 +52,23 @@ export function AiWorkspacePage() {
   const setActiveConversation = useMiroStore((s) => s.setActiveConversation);
   const createConversation = useMiroStore((s) => s.createConversation);
   const appendMessage = useMiroStore((s) => s.appendMessage);
-  const tasks = useMiroStore((s) => s.tasks);
+  const liveMode = useMiroStore((s) => s.liveWorkspaceMode);
   const projects = useMiroStore((s) => s.projects);
   const profiles = useMiroStore((s) => s.browserProfiles);
-  const liveMode = useMiroStore((s) => s.liveWorkspaceMode);
-  const setLiveWorkspace = useMiroStore((s) => s.setLiveWorkspace);
   const settings = useMiroStore((s) => s.settings);
   const setActiveContext = useMiroStore((s) => s.setActiveContext);
   const setLastConversationRouteId = useMiroStore((s) => s.setLastConversationRouteId);
 
   const [historyOpen, setHistoryOpen] = useState(false);
   const [input, setInput] = useState('');
-  const [selectedProfileId, setSelectedProfileId] = useState(settings.defaultProfileId || 'profile-20');
-  const [selectedProjectId, setSelectedProjectId] = useState('proj-kans-377');
-  const [selectedModel, setSelectedModel] = useState(settings.defaultModel || 'Miro Core (Simulated)');
+  const [selectedProfileId, setSelectedProfileId] = useState(settings.defaultProfileId || '');
+  const [selectedProjectId, setSelectedProjectId] = useState(projects[0]?.id ?? '');
+  const [selectedModel, setSelectedModel] = useState('Miro Core');
   const [attachments, setAttachments] = useState<string[]>([]);
   const [chatPercent, setChatPercent] = useState(46);
+  const [sendError, setSendError] = useState<string | null>(null);
+  const [sending, setSending] = useState(false);
+  const [lastSentText, setLastSentText] = useState('');
 
   const draggingRef = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -110,9 +104,13 @@ export function AiWorkspacePage() {
     };
   }, []);
 
-  const handleSend = (overridePrompt?: string, overrideScenario?: typeof SUGGESTED_SCENARIOS[number]['scenario']) => {
+  // W2 run-message: gui instruction len BE (POST /tasks/run-message).
+  // Thanh cong -> hien task_id/route that + link /tasks-live/{id}.
+  // That bai/BE unreachable -> hien loi THAT + nut thu lai. TUYET DOI
+  // khong goi mock engine, khong tu tao task/progress gia.
+  const handleSend = (overridePrompt?: string) => {
     const text = (overridePrompt ?? input).trim();
-    if (!text) return;
+    if (!text || sending) return;
     const convId = activeConv?.id ?? createConversation();
     appendMessage(convId, {
       role: 'user',
@@ -121,40 +119,40 @@ export function AiWorkspacePage() {
     });
     setInput('');
     setAttachments([]);
+    setSendError(null);
+    setSending(true);
+    setLastSentText(text);
     void submitInstructionToBackend(text)
       .then((out) => {
         if (out?.ok && out.task_id) {
           appendMessage(convId, {
             role: 'assistant',
-            content: `Miro đã nhận việc trên backend (task ${out.task_id}, route ${out.route?.job_type ?? 'unknown'}). Bạn có thể theo dõi trong Tác vụ.`,
+            content:
+              `BE đã nhận việc (task ${out.task_id}, route ${out.route?.job_type ?? 'unknown'}). ` +
+              `Theo dõi tiến độ thật tại /tasks-live/${out.task_id}.`,
+            taskId: undefined,
+            resourceLinks: [{ label: `Mở task ${out.task_id}`, route: `/tasks-live/${out.task_id}` }],
           });
+          setLastConversationRouteId(convId);
+          navigate(`/tasks-live/${out.task_id}`);
           return;
         }
-        launchTaskFromInstruction({
-          instruction: text,
-          conversationId: convId,
-          profileId: selectedProfileId,
-          projectId: selectedProjectId,
-          overrideScenario,
-          trigger: 'chat',
-          openLive: true,
-        });
+        const detail = out?.error ?? 'unknown';
+        const hint = typeof out?.hint === 'string' && out.hint ? ` Gợi ý: ${out.hint}` : '';
+        const msg = `BE trả lỗi: ${detail}.${hint} Task ${out?.task_id ?? 'chưa tạo được'} — reconcile read-only, không gửi lặp.`;
+        setSendError(msg);
+        appendMessage(convId, { role: 'assistant', content: msg });
       })
-      .catch(() => {
-        launchTaskFromInstruction({
-          instruction: text,
-          conversationId: convId,
-          profileId: selectedProfileId,
-          projectId: selectedProjectId,
-          overrideScenario,
-          trigger: 'chat',
-          openLive: true,
-        });
-      });
+      .catch((e: unknown) => {
+        const msg = e instanceof Error ? e.message : 'Gửi thất bại không rõ nguyên nhân.';
+        setSendError(msg);
+        appendMessage(convId, { role: 'assistant', content: msg });
+      })
+      .finally(() => setSending(false));
   };
 
   const handleAttachDemo = () => {
-    const sampleName = `brief-kans-377-${attachments.length + 1}.md`;
+    const sampleName = `brief-${attachments.length + 1}.md`;
     setAttachments((prev) => [...prev, sampleName]);
     toast.info(`Đã đính kèm tệp mẫu: ${sampleName}`);
   };
@@ -224,6 +222,7 @@ export function AiWorkspacePage() {
               prominent ? 'max-w-[170px]' : 'max-w-[132px]'
             )}
           >
+            <option value="">Dự án: chưa chọn</option>
             {projects.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.name}
@@ -237,6 +236,7 @@ export function AiWorkspacePage() {
             onChange={(e) => setSelectedProfileId(e.target.value)}
             className="h-7 rounded-[6px] bg-[var(--color-surface-1)] border border-[var(--color-border)] px-2 text-[12px] text-[var(--color-text-secondary)] max-w-[100px]"
           >
+            <option value="">Profile: chưa chọn</option>
             {profiles.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.name}
@@ -253,23 +253,36 @@ export function AiWorkspacePage() {
               prominent ? 'max-w-[175px]' : 'max-w-[136px]'
             )}
           >
-            <option value="Miro Core (Simulated)">Miro Core (Simulated)</option>
-            <option value="Miro Fast (Simulated)">Miro Fast (Simulated)</option>
-            <option value="Miro Deep Research (Simulated)">Miro Deep Research (Simulated)</option>
+            <option value="Miro Core">Miro Core</option>
+            <option value="Miro Fast">Miro Fast</option>
+            <option value="Miro Deep Research">Miro Deep Research</option>
           </select>
         </div>
 
         <Button
           variant="primary"
           size="sm"
-          disabled={!input.trim()}
+          disabled={!input.trim() || sending}
           onClick={() => handleSend()}
           className="h-8 px-3 ml-auto shrink-0"
         >
           <SendHorizontal className="w-3.5 h-3.5" />
-          <span>{t.workspace.send}</span>
+          <span>{sending ? 'Đang gửi…' : t.workspace.send}</span>
         </Button>
       </div>
+      {sendError && (
+        <div className="mt-2 rounded-[8px] bg-[var(--color-error-bg)] border border-[var(--color-error)]/30 px-3 py-2 text-[12px] text-[var(--color-error)]">
+          <p>{sendError}</p>
+          <button
+            type="button"
+            onClick={() => handleSend(lastSentText)}
+            disabled={sending || !lastSentText.trim()}
+            className="mt-1 font-medium underline underline-offset-2 cursor-pointer disabled:opacity-50"
+          >
+            Thử lại
+          </button>
+        </div>
+      )}
     </div>
   );
 
@@ -361,17 +374,9 @@ export function AiWorkspacePage() {
             </div>
 
             <div className="flex items-center gap-1.5">
-              {liveMode === 'hidden' && tasks.length > 0 && (
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => setLiveWorkspace('split', tasks[0]?.id)}
-                  className="h-7 px-2.5 text-[12px]"
-                >
-                  <MonitorPlay className="w-3.5 h-3.5 text-[var(--color-accent-text)]" />
-                  <span>{t.workspace.openLiveWorkspace}</span>
-                </Button>
-              )}
+              <span className="text-[12px] text-[var(--color-text-muted)]">
+                Tiến độ trực tiếp lấy từ BE tại /tasks-live — không có dữ liệu mô phỏng ở đây.
+              </span>
             </div>
           </div>
 
@@ -393,18 +398,18 @@ export function AiWorkspacePage() {
 
                 {renderComposer(true)}
 
-                {/* Suggested interactive demo scenarios */}
+                {/* Goi y trung tinh — bam chi dien text vao input, KHONG tu chay */}
                 <div className="space-y-2.5">
                   <div className="flex items-center justify-between text-[12px] text-[var(--color-text-muted)]">
                     <span className="font-medium">{t.workspace.suggestedActions}</span>
                     <span>{t.brand.philosophy}</span>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                    {SUGGESTED_SCENARIOS.map((sc) => (
+                    {SUGGESTED_PROMPTS.map((sc) => (
                       <button
                         key={sc.title}
                         type="button"
-                        onClick={() => handleSend(sc.prompt, sc.scenario)}
+                        onClick={() => setInput(sc.prompt)}
                         className="group flex flex-col justify-between gap-2 rounded-[10px] bg-[var(--color-surface-1)]/90 border border-[var(--color-border)] p-3.5 text-left hover:border-[var(--color-border-strong)] hover:bg-[var(--color-surface-2)] transition-colors duration-150 cursor-pointer"
                       >
                         <div className="space-y-1">
@@ -413,11 +418,11 @@ export function AiWorkspacePage() {
                           </p>
                           <p className="text-h5 text-[var(--color-text-primary)]">{sc.title}</p>
                           <p className="text-[12px] text-[var(--color-text-secondary)] line-clamp-2">
-                            "{sc.prompt}"
+                            &quot;{sc.prompt}&quot;
                           </p>
                         </div>
                         <span className="inline-flex items-center gap-1 text-[12px] font-medium text-[var(--color-text-muted)] group-hover:text-[var(--color-text-primary)]">
-                          <span>Chạy kịch bản mẫu</span>
+                          <span>Điền vào khung chat</span>
                           <ArrowRight className="w-3.5 h-3.5" />
                         </span>
                       </button>
@@ -459,10 +464,6 @@ export function AiWorkspacePage() {
               <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-6">
                 <div className="mx-auto w-full max-w-[800px] space-y-6">
                   {activeConv.messages.map((msg) => {
-                    const linkedTask = msg.taskId
-                      ? tasks.find((tk) => tk.id === msg.taskId)
-                      : undefined;
-
                     if (msg.role === 'user') {
                       return (
                         <div key={msg.id} className="flex justify-end">
@@ -494,26 +495,6 @@ export function AiWorkspacePage() {
                         <p className="text-[14px] leading-[23px] text-[var(--color-text-primary)] whitespace-pre-wrap">
                           {msg.content}
                         </p>
-
-                        {linkedTask && <LiveTaskCard task={linkedTask} />}
-
-                        {msg.structuredSummary && (
-                          <div className="rounded-[10px] bg-[var(--color-surface-1)] border border-[var(--color-border)] p-4 space-y-2.5">
-                            <p className="text-h5 text-[var(--color-text-primary)]">
-                              {msg.structuredSummary.title}
-                            </p>
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                              {msg.structuredSummary.items.map((item) => (
-                                <div key={item.label} className="space-y-0.5">
-                                  <p className="text-[11px] text-[var(--color-text-muted)]">{item.label}</p>
-                                  <p className="text-[13px] font-medium text-[var(--color-text-primary)]">
-                                    {item.value}
-                                  </p>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
 
                         {msg.resourceLinks && msg.resourceLinks.length > 0 && (
                           <div className="flex flex-wrap gap-2">

@@ -16,7 +16,10 @@ function EditorInner() {
   const sp = useSearchParams();
   const qp = sp.get("project") ?? "";
   const { data: library } = useLibrary();
-  const projectId = qp || String((library?.[0] as Record<string, unknown> | undefined)?.id ?? "p1");
+  // Repair: fallback trỏ nhầm "p1" (fixture cũ threads-milestone) — khi không có
+  // query param và library rỗng/BE down, projectId rỗng → useProject disabled →
+  // UI hiện empty-state trung thực, KHÔNG tự load p1 mẫu gây hiểu nhầm.
+  const projectId = qp || String((library?.[0] as Record<string, unknown> | undefined)?.id ?? "");
   const { data: project, isLoading, isError, refetch } = useProject(projectId);
   const command = useEditorCommand(projectId);
   const renderMut = useRender(projectId);
@@ -102,6 +105,11 @@ function EditorInner() {
 
         {isLoading ? <p>Đang tải project…</p> : null}
         {isError ? <p style={{ color: "#B52E2E" }}>Chưa nối được BE.</p> : null}
+        {!projectId && !isLoading ? (
+          <p data-testid="editor-empty">
+            Chưa chọn project — mở qua ?project=&lt;id&gt; hoặc Thư viện (BE). Không tự mở project mẫu.
+          </p>
+        ) : null}
         {msg ? <p data-testid="editor-msg">{msg}</p> : null}
 
         {p ? (

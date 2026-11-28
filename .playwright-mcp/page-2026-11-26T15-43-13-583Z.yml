@@ -1,0 +1,48 @@
+- generic [ref=f18e1]:
+  - generic [ref=f18e2]:
+    - complementary [ref=f18e3]:
+      - generic [ref=f18e4]: Miro
+      - navigation [ref=f18e5]:
+        - link "Công việc" [ref=f18e6] [cursor=pointer]:
+          - /url: /
+        - link "Giao việc (live)" [ref=f18e7] [cursor=pointer]:
+          - /url: /tasks-live
+        - link "Runtime" [ref=f18e8] [cursor=pointer]:
+          - /url: /runtime
+        - link "Thư viện" [ref=f18e9] [cursor=pointer]:
+          - /url: /library
+        - link "Xuất bản" [ref=f18e10] [cursor=pointer]:
+          - /url: /publish
+        - link "Editor" [ref=f18e11] [cursor=pointer]:
+          - /url: /editor
+        - link "Cài đặt & kết nối" [ref=f18e12] [cursor=pointer]:
+          - /url: /settings
+    - main [ref=f18e13]:
+      - heading "Giao viec" [level=1] [ref=f18e14]
+      - paragraph [ref=f18e15]:
+        - text: Nhiem vu capability da nghiem thu (actor/video/search TikTok) qua
+        - code [ref=f18e16]: POST /tasks/run-message
+        - text: . BE so huu state; chuyen trang khong mat task.
+      - generic [ref=f18e17]:
+        - 'textbox "VD: tim kiem tiktok KANS 377 5 video" [ref=f18e18]'
+        - button "Giao viec" [disabled] [ref=f18e19]
+      - heading "Phân tích video (Manual Control)" [level=2] [ref=f18e20]
+      - paragraph [ref=f18e21]: Dán URL video TikTok — Miro tự phân tích, không cần tab hay cú pháp kỹ thuật.
+      - generic [ref=f18e22]:
+        - textbox "https://www.tiktok.com/@.../video/..." [ref=f18e23]
+        - button "Phân tích video" [disabled] [ref=f18e24]
+      - generic [ref=f18e25]:
+        - button "Tìm kiếm mẫu" [ref=f18e26]
+        - button "Kiểm tra tài khoản" [ref=f18e27]
+      - heading "Task moi nhat (BE)" [level=2] [ref=f18e28]
+      - list
+  - generic [ref=f18e33] [cursor=pointer]:
+    - button "Open Next.js Dev Tools" [ref=f18e34]
+    - generic [ref=f18e38]:
+      - button "Open issues overlay" [ref=f18e39]:
+        - generic [ref=f18e40]:
+          - generic [aria-hidden] [ref=f18e41]: "0"
+          - generic [ref=f18e42]: "1"
+        - generic [ref=f18e43]: Issue
+      - button "Collapse issues badge" [ref=f18e44]
+  - alert [ref=f18e47]

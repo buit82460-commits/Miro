@@ -1,51 +1,43 @@
 "use client";
 import { useState } from 'react';
+import { useNavigate } from '@/lib/router-compat';
 import { SendHorizontal, Sparkles } from 'lucide-react';
 import { useMiroStore } from '../../stores/useMiroStore';
 import { useTranslation } from '../../i18n/useTranslation';
-import { launchTaskFromInstruction } from '../../proto-services/mock/executionEngine';
+import { useBeTasks } from '@/hooks/data/useRuntime';
 import { Button, Drawer } from '../miro-ui/primitives';
-import { LiveTaskCard } from '../miro-shared/LiveTaskCard';
 
 export function ContextualAiAssistantDrawer() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const open = useMiroStore((s) => s.aiAssistantOpen);
   const setOpen = useMiroStore((s) => s.setAiAssistantOpen);
   const activeContext = useMiroStore((s) => s.activeContext);
-  const tasks = useMiroStore((s) => s.tasks);
-  const projects = useMiroStore((s) => s.projects);
+  const beTasks = useBeTasks(4, 5000);
 
   const [input, setInput] = useState('');
-  const [recentIds, setRecentIds] = useState<string[]>([]);
-
-  const boundProject = projects.find((p) => p.id === activeContext.projectId);
-  const relatedTasks = tasks.filter(
-    (tk) =>
-      recentIds.includes(tk.id) ||
-      (activeContext.resourceId && tk.resource.id === activeContext.resourceId)
-  );
 
   const handleSubmit = (text?: string) => {
     const prompt = (text ?? input).trim();
     if (!prompt) return;
-    const contextPrefix = activeContext.resourceLabel
-      ? `[Ngữ cảnh: ${activeContext.resourceLabel}] `
-      : '';
-    const task = launchTaskFromInstruction({
-      instruction: `${contextPrefix}${prompt}`,
-      projectId: activeContext.projectId,
-      trigger: 'chat',
-      openLive: false,
-    });
-    setRecentIds((prev) => [task.id, ...prev]);
-    setInput('');
+    // Gợi ý chỉ điền text vào input — không tự execute mock.
+    setInput(prompt);
   };
 
-  const quickSuggestions = activeContext.resourceKind === 'media'
-    ? ['Phân tích video này và tách các phân cảnh chính', 'Tạo bản nháp xuất bản TikTok từ video này']
-    : activeContext.resourceKind === 'schedule'
-    ? ['Kiểm tra lại lịch trình này và đề xuất tối ưu khung giờ']
-    : ['Tìm và phân tích 10 video KANS 377 trên TikTok bằng Profile 20', 'Soạn báo cáo tổng hợp cho tài nguyên hiện tại'];
+  const handleSend = () => {
+    const prompt = input.trim();
+    if (!prompt) return;
+    // BE chưa hỗ trợ: gửi prompt trực tiếp từ drawer — điều hướng sang Tasks để tạo qua POST /tasks.
+    setOpen(false);
+    navigate('/tasks');
+  };
+
+  const quickSuggestions =
+    activeContext.resourceKind === 'media'
+      ? ['Mô tả video này để tạo task phân tích trên BE', 'Soạn nội dung bản nháp để tạo task trên BE']
+      : activeContext.resourceKind === 'schedule'
+        ? ['Mô tả lịch trình này để tạo task kiểm tra trên BE']
+        : ['Mô tả tác vụ cần tạo trên BE', 'Soạn nội dung để tạo task mới'];
 
   return (
     <Drawer
@@ -57,7 +49,6 @@ export function ContextualAiAssistantDrawer() {
     >
       <div className="flex flex-col h-full justify-between gap-4">
         <div className="space-y-4">
-          {/* Active Context Box */}
           <div className="rounded-[8px] bg-[var(--color-surface-2)] border border-[var(--color-border)] p-3 space-y-1 text-[12px]">
             <p className="text-[11px] font-medium uppercase tracking-[0.04em] text-[var(--color-text-muted)]">
               Ngữ cảnh đang gắn kết
@@ -65,15 +56,11 @@ export function ContextualAiAssistantDrawer() {
             <p className="text-[13px] font-medium text-[var(--color-text-primary)]">
               {activeContext.resourceLabel ?? 'Toàn bộ Workspace hiện tại'}
             </p>
-            {boundProject && (
-              <p className="text-[var(--color-text-secondary)]">Dự án: {boundProject.name}</p>
-            )}
             <p className="text-[11px] text-[var(--color-text-muted)]">
-              Chỉ tài nguyên bạn đang chọn được gửi làm ngữ cảnh rõ ràng.
+              Gợi ý chỉ điền text vào ô nhập — không tự chạy tác vụ.
             </p>
           </div>
 
-          {/* Quick Contextual Suggestions */}
           <div className="space-y-1.5">
             <p className="text-[12px] font-medium text-[var(--color-text-secondary)]">Gợi ý nhanh theo ngữ cảnh</p>
             <div className="flex flex-col gap-1.5">
@@ -91,24 +78,33 @@ export function ContextualAiAssistantDrawer() {
             </div>
           </div>
 
-          {/* Live Task Responses */}
-          {relatedTasks.length > 0 && (
+          {(beTasks.data ?? []).length > 0 && (
             <div className="space-y-2">
               <p className="text-[12px] font-medium text-[var(--color-text-secondary)]">
-                Tác vụ liên quan ({relatedTasks.length})
+                Tác vụ BE gần đây ({(beTasks.data ?? []).length})
               </p>
-              {relatedTasks.slice(0, 4).map((tk) => (
-                <LiveTaskCard key={tk.id} task={tk} compact showLiveButton={false} />
+              {(beTasks.data ?? []).map((tk) => (
+                <button
+                  key={tk.id}
+                  type="button"
+                  onClick={() => {
+                    setOpen(false);
+                    navigate('/tasks');
+                  }}
+                  className="w-full rounded-[8px] bg-[var(--color-surface-1)] border border-[var(--color-border)] p-3 space-y-1 text-left text-[12px] hover:bg-[var(--color-hover)] transition-colors cursor-pointer"
+                >
+                  <p className="font-mono-tech text-[var(--color-text-primary)]">{tk.id}</p>
+                  <p className="text-[var(--color-text-secondary)]">{String(tk.status ?? '')}</p>
+                </button>
               ))}
             </div>
           )}
         </div>
 
-        {/* Compact Composer */}
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            handleSubmit();
+            handleSend();
           }}
           className="rounded-[12px] bg-[var(--color-surface-2)] border border-[var(--color-border)] p-2.5 space-y-2"
         >
@@ -116,21 +112,15 @@ export function ContextualAiAssistantDrawer() {
             rows={2}
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                handleSubmit();
-              }
-            }}
             placeholder={
               activeContext.resourceLabel
-                ? `Ra lệnh cho Miro về "${activeContext.resourceLabel}"...`
+                ? `Soạn nội dung về "${activeContext.resourceLabel}"...`
                 : 'Nhập yêu cầu cho Miro...'
             }
             className="w-full resize-none bg-transparent text-[13px] text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none"
           />
           <div className="flex items-center justify-between">
-            <span className="text-[11px] text-[var(--color-text-muted)]">Đóng bảng không làm dừng tác vụ</span>
+            <span className="text-[11px] text-[var(--color-text-muted)]">Gửi chuyển sang trang Tác vụ (BE)</span>
             <Button type="submit" variant="primary" size="sm" disabled={!input.trim()}>
               <SendHorizontal className="w-3.5 h-3.5" />
               <span>{t.workspace.send}</span>

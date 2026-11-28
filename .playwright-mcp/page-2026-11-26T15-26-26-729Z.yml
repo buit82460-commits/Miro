@@ -1,0 +1,243 @@
+- generic [ref=f11e2]:
+  - complementary "Primary navigation" [ref=f11e4]:
+    - generic [ref=f11e5]:
+      - generic [ref=f11e6]:
+        - button [ref=f11e7] [cursor=pointer]:
+          - generic "miro." [ref=f11e8]:
+            - text: miro
+            - generic [ref=f11e9]: .
+        - button "Thu gọn thanh điều hướng" [ref=f11e10] [cursor=pointer]
+      - generic [ref=f11e13]:
+        - generic [ref=f11e14]: Personal Operations
+        - generic [ref=f11e15]: LOCAL
+      - generic [ref=f11e16]:
+        - button "Bảng lệnh" [ref=f11e17] [cursor=pointer]:
+          - generic [ref=f11e18]: Tìm kiếm nhanh...
+          - generic [ref=f11e23]: ⌘K
+        - button "Hội thoại mới" [ref=f11e24] [cursor=pointer]
+    - navigation "Workspace sections" [ref=f11e27]:
+      - generic [ref=f11e28]:
+        - button "WORKSPACE" [ref=f11e29] [cursor=pointer]
+        - list [ref=f11e33]:
+          - listitem [ref=f11e34]:
+            - link "Tổng quan" [ref=f11e35] [cursor=pointer]:
+              - /url: /overview
+          - listitem [ref=f11e42]:
+            - link "AI Workspace" [ref=f11e43] [cursor=pointer]:
+              - /url: /workspace
+          - listitem [ref=f11e47]:
+            - link "Tác vụ" [ref=f11e48] [cursor=pointer]:
+              - /url: /tasks
+          - listitem [ref=f11e53]:
+            - link "Dự án" [ref=f11e54] [cursor=pointer]:
+              - /url: /projects
+      - generic [ref=f11e58]:
+        - button "TỰ ĐỘNG HÓA" [ref=f11e59] [cursor=pointer]
+        - list [ref=f11e63]:
+          - listitem [ref=f11e64]:
+            - link "Lịch trình" [ref=f11e65] [cursor=pointer]:
+              - /url: /schedules
+          - listitem [ref=f11e71]:
+            - link "Workflows" [ref=f11e72] [cursor=pointer]:
+              - /url: /workflows
+      - generic [ref=f11e78]:
+        - button "CÔNG CỤ" [ref=f11e79] [cursor=pointer]
+        - list [ref=f11e83]:
+          - listitem [ref=f11e84]:
+            - link "Trình duyệt" [ref=f11e85] [cursor=pointer]:
+              - /url: /browser
+          - listitem [ref=f11e90]:
+            - link "Nghiên cứu" [ref=f11e91] [cursor=pointer]:
+              - /url: /research
+          - listitem [ref=f11e96]:
+            - link "Media Studio" [ref=f11e97] [cursor=pointer]:
+              - /url: /media
+          - listitem [ref=f11e101]:
+            - link "Xuất bản" [ref=f11e102] [cursor=pointer]:
+              - /url: /publishing
+          - listitem [ref=f11e107]:
+            - link "Tri thức" [ref=f11e108] [cursor=pointer]:
+              - /url: /knowledge
+      - generic [ref=f11e112]:
+        - button "HỆ THỐNG" [ref=f11e113] [cursor=pointer]
+        - list [ref=f11e117]:
+          - listitem [ref=f11e118]:
+            - link "Hoạt động" [ref=f11e119] [cursor=pointer]:
+              - /url: /activity
+          - listitem [ref=f11e123]:
+            - link "Tích hợp" [ref=f11e124] [cursor=pointer]:
+              - /url: /integrations
+          - listitem [ref=f11e129]:
+            - link "Cài đặt" [ref=f11e130] [cursor=pointer]:
+              - /url: /settings
+    - generic [ref=f11e135]:
+      - generic [ref=f11e136]:
+        - generic [ref=f11e137]: Miro Runtime · Mô phỏng
+        - generic [ref=f11e138]: OK
+      - generic [ref=f11e139]:
+        - generic [ref=f11e140]:
+          - generic [ref=f11e141]: OP
+          - generic [ref=f11e142]:
+            - paragraph [ref=f11e143]: Operator
+            - paragraph [ref=f11e144]: Asia/Bangkok
+        - button "Switch theme" [ref=f11e146] [cursor=pointer]
+  - generic [ref=f11e149]:
+    - banner [ref=f11e150]:
+      - navigation "Breadcrumb" [ref=f11e152]:
+        - generic [ref=f11e153]: Tích hợp
+      - generic [ref=f11e154]:
+        - generic "Mọi tác vụ, trình duyệt và xuất bản đều được mô phỏng cục bộ. Không kết nối tài khoản thật." [ref=f11e155]: Chế độ Mô phỏng
+        - button "Giám sát tác vụ" [ref=f11e156] [cursor=pointer]:
+          - generic [ref=f11e159]: "0"
+          - generic [ref=f11e160]: đang chạy
+        - button "Cần xử lý" [ref=f11e161] [cursor=pointer]:
+          - generic [ref=f11e164]: "2"
+        - button "Thông báo" [ref=f11e165] [cursor=pointer]
+        - button "Trợ lý AI ngữ cảnh" [ref=f11e170] [cursor=pointer]:
+          - generic [ref=f11e173]: Miro AI
+    - main [ref=f11e174]:
+      - generic [ref=f11e176]:
+        - generic [ref=f11e177]:
+          - heading "Tích hợp" [level=1] [ref=f11e178]
+          - paragraph [ref=f11e179]: Trạng thái kết nối dịch vụ trong bản nguyên mẫu. Không yêu cầu API key thật và không đánh dấu sai trạng thái hoạt động.
+        - generic [ref=f11e180]:
+          - heading "AI Models" [level=2] [ref=f11e181]
+          - generic [ref=f11e186]:
+            - generic [ref=f11e187]:
+              - generic [ref=f11e188]:
+                - generic [ref=f11e189]:
+                  - heading "OpenAI" [level=3] [ref=f11e194]
+                  - generic [ref=f11e195]: Not configured
+                - paragraph [ref=f11e197]: Mô hình suy luận & tổng hợp nội dung.
+                - paragraph [ref=f11e198]: Không yêu cầu API key trong chế độ nguyên mẫu.
+              - button "Cấu hình mô phỏng" [ref=f11e200] [cursor=pointer]
+            - generic [ref=f11e201]:
+              - generic [ref=f11e202]:
+                - generic [ref=f11e203]:
+                  - heading "Google Gemini" [level=3] [ref=f11e208]
+                  - generic [ref=f11e209]: Simulated connected
+                - paragraph [ref=f11e211]: Đa phương thức văn bản, hình ảnh và phân tích video.
+                - paragraph [ref=f11e212]: Đang chạy bộ mô phỏng nội bộ cho Miro Prototype.
+              - button "Cấu hình mô phỏng" [ref=f11e214] [cursor=pointer]
+            - generic [ref=f11e215]:
+              - generic [ref=f11e216]:
+                - generic [ref=f11e217]:
+                  - heading "Anthropic" [level=3] [ref=f11e222]
+                  - generic [ref=f11e223]: Not configured
+                - paragraph [ref=f11e225]: Xử lý tài liệu dài và cấu trúc báo cáo.
+                - paragraph [ref=f11e226]: Có thể kết nối ở bản backend thật.
+              - button "Cấu hình mô phỏng" [ref=f11e228] [cursor=pointer]
+            - generic [ref=f11e229]:
+              - generic [ref=f11e230]:
+                - generic [ref=f11e231]:
+                  - heading "Ollama (Local)" [level=3] [ref=f11e236]
+                  - generic [ref=f11e237]: Unavailable
+                - paragraph [ref=f11e239]: Chạy mô hình cục bộ trên máy cá nhân.
+                - paragraph [ref=f11e240]: Không phát hiện dịch vụ cục bộ trong môi trường trình duyệt.
+              - generic [ref=f11e241]:
+                - button "Cấu hình mô phỏng" [disabled]
+        - generic [ref=f11e242]:
+          - heading "Browser & Runtime" [level=2] [ref=f11e243]
+          - generic [ref=f11e248]:
+            - generic [ref=f11e249]:
+              - generic [ref=f11e250]:
+                - generic [ref=f11e251]:
+                  - heading "Chrome Extension" [level=3] [ref=f11e256]
+                  - generic [ref=f11e257]: Simulated connected
+                - paragraph [ref=f11e259]: Cầu nối điều khiển và quan sát tab trình duyệt.
+                - paragraph [ref=f11e260]: Mô phỏng 4 profile cục bộ (Profile 20–23).
+              - button "Cấu hình mô phỏng" [ref=f11e262] [cursor=pointer]
+            - generic [ref=f11e263]:
+              - generic [ref=f11e264]:
+                - generic [ref=f11e265]:
+                  - heading "Miro Bridge" [level=3] [ref=f11e270]
+                  - generic [ref=f11e271]: Simulated connected
+                - paragraph [ref=f11e273]: Đồng bộ trạng thái tác vụ và quyền tiếp quản.
+                - paragraph [ref=f11e274]: Độ trễ mô phỏng ổn định.
+              - button "Cấu hình mô phỏng" [ref=f11e276] [cursor=pointer]
+            - generic [ref=f11e277]:
+              - generic [ref=f11e278]:
+                - generic [ref=f11e279]:
+                  - heading "Windows Runtime" [level=3] [ref=f11e284]
+                  - generic [ref=f11e285]: Coming soon
+                - paragraph [ref=f11e287]: Tác nhân nền cấp hệ điều hành cho tự động hóa.
+                - paragraph [ref=f11e288]: Dành cho phiên bản desktop ứng dụng.
+              - generic [ref=f11e289]:
+                - button "Cấu hình mô phỏng" [disabled]
+        - generic [ref=f11e290]:
+          - heading "Data & Storage" [level=2] [ref=f11e291]
+          - generic [ref=f11e297]:
+            - generic [ref=f11e298]:
+              - generic [ref=f11e299]:
+                - generic [ref=f11e300]:
+                  - heading "Local Persistence" [level=3] [ref=f11e305]
+                  - generic [ref=f11e306]: Simulated connected
+                - paragraph [ref=f11e308]: Lưu trạng thái dữ liệu mẫu trên trình duyệt hiện tại.
+                - paragraph [ref=f11e309]: Tự động đồng bộ vào localStorage.
+              - button "Cấu hình mô phỏng" [ref=f11e311] [cursor=pointer]
+            - generic [ref=f11e312]:
+              - generic [ref=f11e313]:
+                - generic [ref=f11e314]:
+                  - heading "Supabase" [level=3] [ref=f11e319]
+                  - generic [ref=f11e320]: Not configured
+                - paragraph [ref=f11e322]: Cơ sở dữ liệu đám mây và đồng bộ nhiều thiết bị.
+                - paragraph [ref=f11e323]: Tắt chủ động trong bản nguyên mẫu frontend.
+              - button "Cấu hình mô phỏng" [ref=f11e325] [cursor=pointer]
+            - generic [ref=f11e326]:
+              - generic [ref=f11e327]:
+                - generic [ref=f11e328]:
+                  - heading "PostgreSQL" [level=3] [ref=f11e333]
+                  - generic [ref=f11e334]: Not configured
+                - paragraph [ref=f11e336]: Lưu trữ quan hệ cho nhật ký và tài nguyên.
+                - paragraph [ref=f11e337]: Tùy chọn triển khai tự lưu trữ.
+              - button "Cấu hình mô phỏng" [ref=f11e339] [cursor=pointer]
+        - generic [ref=f11e340]:
+          - heading "Automation" [level=2] [ref=f11e341]
+          - generic [ref=f11e347]:
+            - generic [ref=f11e348]:
+              - generic [ref=f11e349]:
+                - generic [ref=f11e350]:
+                  - heading "n8n" [level=3] [ref=f11e355]
+                  - generic [ref=f11e356]: Not configured
+                - paragraph [ref=f11e358]: Đồng bộ workflow nâng cao qua webhook.
+                - paragraph [ref=f11e359]: Miro tích hợp sẵn trình dựng Workflow cục bộ.
+              - button "Cấu hình mô phỏng" [ref=f11e361] [cursor=pointer]
+            - generic [ref=f11e362]:
+              - generic [ref=f11e363]:
+                - generic [ref=f11e364]:
+                  - heading "Webhooks" [level=3] [ref=f11e369]
+                  - generic [ref=f11e370]: Coming soon
+                - paragraph [ref=f11e372]: Nhận và phát sự kiện tới hệ thống bên ngoài.
+                - paragraph [ref=f11e373]: Đang phát triển ở tầng máy chủ.
+              - generic [ref=f11e374]:
+                - button "Cấu hình mô phỏng" [disabled]
+            - generic [ref=f11e375]:
+              - generic [ref=f11e376]:
+                - generic [ref=f11e377]:
+                  - heading "Miro Scheduler" [level=3] [ref=f11e382]
+                  - generic [ref=f11e383]: Simulated connected
+                - paragraph [ref=f11e385]: Bộ lập lịch tự động theo múi giờ IANA.
+                - paragraph [ref=f11e386]: "Múi giờ mặc định: Asia/Bangkok."
+              - button "Cấu hình mô phỏng" [ref=f11e388] [cursor=pointer]
+        - generic [ref=f11e389]:
+          - heading "Connectivity" [level=2] [ref=f11e390]
+          - generic [ref=f11e395]:
+            - generic [ref=f11e396]:
+              - generic [ref=f11e397]:
+                - generic [ref=f11e398]:
+                  - heading "Tailscale" [level=3] [ref=f11e403]
+                  - generic [ref=f11e404]: Unavailable
+                - paragraph [ref=f11e406]: Kết nối mạng riêng an toàn tới máy trạm cá nhân.
+                - paragraph [ref=f11e407]: Chỉ khả dụng trên Miro Desktop Runtime.
+              - generic [ref=f11e408]:
+                - button "Cấu hình mô phỏng" [disabled]
+            - generic [ref=f11e409]:
+              - generic [ref=f11e410]:
+                - generic [ref=f11e411]:
+                  - heading "Cloud Access" [level=3] [ref=f11e416]
+                  - generic [ref=f11e417]: Coming soon
+                - paragraph [ref=f11e419]: Điều khiển từ xa trên thiết bị di động.
+                - paragraph [ref=f11e420]: Đang thiết kế giao thức đồng bộ.
+              - generic [ref=f11e421]:
+                - button "Cấu hình mô phỏng" [disabled]
+  - region "Notifications alt+T"

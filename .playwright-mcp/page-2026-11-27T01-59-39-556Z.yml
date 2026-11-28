@@ -1,0 +1,38 @@
+- generic [ref=f1e1]:
+  - generic [ref=f1e2]:
+    - complementary [ref=f1e3]:
+      - generic [ref=f1e4]: Miro
+      - navigation [ref=f1e5]:
+        - link "Công việc" [ref=f1e6] [cursor=pointer]:
+          - /url: /
+        - link "Giao việc (live)" [ref=f1e7] [cursor=pointer]:
+          - /url: /tasks-live
+        - link "Runtime" [ref=f1e8] [cursor=pointer]:
+          - /url: /runtime
+        - link "Thư viện" [ref=f1e9] [cursor=pointer]:
+          - /url: /library
+        - link "Xuất bản" [ref=f1e10] [cursor=pointer]:
+          - /url: /publish
+        - link "Editor" [ref=f1e11] [cursor=pointer]:
+          - /url: /editor
+        - link "Cài đặt & kết nối" [ref=f1e12] [cursor=pointer]:
+          - /url: /settings
+    - main [ref=f1e13]:
+      - heading "Task task-8c70bb1eb471" [level=1] [ref=f1e14]
+      - paragraph [ref=f1e15]: "Trạng thái: needs_attention · TAB_UNKNOWN: browser task failed"
+      - paragraph [ref=f1e16]: Chưa có evidence.
+      - button "Dừng task" [ref=f1e17]
+      - heading "Tiến độ / sự kiện" [level=2] [ref=f1e18]
+      - list [ref=f1e19]:
+        - listitem [ref=f1e20]: "#1 · task_created · 2026-11-27T01:59:27.260840+00:00 · {\"request_id\":\"msg-c4a6c3b1ec17\"}"
+        - listitem [ref=f1e21]: "#2 · task_blocked · 2026-11-27T01:59:27.269844+00:00 · {\"code\":\"TAB_UNKNOWN\"}"
+  - generic [ref=f1e26] [cursor=pointer]:
+    - button "Open Next.js Dev Tools" [ref=f1e27]
+    - generic [ref=f1e31]:
+      - button "Open issues overlay" [ref=f1e32]:
+        - generic [ref=f1e33]:
+          - generic [aria-hidden] [ref=f1e34]: "0"
+          - generic [ref=f1e35]: "1"
+        - generic [ref=f1e36]: Issue
+      - button "Collapse issues badge" [ref=f1e37]
+  - alert [ref=f1e40]

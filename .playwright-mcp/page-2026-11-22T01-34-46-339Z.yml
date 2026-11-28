@@ -1,0 +1,181 @@
+- generic [ref=f18e1]:
+  - generic [ref=f18e3]:
+    - link "Skip to content" [ref=f18e179] [cursor=pointer]:
+      - /url: "#_R_lblcel9iqeprb347l9arad5_"
+    - generic [ref=f18e5]:
+      - complementary [ref=f18e6]:
+        - generic [ref=f18e182]:
+          - generic [ref=f18e183]:
+            - generic [ref=f18e184]: ChatGPT
+            - generic [ref=f18e196]:
+              - button "Search" [ref=f18e197] [cursor=pointer]
+              - button "Hide sidebar" [expanded] [ref=f18e205] [cursor=pointer]
+          - navigation "Chat history" [ref=f18e210]:
+            - button "New chat" [ref=f18e214] [cursor=pointer]
+            - generic [ref=f18e224]:
+              - generic [ref=f18e225]:
+                - link "Images" [ref=f18e228] [cursor=pointer]:
+                  - /url: /images
+                - generic [ref=f18e239]:
+                  - button "Scheduled" [ref=f18e240] [cursor=pointer]
+                  - button "Library" [ref=f18e247] [cursor=pointer]
+                  - button "Plugins" [ref=f18e255] [cursor=pointer]
+                  - button "Explore" [ref=f18e264] [cursor=pointer]
+              - generic [ref=f18e275]:
+                - generic [ref=f18e278]:
+                  - button "Pinned" [expanded] [ref=f18e282] [cursor=pointer]
+                  - list [ref=f18e292]:
+                    - listitem [ref=f18e293]:
+                      - generic [ref=f18e294]:
+                        - group "Semantic HTML Elements":
+                          - link "Semantic HTML Elements" [ref=f18e295] [cursor=pointer]:
+                            - /url: /c/696512ab-39cc-8324-b69c-8db2fb1b90e1
+                          - generic:
+                            - generic:
+                              - button "Unpin chat" [ref=f18e301] [cursor=pointer]
+                              - button "Chat actions" [ref=f18e305] [cursor=pointer]
+                - generic [ref=f18e311]:
+                  - generic [ref=f18e312]:
+                    - button "Projects" [expanded] [ref=f18e315] [cursor=pointer]
+                    - generic:
+                      - generic:
+                        - generic:
+                          - button "Project sidebar options"
+                          - button "Add new project" [ref=f18e320] [cursor=pointer]
+                  - list [ref=f18e330]:
+                    - listitem [ref=f18e331]: No projects
+                - generic [ref=f18e335]:
+                  - generic [ref=f18e336]:
+                    - button "Recents" [expanded] [ref=f18e339] [cursor=pointer]
+                    - generic:
+                      - generic:
+                        - generic:
+                          - button "Chat sidebar options"
+                          - button "New chat"
+                  - list [ref=f18e349]:
+                    - listitem [ref=f18e350]:
+                      - generic [ref=f18e351]:
+                        - group "Tìm hiểu tính năng Flow":
+                          - link "Tìm hiểu tính năng Flow" [ref=f18e352] [cursor=pointer]:
+                            - /url: /c/6b00167d-7838-83ec-93d4-30e09ed32c0e
+                          - generic:
+                            - generic:
+                              - button "Pin chat" [ref=f18e358] [cursor=pointer]
+                              - button "Chat actions" [ref=f18e362] [cursor=pointer]
+                    - listitem [ref=f18e366]:
+                      - generic [ref=f18e367]:
+                        - group "Chào hỏi hợp tác":
+                          - link "Chào hỏi hợp tác" [ref=f18e368] [cursor=pointer]:
+                            - /url: /c/6affda57-5e00-83ec-8cf1-e464221ee191
+                          - generic:
+                            - generic:
+                              - button "Pin chat" [ref=f18e374] [cursor=pointer]
+                              - button "Chat actions" [ref=f18e378] [cursor=pointer]
+                    - listitem [ref=f18e382]:
+                      - generic [ref=f18e383]:
+                        - group "Da Lat Vintage Storyboard":
+                          - link "Da Lat Vintage Storyboard" [ref=f18e384] [cursor=pointer]:
+                            - /url: /c/69eaed20-effc-8321-a345-6c4b4db2f932
+                          - generic:
+                            - generic:
+                              - button "Pin chat" [ref=f18e390] [cursor=pointer]
+                              - button "Chat actions" [ref=f18e394] [cursor=pointer]
+                    - listitem [ref=f18e398]:
+                      - generic [ref=f18e399]:
+                        - group "Lịch học và làm việc":
+                          - link "Lịch học và làm việc" [ref=f18e400] [cursor=pointer]:
+                            - /url: /c/69d6680e-4e88-8322-81e6-534500a50224
+                          - generic:
+                            - generic:
+                              - button "Pin chat" [ref=f18e406] [cursor=pointer]
+                              - button "Chat actions" [ref=f18e410] [cursor=pointer]
+                    - listitem [ref=f18e414]:
+                      - generic [ref=f18e415]:
+                        - group "Dùng AI hiệu quả":
+                          - link "Dùng AI hiệu quả" [ref=f18e416] [cursor=pointer]:
+                            - /url: /c/69d664a1-303c-8320-9473-b815fc23acec
+                          - generic:
+                            - generic:
+                              - button "Pin chat" [ref=f18e422] [cursor=pointer]
+                              - button "Chat actions" [ref=f18e426] [cursor=pointer]
+                    - listitem [ref=f18e430]:
+                      - generic [ref=f18e431]:
+                        - group "Git status review":
+                          - link "Git status review" [ref=f18e432] [cursor=pointer]:
+                            - /url: /c/69d3d2bb-3b34-8322-9749-e6f021665cd9
+                          - generic:
+                            - generic:
+                              - button "Pin chat" [ref=f18e438] [cursor=pointer]
+                              - button "Chat actions" [ref=f18e442] [cursor=pointer]
+                    - listitem [ref=f18e446]:
+                      - generic [ref=f18e447]:
+                        - group "Force refetch là gì":
+                          - link "Force refetch là gì" [ref=f18e448] [cursor=pointer]:
+                            - /url: /c/697da50d-7790-8321-956c-b2fa2e8e68a5
+                          - generic:
+                            - generic:
+                              - button "Pin chat" [ref=f18e454] [cursor=pointer]
+                              - button "Chat actions" [ref=f18e458] [cursor=pointer]
+                    - listitem [ref=f18e462]:
+                      - generic [ref=f18e463]:
+                        - group "Cập nhật code nhanh chóng":
+                          - link "Cập nhật code nhanh chóng" [ref=f18e464] [cursor=pointer]:
+                            - /url: /c/69788a8b-5b84-8324-83d3-6e6b1d93150d
+                          - generic:
+                            - generic:
+                              - button "Pin chat" [ref=f18e470] [cursor=pointer]
+                              - button "Chat actions" [ref=f18e474] [cursor=pointer]
+                    - listitem [ref=f18e478]:
+                      - generic [ref=f18e479]:
+                        - group "Form đăng ký nâng cấp":
+                          - link "Form đăng ký nâng cấp" [ref=f18e480] [cursor=pointer]:
+                            - /url: /c/69651b4f-f588-8324-a78c-9d7344ea50b4
+                          - generic:
+                            - generic:
+                              - button "Pin chat" [ref=f18e486] [cursor=pointer]
+                              - button "Chat actions" [ref=f18e490] [cursor=pointer]
+                    - listitem [ref=f18e494]:
+                      - generic [ref=f18e495]:
+                        - group "Dạy lập trình với AI":
+                          - link "Dạy lập trình với AI" [ref=f18e496] [cursor=pointer]:
+                            - /url: /c/696515e5-94d0-8320-a213-12d5817a6aa0
+                          - generic:
+                            - generic:
+                              - button "Pin chat" [ref=f18e502] [cursor=pointer]
+                              - button "Chat actions" [ref=f18e506] [cursor=pointer]
+                    - listitem [ref=f18e510]
+          - generic [ref=f18e513]:
+            - generic [ref=f18e514]:
+              - iframe [ref=f18e517]
+              - generic [ref=f18e518]: Templates
+            - generic [ref=f18e533]:
+              - button "Open profile menu" [ref=f18e535] [cursor=pointer]:
+                - generic [ref=f18e539]:
+                  - generic [ref=f18e540]: kenjr-4
+                  - generic [ref=f18e541]: Free
+              - button "Claim offer" [ref=f18e545] [cursor=pointer]
+        - generic:
+          - separator
+      - generic [ref=f18e169]:
+        - main [ref=f18e171]:
+          - generic [ref=f18e552]:
+            - complementary [ref=f18e554]:
+              - generic [ref=f18e560]:
+                - generic [ref=f18e561]:
+                  - heading "GPTs will be retired on December 11" [level=3] [ref=f18e562]
+                  - generic [ref=f18e564]:
+                    - text: GPTs migrated by their creators will remain available as plugins after December 11.
+                    - link "Learn more" [ref=f18e565] [cursor=pointer]:
+                      - /url: https://help.openai.com/en/collections/8475420-gpts
+                - button "Explore plugins" [ref=f18e567] [cursor=pointer]
+            - generic [ref=f18e571]:
+              - heading "GPTs" [level=1] [ref=f18e572]
+              - generic [ref=f18e573]: Discover custom versions of ChatGPT that combine instructions, extra knowledge, and any combination of skills
+            - generic [ref=f18e578]:
+              - generic [ref=f18e582]: Search GPTs
+              - textbox "Search GPTs" [ref=f18e583]
+            - status [ref=f18e586]:
+              - generic [ref=f18e591]: Loading GPTs
+        - status [ref=f18e592]
+  - status [ref=f18e593]
+  - status [ref=f18e594]

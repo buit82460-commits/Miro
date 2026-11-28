@@ -10,8 +10,11 @@ test("slice04: nav runtime + tasks-live + detail khong mat trang", async ({ page
   await expect(page.getByTestId("runtime-title")).toContainText("Runtime");
 
   // Tasks-live: giao viec qua fixture chat cu van tao task moi.
+  // BUG-16 (stale-assertion, khong ghi de BUG-12 cu OBSERVATION_TIMEOUT):
+  // spec cu viet "Giao viec" (khong dau); product contract
+  // (apps/web/src/app/tasks-live/page.tsx: doi tieu de "Giao việc").
   await page.goto("/tasks-live");
-  await expect(page.getByTestId("live-title")).toContainText("Giao viec");
+  await expect(page.getByTestId("live-title")).toContainText("Giao việc");
 
   // Chuyen trang qua lai khong mat noi dung (nav giu, list van render).
   await page.goto("/runtime");

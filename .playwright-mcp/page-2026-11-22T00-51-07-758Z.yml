@@ -1,0 +1,15 @@
+- generic [ref=e1]:
+  - generic [ref=e3]:
+    - img "logo" [ref=e5] [cursor=pointer]
+    - button [ref=e6] [cursor=pointer]
+    - button [ref=e10] [cursor=pointer]
+    - button [ref=e15] [cursor=pointer]:
+      - img "file-text" [ref=e17]
+    - button [ref=e20] [cursor=pointer]:
+      - img "star" [ref=e22]
+    - img "double-right" [ref=e26] [cursor=pointer]
+  - generic [ref=e63]:
+    - article [ref=e65]:
+      - region "Watch in full screen" [ref=e67] [cursor=pointer]:
+        - 'img "5 Claude Skills giúp biến Claude thành một AI Design thực thụ 🤯 Từ nghiên cứu ý tưởng, tạo wireframe, phân tích UI/UX đến xây dựng design system — tất cả đều có thể làm ngay trong Claude khi biết dùng đúng Skill. Bạn đang dùng được mấy cái? 👇 #ClaudeAI #AI #AIDesign #ClaudeSkill #ngocanhal" [ref=e72]'
+    - complementary

@@ -1,0 +1,8 @@
+[      99ms] [WARNING] Error with Permissions-Policy header: Unrecognized feature: 'attribution-reporting'. @ :1
+[      99ms] [WARNING] Error with Permissions-Policy header: Unrecognized feature: 'browsing-topics'. @ :1
+[     416ms] [INFO] [O11Y] [DatadogRUM] Initialized {service: claude-ai, env: production, version: 8394f27c51} @ https://assets-proxy.anthropic.com/claude-ai/v2/assets/v1/shared-l-p-m-w-0-D2K859qW.js:26
+[    2115ms] [ERROR] Unchecked runtime.lastError: Could not establish connection. Receiving end does not exist. @ https://claude.ai/plugins:1
+[    2526ms] [WARNING] Error with Permissions-Policy header: Unrecognized feature: 'attribution-reporting'. @ :1
+[    2526ms] [WARNING] Error with Permissions-Policy header: Unrecognized feature: 'browsing-topics'. @ :1
+[    2654ms] [ERROR] Unchecked runtime.lastError: Could not establish connection. Receiving end does not exist. @ https://a.claude.ai/isolated-segment.html?v=8394f27c51:1
+[   15069ms] [ERROR] Unchecked runtime.lastError: Could not establish connection. Receiving end does not exist. @ https://keywordseverywhere.com/ke/widget.php?source=claude_sidebar&plan=undefined&d=0&rev=1&promo=1&enabled=true&country=&version=12.0.0&pur=1&query=&darkmode=true:1

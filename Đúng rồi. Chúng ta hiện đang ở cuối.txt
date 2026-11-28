@@ -1,0 +1,235 @@
+Đúng rồi. **Chúng ta hiện đang ở cuối Slice 03, chuẩn bị chuyển sang Slice 04 và Slice 05.**
+
+Phần Master Roadmap vừa tổng hợp là bản đồ phát triển dài hạn của Miro, bao gồm cả những Slice đã thực hiện và những hướng mở rộng trong tương lai. Nó không phải một roadmap mới thay thế toàn bộ các Slice trước đó.
+
+Tôi sẽ giữ nguyên cách đánh số Slice để tránh làm mất mạch phát triển.
+
+# **1. Tiến độ Slice hiện tại**
+
+01
+
+**Slice 01 — Browser Bridge**
+
+Kết nối Chrome, Extension, Gateway.
+
+Đã nghiệm thu
+
+01B
+
+**Slice 01B — Persistent Connection**
+
+Pairing, tự kết nối lại, Launcher.
+
+Đã nghiệm thu có giới hạn
+
+02A
+
+**Slice 02A — Browser Observation**
+
+REA-MẮT, đọc DOM, metadata, Evidence.
+
+Đã nghiệm thu
+
+02B
+
+**Slice 02B — Browser Interaction**
+
+Tự điều hướng, tìm kiếm và thu thập dữ liệu.
+
+Đã nghiệm thu theo báo cáo
+
+03
+
+**Slice 03 — Media Intelligence & REA**
+
+Phân tích video, audio, OCR, storyboard.
+
+Level 1–2 đạt · Level 3–5 chưa đạt đầy đủ
+
+04
+
+**Slice 04 — Standalone Runtime & Frontend**
+
+Biến Miro thành ứng dụng sử dụng độc lập.
+
+Giai đoạn tiếp theo đề xuất
+
+05
+
+**Slice 05 — Agent Intelligence**
+
+LLM, Tool Calling, Planning, Context.
+
+Chưa nghiệm thu
+
+06
+
+**Slice 06 — Autonomous Execution**
+
+Scheduler, Workflow, Event, Watcher.
+
+Chưa nghiệm thu
+
+07
+
+**Slice 07 — Remote & Cloud**
+
+Tailscale, Supabase, Cloud Control Center.
+
+Định hướng
+
+# **2. Mối quan hệ giữa các Slice**
+
+Bạn có thể hình dung chúng ta đang xây dựng một AI hoàn chỉnh theo từng bộ phận.
+
+Slice 01 – 01B
+
+**Hệ thần kinh**
+
+Kết nối, truyền lệnh, quyền hạn và bảo mật.
+
+Slice 02A
+
+**Đôi mắt**
+
+Quan sát và đọc dữ liệu.
+
+Slice 02B
+
+**Đôi tay**
+
+Thao tác và điều hướng trình duyệt.
+
+Slice 03
+
+**Khả năng cảm nhận**
+
+Xử lý hình ảnh, video và âm thanh.
+
+Slice 04
+
+**Cơ thể**
+
+Ứng dụng độc lập và giao diện điều khiển.
+
+Slice 05
+
+**Bộ não**
+
+Hiểu yêu cầu, lập kế hoạch và phối hợp công cụ.
+
+Slice 06
+
+**Khả năng tự vận hành**
+
+Chủ động làm việc theo lịch, sự kiện và điều kiện.
+
+Slice 07
+
+**Khả năng kết nối**
+
+Điều khiển từ xa, đồng bộ và mở rộng.
+
+# **3. Các công nghệ vừa nghiên cứu sẽ được đưa vào đâu?**
+
+Chúng không nhất thiết tạo thành Slice mới. Chúng có thể bổ sung hoặc cải thiện những Slice đã có.
+
+| Công nghệ                  | Slice liên quan | Vai trò                                      |
+| -------------------------- | --------------- | -------------------------------------------- |
+| agent-desktop              | 02B, 04, 05     | Mở rộng điều khiển Desktop và Live Workspace |
+| agent-reach                | 02, 03, 05      | Nghiên cứu Internet, quản lý capability      |
+| yt-dlp                     | 03              | Tiếp nhận media                              |
+| FFmpeg                     | 03              | Xử lý video và audio                         |
+| Sherpa-ONNX                | 03              | Nhận diện lời thoại                          |
+| React, Tailwind, shadcn/ui | 04              | Frontend                                     |
+| SQLite                     | 04, 05, 06      | Lưu dữ liệu và trạng thái                    |
+| LangGraph                  | 05              | Điều phối Agent                              |
+| Ollama                     | 05              | Local LLM                                    |
+| pgvector, Qdrant           | 05              | Bộ nhớ và truy xuất kiến thức                |
+| APScheduler                | 06              | Lập lịch                                     |
+| n8n                        | 06              | Workflow và integration                      |
+| Temporal                   | 06              | Thực thi và phục hồi tác vụ dài hạn          |
+| Tailscale                  | 04 hoặc 07      | Điều khiển từ xa                             |
+| Supabase                   | 07              | Cloud database                               |
+| Vercel, Cloudflare         | 07              | Cloud deployment                             |
+
+Đây là vị trí ứng dụng dự kiến, chưa phải quyết định tích hợp.
+
+# **4. Còn Project Context Grounding thì nằm ở đâu?**
+
+Nó không phải Slice 04 hay Slice 05.
+
+Đây là một luồng công việc hỗ trợ xuyên suốt toàn bộ quá trình phát triển.
+
+S01
+
+S02
+
+S03
+
+S04
+
+S05
+
+S06
+
+S07
+
+**Project Intelligence**
+
+Context · Preflight · Runbooks · CI · Capability Map · Knowledge Writeback
+
+Hỗ trợ tất cả các Slice, không thay đổi số thứ tự roadmap.
+
+Audit đã hoàn thành. Phương án cải thiện chưa được nghiệm thu.
+
+# **5. Slice 03 đã xong chưa?**
+
+Chính xác là **đã kết thúc một đợt triển khai và bàn giao, nhưng chưa hoàn thành toàn bộ mục tiêu Slice 03.**
+
+| Hạng mục          | Trạng thái |
+| ----------------- | ---------- |
+| Level 1–2         | Accepted   |
+| Level 3–4         | Partial    |
+| Level 5           | Blocked    |
+| STT / Diarization | Blocked    |
+| VLM               | Denied     |
+| Backend tests     | 458 PASS   |
+| Bridge tests      | 89 PASS    |
+| HEAD              | `9b33700`  |
+
+Chúng ta có thể chuyển sang Slice 04 mà vẫn giữ những phần chưa hoàn thành của Slice 03 trong backlog, nếu chúng không cản trở mục tiêu của Slice 04.
+
+Không cần hoàn thiện tuyệt đối mọi capability rồi mới phát triển phần tiếp theo.
+
+# **6. Thứ tự tôi đề xuất giữ nguyên**
+
+HIỆN TẠI
+
+**Slice 03 — Bàn giao và tổng hợp**
+
+Tiếp nhận các báo cáo đang chạy, đối chiếu hiện trạng, ghi nhận backlog.
+
+TIẾP THEO
+
+**Slice 04 — Standalone Runtime + Frontend**
+
+Bạn có thể mở Miro, giao nhiệm vụ, theo dõi tiến trình và nhận kết quả thật.
+
+**Slice 05 — Agent Intelligence**
+
+Miro có bộ não AI tổng quát hơn, biết lựa chọn và phối hợp các công cụ hiện có.
+
+**Slice 06 — Autonomous Execution**
+
+Miro tự làm việc theo lịch, workflow và sự kiện.
+
+**Slice 07 — Remote & Cloud**
+
+Miro có thể được quản lý từ xa và đồng bộ giữa các thiết bị.
+
+Tôi chưa trực tiếp kiểm tra repository mới nhất, nên thứ tự trên vẫn là roadmap đề xuất dựa trên những gì hai bên đã thống nhất.
+
+**Tóm lại, không có việc thay đổi roadmap hay quay lại làm từ đầu.** Master Roadmap vừa rồi chỉ giúp chúng ta nhìn rõ toàn bộ dự án, bao gồm cả những công nghệ mới có thể bổ sung vào từng Slice.
+
+Hiện tại cứ hoàn tất việc tổng hợp các báo cáo. Sau đó chúng ta sẽ xác định chính xác phạm vi Slice 04, tận dụng những nghiên cứu phù hợp và tiếp tục phát triển từ HEAD `9b33700`.

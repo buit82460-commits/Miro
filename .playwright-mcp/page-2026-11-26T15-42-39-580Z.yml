@@ -1,0 +1,128 @@
+- generic [ref=f10e1]:
+  - generic [ref=f10e2]:
+    - complementary [ref=f10e3]:
+      - generic [ref=f10e4]: Miro
+      - navigation [ref=f10e5]:
+        - link "Công việc" [ref=f10e6] [cursor=pointer]:
+          - /url: /
+        - link "Giao việc (live)" [ref=f10e7] [cursor=pointer]:
+          - /url: /tasks-live
+        - link "Runtime" [ref=f10e8] [cursor=pointer]:
+          - /url: /runtime
+        - link "Thư viện" [ref=f10e9] [cursor=pointer]:
+          - /url: /library
+        - link "Xuất bản" [ref=f10e10] [cursor=pointer]:
+          - /url: /publish
+        - link "Editor" [ref=f10e11] [cursor=pointer]:
+          - /url: /editor
+        - link "Cài đặt & kết nối" [ref=f10e12] [cursor=pointer]:
+          - /url: /settings
+    - main [ref=f10e13]:
+      - heading "Giao viec" [level=1] [ref=f10e14]
+      - paragraph [ref=f10e15]:
+        - text: Nhiem vu capability da nghiem thu (actor/video/search TikTok) qua
+        - code [ref=f10e16]: POST /tasks/run-message
+        - text: . BE so huu state; chuyen trang khong mat task.
+      - generic [ref=f10e17]:
+        - 'textbox "VD: tim kiem tiktok KANS 377 5 video" [ref=f10e18]'
+        - button "Giao viec" [disabled] [ref=f10e19]
+      - heading "Phân tích video (Manual Control)" [level=2] [ref=f10e20]
+      - paragraph [ref=f10e21]: Dán URL video TikTok — Miro tự phân tích, không cần tab hay cú pháp kỹ thuật.
+      - generic [ref=f10e22]:
+        - textbox "https://www.tiktok.com/@.../video/..." [ref=f10e23]
+        - button "Phân tích video" [disabled] [ref=f10e24]
+      - generic [ref=f10e25]:
+        - button "Tìm kiếm mẫu" [ref=f10e26]
+        - button "Kiểm tra tài khoản" [ref=f10e27]
+      - heading "Task moi nhat (BE)" [level=2] [ref=f10e28]
+      - list [ref=f10e29]:
+        - listitem [ref=f10e30]:
+          - link "task-dc6b68c7ed04" [ref=f10e31] [cursor=pointer]:
+            - /url: /tasks-live/task-dc6b68c7ed04
+          - generic [ref=f10e32]: "- needs_attention - NO_ROUTE_MATCH"
+        - listitem [ref=f10e33]:
+          - link "task-ff1030af7817" [ref=f10e34] [cursor=pointer]:
+            - /url: /tasks-live/task-ff1030af7817
+          - generic [ref=f10e35]: "- needs_attention - SEARCH_NO_RECORDS"
+        - listitem [ref=f10e36]:
+          - link "task-d8690bec262e" [ref=f10e37] [cursor=pointer]:
+            - /url: /tasks-live/task-d8690bec262e
+          - generic [ref=f10e38]: "- needs_attention - NO_ROUTE_MATCH"
+        - listitem [ref=f10e39]:
+          - link "task-c87b85d6cee9" [ref=f10e40] [cursor=pointer]:
+            - /url: /tasks-live/task-c87b85d6cee9
+          - generic [ref=f10e41]: "- needs_attention - NO_ROUTE_MATCH"
+        - listitem [ref=f10e42]:
+          - link "task-7dbff808928b" [ref=f10e43] [cursor=pointer]:
+            - /url: /tasks-live/task-7dbff808928b
+          - generic [ref=f10e44]: "- needs_attention - NO_MANAGED_TAB"
+        - listitem [ref=f10e45]:
+          - link "task-2a724e29ba36" [ref=f10e46] [cursor=pointer]:
+            - /url: /tasks-live/task-2a724e29ba36
+          - generic [ref=f10e47]: "- needs_attention - NO_MANAGED_TAB"
+        - listitem [ref=f10e48]:
+          - link "task-da52957d39e2" [ref=f10e49] [cursor=pointer]:
+            - /url: /tasks-live/task-da52957d39e2
+          - generic [ref=f10e50]: "- queued"
+        - listitem [ref=f10e51]:
+          - link "task-0678e70f87c1" [ref=f10e52] [cursor=pointer]:
+            - /url: /tasks-live/task-0678e70f87c1
+          - generic [ref=f10e53]: "- queued"
+        - listitem [ref=f10e54]:
+          - link "task-d7331ca58526" [ref=f10e55] [cursor=pointer]:
+            - /url: /tasks-live/task-d7331ca58526
+          - generic [ref=f10e56]: "- queued"
+        - listitem [ref=f10e57]:
+          - link "task-e60e7ba7e230" [ref=f10e58] [cursor=pointer]:
+            - /url: /tasks-live/task-e60e7ba7e230
+          - generic [ref=f10e59]: "- needs_attention - RuntimeError - co evidence"
+        - listitem [ref=f10e60]:
+          - link "task-d20a836485b1" [ref=f10e61] [cursor=pointer]:
+            - /url: /tasks-live/task-d20a836485b1
+          - generic [ref=f10e62]: "- needs_attention - RuntimeError - co evidence"
+        - listitem [ref=f10e63]:
+          - link "task-951fbea19f84" [ref=f10e64] [cursor=pointer]:
+            - /url: /tasks-live/task-951fbea19f84
+          - generic [ref=f10e65]: "- needs_attention - RuntimeError - co evidence"
+        - listitem [ref=f10e66]:
+          - link "task-854f1d70d617" [ref=f10e67] [cursor=pointer]:
+            - /url: /tasks-live/task-854f1d70d617
+          - generic [ref=f10e68]: "- queued"
+        - listitem [ref=f10e69]:
+          - link "task-9e613fa3c510" [ref=f10e70] [cursor=pointer]:
+            - /url: /tasks-live/task-9e613fa3c510
+          - generic [ref=f10e71]: "- queued"
+        - listitem [ref=f10e72]:
+          - link "task-c757825843a1" [ref=f10e73] [cursor=pointer]:
+            - /url: /tasks-live/task-c757825843a1
+          - generic [ref=f10e74]: "- queued"
+        - listitem [ref=f10e75]:
+          - link "task-a0e742107de3" [ref=f10e76] [cursor=pointer]:
+            - /url: /tasks-live/task-a0e742107de3
+          - generic [ref=f10e77]: "- queued"
+        - listitem [ref=f10e78]:
+          - link "task-1733692baa77" [ref=f10e79] [cursor=pointer]:
+            - /url: /tasks-live/task-1733692baa77
+          - generic [ref=f10e80]: "- queued"
+        - listitem [ref=f10e81]:
+          - link "task-b4ebcf3aabd5" [ref=f10e82] [cursor=pointer]:
+            - /url: /tasks-live/task-b4ebcf3aabd5
+          - generic [ref=f10e83]: "- queued"
+        - listitem [ref=f10e84]:
+          - link "task-d54346942a5a" [ref=f10e85] [cursor=pointer]:
+            - /url: /tasks-live/task-d54346942a5a
+          - generic [ref=f10e86]: "- queued"
+        - listitem [ref=f10e87]:
+          - link "task-fbf1497ffc66" [ref=f10e88] [cursor=pointer]:
+            - /url: /tasks-live/task-fbf1497ffc66
+          - generic [ref=f10e89]: "- queued"
+  - generic [ref=f10e94] [cursor=pointer]:
+    - button "Open Next.js Dev Tools" [ref=f10e95]
+    - generic [ref=f10e99]:
+      - button "Open issues overlay" [ref=f10e100]:
+        - generic [ref=f10e101]:
+          - generic [aria-hidden] [ref=f10e102]: "0"
+          - generic [ref=f10e103]: "1"
+        - generic [ref=f10e104]: Issue
+      - button "Collapse issues badge" [ref=f10e105]
+  - alert [ref=f10e108]

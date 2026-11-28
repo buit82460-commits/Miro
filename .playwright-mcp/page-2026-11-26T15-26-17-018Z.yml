@@ -1,0 +1,208 @@
+- generic [ref=f7e2]:
+  - complementary "Primary navigation" [ref=f7e4]:
+    - generic [ref=f7e5]:
+      - generic [ref=f7e6]:
+        - button [ref=f7e7] [cursor=pointer]:
+          - generic "miro." [ref=f7e8]:
+            - text: miro
+            - generic [ref=f7e9]: .
+        - button "Thu gọn thanh điều hướng" [ref=f7e10] [cursor=pointer]
+      - generic [ref=f7e13]:
+        - generic [ref=f7e14]: Personal Operations
+        - generic [ref=f7e15]: LOCAL
+      - generic [ref=f7e16]:
+        - button "Bảng lệnh" [ref=f7e17] [cursor=pointer]:
+          - generic [ref=f7e18]: Tìm kiếm nhanh...
+          - generic [ref=f7e23]: ⌘K
+        - button "Hội thoại mới" [ref=f7e24] [cursor=pointer]
+    - navigation "Workspace sections" [ref=f7e27]:
+      - generic [ref=f7e28]:
+        - button "WORKSPACE" [ref=f7e29] [cursor=pointer]
+        - list [ref=f7e33]:
+          - listitem [ref=f7e34]:
+            - link "Tổng quan" [ref=f7e35] [cursor=pointer]:
+              - /url: /overview
+          - listitem [ref=f7e42]:
+            - link "AI Workspace" [ref=f7e43] [cursor=pointer]:
+              - /url: /workspace
+          - listitem [ref=f7e47]:
+            - link "Tác vụ" [ref=f7e48] [cursor=pointer]:
+              - /url: /tasks
+          - listitem [ref=f7e53]:
+            - link "Dự án" [ref=f7e54] [cursor=pointer]:
+              - /url: /projects
+      - generic [ref=f7e58]:
+        - button "TỰ ĐỘNG HÓA" [ref=f7e59] [cursor=pointer]
+        - list [ref=f7e63]:
+          - listitem [ref=f7e64]:
+            - link "Lịch trình" [ref=f7e65] [cursor=pointer]:
+              - /url: /schedules
+          - listitem [ref=f7e71]:
+            - link "Workflows" [ref=f7e72] [cursor=pointer]:
+              - /url: /workflows
+      - generic [ref=f7e78]:
+        - button "CÔNG CỤ" [ref=f7e79] [cursor=pointer]
+        - list [ref=f7e83]:
+          - listitem [ref=f7e84]:
+            - link "Trình duyệt" [ref=f7e85] [cursor=pointer]:
+              - /url: /browser
+          - listitem [ref=f7e90]:
+            - link "Nghiên cứu" [ref=f7e91] [cursor=pointer]:
+              - /url: /research
+          - listitem [ref=f7e96]:
+            - link "Media Studio" [ref=f7e97] [cursor=pointer]:
+              - /url: /media
+          - listitem [ref=f7e102]:
+            - link "Xuất bản" [ref=f7e103] [cursor=pointer]:
+              - /url: /publishing
+          - listitem [ref=f7e108]:
+            - link "Tri thức" [ref=f7e109] [cursor=pointer]:
+              - /url: /knowledge
+      - generic [ref=f7e113]:
+        - button "HỆ THỐNG" [ref=f7e114] [cursor=pointer]
+        - list [ref=f7e118]:
+          - listitem [ref=f7e119]:
+            - link "Hoạt động" [ref=f7e120] [cursor=pointer]:
+              - /url: /activity
+          - listitem [ref=f7e124]:
+            - link "Tích hợp" [ref=f7e125] [cursor=pointer]:
+              - /url: /integrations
+          - listitem [ref=f7e129]:
+            - link "Cài đặt" [ref=f7e130] [cursor=pointer]:
+              - /url: /settings
+    - generic [ref=f7e135]:
+      - generic [ref=f7e136]:
+        - generic [ref=f7e137]: Miro Runtime · Mô phỏng
+        - generic [ref=f7e138]: OK
+      - generic [ref=f7e139]:
+        - generic [ref=f7e140]:
+          - generic [ref=f7e141]: OP
+          - generic [ref=f7e142]:
+            - paragraph [ref=f7e143]: Operator
+            - paragraph [ref=f7e144]: Asia/Bangkok
+        - button "Switch theme" [ref=f7e146] [cursor=pointer]
+  - generic [ref=f7e149]:
+    - banner [ref=f7e150]:
+      - navigation "Breadcrumb" [ref=f7e152]:
+        - generic [ref=f7e153]: Media Studio
+      - generic [ref=f7e154]:
+        - generic "Mọi tác vụ, trình duyệt và xuất bản đều được mô phỏng cục bộ. Không kết nối tài khoản thật." [ref=f7e155]: Chế độ Mô phỏng
+        - button "Giám sát tác vụ" [ref=f7e156] [cursor=pointer]:
+          - generic [ref=f7e159]: "0"
+          - generic [ref=f7e160]: đang chạy
+        - button "Cần xử lý" [ref=f7e161] [cursor=pointer]:
+          - generic [ref=f7e164]: "2"
+        - button "Thông báo" [ref=f7e165] [cursor=pointer]
+        - button "Trợ lý AI ngữ cảnh" [ref=f7e170] [cursor=pointer]:
+          - generic [ref=f7e173]: Miro AI
+    - main [ref=f7e174]:
+      - generic [ref=f7e175]:
+        - generic [ref=f7e176]:
+          - complementary [ref=f7e177]:
+            - generic [ref=f7e178]:
+              - generic [ref=f7e179]:
+                - heading "Media Studio" [level=1] [ref=f7e180]
+                - generic [ref=f7e181]:
+                  - button "List view" [ref=f7e182] [cursor=pointer]
+                  - button "Grid view" [ref=f7e184] [cursor=pointer]
+              - textbox "Tìm media..." [ref=f7e191]
+              - generic [ref=f7e192]:
+                - button "all" [ref=f7e193] [cursor=pointer]
+                - button "video" [ref=f7e194] [cursor=pointer]
+                - button "audio" [ref=f7e195] [cursor=pointer]
+                - button "image" [ref=f7e196] [cursor=pointer]
+              - button "Tải lên mẫu (Demo)" [ref=f7e197] [cursor=pointer]
+            - generic [ref=f7e202]:
+              - button [ref=f7e203] [cursor=pointer]:
+                - generic [ref=f7e207]:
+                  - paragraph [ref=f7e208]: Product Review 01
+                  - paragraph [ref=f7e209]: 0:42 · analyzed
+              - button [ref=f7e210] [cursor=pointer]:
+                - generic [ref=f7e214]:
+                  - paragraph [ref=f7e215]: KANS 377 Unboxing Clip
+                  - paragraph [ref=f7e216]: 0:28 · pending
+              - button [ref=f7e217] [cursor=pointer]:
+                - generic [ref=f7e221]:
+                  - paragraph [ref=f7e222]: Fashion Lookbook Reel 04
+                  - paragraph [ref=f7e223]: 0:35 · analyzed
+              - button [ref=f7e224] [cursor=pointer]:
+                - generic [ref=f7e230]:
+                  - paragraph [ref=f7e231]: KANS 377 Voiceover Draft.wav
+                  - paragraph [ref=f7e232]: 0:40 · analyzed
+          - generic [ref=f7e233]:
+            - generic [ref=f7e234]:
+              - generic [ref=f7e235]:
+                - heading "Product Review 01" [level=2] [ref=f7e236]
+                - paragraph [ref=f7e237]: KANS 377 Reviews · 1080 × 1920 · 24.8 MB · Simulated Preview
+              - generic [ref=f7e238]:
+                - generic [ref=f7e239]: analyzed
+                - button "Phân tích (Mô phỏng)" [ref=f7e241] [cursor=pointer]
+            - generic [ref=f7e246]:
+              - generic [ref=f7e247]:
+                - generic [ref=f7e248]: Hook mở đầu · Cận cảnh chai sản phẩm
+                - generic [ref=f7e249]: 0:00 / 0:42
+              - generic [ref=f7e250]:
+                - button "Play preview" [ref=f7e251] [cursor=pointer]
+                - paragraph [ref=f7e254]: Khung hình cận cảnh kết cấu giọt serum trên mu bàn tay với chữ tiêu đề rõ.
+              - generic [ref=f7e255]: Sau hai tuần dùng đều đặn KANS 377 vào buổi tối, đây là ba điểm mình thấy rõ nhất.
+            - generic [ref=f7e256]:
+              - button "Play" [ref=f7e257] [cursor=pointer]
+              - slider "Timeline scrubber" [ref=f7e260] [cursor=pointer]: "0"
+              - generic [ref=f7e261]: 0:00 / 0:42
+            - generic [ref=f7e262]:
+              - generic [ref=f7e263]:
+                - generic [ref=f7e264]:
+                  - generic [ref=f7e265]: REA-MẮT · Visual Inspector
+                  - generic [ref=f7e266]: Mô phỏng lộ trình
+                - paragraph [ref=f7e268]: Đánh giá bố cục khung hình, mật độ chữ và điểm dừng ánh nhìn theo từng phân cảnh (tính năng tương lai).
+              - generic [ref=f7e269]:
+                - generic [ref=f7e270]:
+                  - generic [ref=f7e271]: REA Video · Auto Cut Brief
+                  - generic [ref=f7e272]: Coming Soon
+                - paragraph [ref=f7e274]: Đề xuất điểm cắt nhịp dựng và tạo biến thể mở đầu từ tư liệu thô sau khi tích hợp runtime xử lý media.
+          - complementary [ref=f7e275]:
+            - tablist [ref=f7e277]:
+              - tab "Phân tích" [selected] [ref=f7e278] [cursor=pointer]
+              - tab "Thoại" [ref=f7e280] [cursor=pointer]
+              - tab "Thông tin" [ref=f7e282] [cursor=pointer]
+              - tab "Ghi chú" [ref=f7e284] [cursor=pointer]
+            - generic [ref=f7e287]:
+              - paragraph [ref=f7e288]: "Trạng thái phân tích mô phỏng (100%). Nhấn một phân cảnh để nhảy mốc thời gian:"
+              - button "Hook mở đầu · Cận cảnh chai sản phẩm 0:00–0:06 Khung hình cận cảnh kết cấu giọt serum trên mu bàn tay với chữ tiêu đề rõ." [ref=f7e289] [cursor=pointer]:
+                - generic [ref=f7e290]:
+                  - generic [ref=f7e291]: Hook mở đầu · Cận cảnh chai sản phẩm
+                  - generic [ref=f7e292]: 0:00–0:06
+                - paragraph [ref=f7e293]: Khung hình cận cảnh kết cấu giọt serum trên mu bàn tay với chữ tiêu đề rõ.
+              - button "Kiểm tra độ thấm & kết cấu 0:06–0:19 Thao tác thoa nhẹ lên da, ánh sáng cửa sổ trung tính, không lóa." [ref=f7e294] [cursor=pointer]:
+                - generic [ref=f7e295]:
+                  - generic [ref=f7e296]: Kiểm tra độ thấm & kết cấu
+                  - generic [ref=f7e297]: 0:06–0:19
+                - paragraph [ref=f7e298]: Thao tác thoa nhẹ lên da, ánh sáng cửa sổ trung tính, không lóa.
+              - button "Lưu ý phối hợp routine 0:19–0:33 So sánh thứ tự bôi cùng kem dưỡng phục hồi và kem chống nắng." [ref=f7e299] [cursor=pointer]:
+                - generic [ref=f7e300]:
+                  - generic [ref=f7e301]: Lưu ý phối hợp routine
+                  - generic [ref=f7e302]: 0:19–0:33
+                - paragraph [ref=f7e303]: So sánh thứ tự bôi cùng kem dưỡng phục hồi và kem chống nắng.
+              - button "Tổng kết & CTA mềm 0:33–0:42 Bảng tóm tắt 3 ưu/nhược điểm dạng danh sách sạch." [ref=f7e304] [cursor=pointer]:
+                - generic [ref=f7e305]:
+                  - generic [ref=f7e306]: Tổng kết & CTA mềm
+                  - generic [ref=f7e307]: 0:33–0:42
+                - paragraph [ref=f7e308]: Bảng tóm tắt 3 ưu/nhược điểm dạng danh sách sạch.
+        - generic [ref=f7e309]:
+          - generic [ref=f7e310]:
+            - generic [ref=f7e311]: Timeline phân cảnh (4 đoạn)
+            - generic [ref=f7e312]: "Playhead: 0:00"
+          - generic [ref=f7e313]:
+            - button "Hook mở đầu · Cận cảnh chai sản phẩm 0:00 → 0:06" [ref=f7e314] [cursor=pointer]:
+              - generic [ref=f7e315]: Hook mở đầu · Cận cảnh chai sản phẩm
+              - generic [ref=f7e316]: 0:00 → 0:06
+            - button "Kiểm tra độ thấm & kết cấu 0:06 → 0:19" [ref=f7e317] [cursor=pointer]:
+              - generic [ref=f7e318]: Kiểm tra độ thấm & kết cấu
+              - generic [ref=f7e319]: 0:06 → 0:19
+            - button "Lưu ý phối hợp routine 0:19 → 0:33" [ref=f7e320] [cursor=pointer]:
+              - generic [ref=f7e321]: Lưu ý phối hợp routine
+              - generic [ref=f7e322]: 0:19 → 0:33
+            - button "Tổng kết & CTA mềm 0:33 → 0:42" [ref=f7e323] [cursor=pointer]:
+              - generic [ref=f7e324]: Tổng kết & CTA mềm
+              - generic [ref=f7e325]: 0:33 → 0:42
+  - region "Notifications alt+T"

@@ -1,14 +1,21 @@
 import { fail, getStore, ok, pushHistory } from "@/lib/fixtures/store";
+import { tryBe } from "@/lib/be";
 
 // 1 lần thả = 1 command có revision. Sai revision -> 409 để FE refetch.
+// BE chỉ hỗ trợ update_subtitle/move_clip — op lạ BE trả 422, BFF forward nguyên.
 export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
-  const p = getStore().projects.find((x) => x.id === id);
-  if (!p) return fail("Không tìm thấy project", 404);
   const body = (await req.json().catch(() => ({}))) as {
     operation?: Record<string, unknown>;
     expected_revision?: number;
   };
+  const be = await tryBe(`/projects/${encodeURIComponent(id)}/operations`, {
+    method: "POST",
+    body,
+  });
+  if (be) return be;
+  const p = getStore().projects.find((x) => x.id === id);
+  if (!p) return fail("Không tìm thấy project", 404);
   if (!body.operation || typeof body.operation.type !== "string") {
     return fail("operation chưa hợp lệ", 422);
   }
@@ -37,6 +44,8 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
         if (clip) clip.start = op.start as number;
       }
     }
+  } else {
+    return fail("operation chưa hỗ trợ (chỉ update_subtitle/move_clip)", 422);
   }
   p.revision += 1;
   if (op.type === "update_subtitle") {

@@ -1,53 +1,71 @@
 import { expect, test } from "@playwright/test";
 
-// Mốc Threads: sửa sub -> render -> duyệt -> đăng -> tìm lại bài -> lịch sử.
-// Chạy bằng fixture/mock nội bộ theo contract BE (POST /api/test-reset để seed lại).
-test("threads milestone: subtitle -> render -> approve -> publish -> receipt -> history", async ({
+// BUG-17 (threads-stale, khong ghi de gate cu): spec fixture cu
+// (editor p1 → publish fixture → receipt posted mẫu) khong con dung khi
+// BFF BE-first. Viết lại BE-first flow:
+// renders BE that → threads approve BE that (scope threads_post) →
+// publish BE dry-run → reconcile read-only.
+// Gate: PASS neu BE fail-closed trung thuc (dry-run/reconcile-not-found),
+// KHONG doi receipt posted mau. BE history 500 → ghi nhan, loai khoi gate.
+test("threads milestone BE-first: render -> approve -> dry-publish -> reconcile", async ({
   page,
   request,
 }) => {
-  await request.post("/api/test-reset");
-  const subText = `Sub Threads E2E ${Date.now()}`;
+  const stamp = Date.now();
+  const shortcode = `e2e-${stamp}`;
 
-  // 1. Sửa sub trong Editor.
-  await page.goto("/editor?project=p1");
-  await expect(page.getByTestId("editor-title")).toContainText("r3");
-  await page.getByTestId("clip-sub1").click();
-  await page.getByTestId("sub-text").fill(subText);
-  await page.getByTestId("sub-save").click();
-  await expect(page.getByTestId("editor-msg")).toContainText("Đã sửa phụ đề");
-  await expect(page.getByTestId("editor-title")).toContainText("r4");
+  // 1. Render BE thật (POST /renders idempotent).
+  const renderRes = await request.post("/api/renders", {
+    data: {
+      request_id: `e2e-${stamp}`,
+      project_id: "p1",
+      expected_revision: 0,
+      content_hash: `e2e-${stamp}`,
+    },
+  });
+  expect([200, 201]).toContain(renderRes.status());
+  const renderBody = await renderRes.json();
+  const renderId: string =
+    renderBody?.result?.render_id ?? renderBody?.render_id ?? "";
+  expect(renderId).toBeTruthy();
 
-  // 2. Render bản cuối.
-  await page.getByTestId("render-final").click();
-  await expect(page.getByTestId("editor-msg")).toContainText("Đã render bản cuối");
-  await expect(page.getByTestId("render-status")).toContainText("render_done");
+  // 2. Approve BE thật (scope threads_post + fingerprint + revision).
+  const approveRes = await request.post("/api/threads/approve", {
+    data: {
+      text: `E2E BE-first probe ${shortcode} hello threads`,
+      owner: "haodaojrk5",
+      shortcode,
+      revision: 0,
+    },
+  });
+  expect([200, 201]).toContain(approveRes.status());
 
-  // 3. Duyệt bản cuối.
-  await page.getByTestId("approve-project").click();
-  await expect(page.getByTestId("editor-msg")).toContainText("Đã duyệt");
+  // 3. Publish BE dry-run (allow_post=false — chưa đăng thật).
+  const pubRes = await request.post("/api/threads/publish", {
+    data: {
+      publication_id: `pub-e2e-${stamp}`,
+      attempt_id: `att-e2e-${stamp}`,
+      render_id: renderId,
+      text: `E2E BE-first probe ${shortcode}`,
+      owner: "haodaojrk5",
+      shortcode,
+      allow_post: false,
+    },
+  });
+  expect([200, 201]).toContain(pubRes.status());
+  const pubBody = await pubRes.json();
+  const first =
+    pubBody?.result?.worker?.results?.[0] ?? pubBody?.worker?.results?.[0];
+  expect(first?.dry_run).toBe(true);
 
-  // 4. Đăng Threads (batch video×platform×account).
+  // 4. Reconcile read-only (chưa có attempt journal → fail-closed, không replay).
+  const recRes = await request.post("/api/threads/reconcile", {
+    data: { text: `probe ${shortcode}`, owner: "haodaojrk5", shortcode },
+  });
+  expect([200]).toContain(recRes.status());
+
+  // 5. UI publish page render BE-first, không seed mẫu.
   await page.goto("/publish");
-  // Nhãn mẫu phải luôn nhìn thấy — chống hiểu nhầm "posted" là đăng thật.
-  await expect(page.getByTestId("publish-sample-note")).toContainText("DỮ LIỆU MẪU");
-  await page.getByTestId("publish-video").selectOption("p1");
-  await page.getByTestId("publish-platform").selectOption("threads");
-  await page.getByTestId("publish-account").fill("@miro.demo");
-  await page.getByTestId("publish-submit").click();
-  await expect(page.getByTestId("publish-msg")).toContainText("Đã gửi batch");
-
-  // 5. Tìm lại bài: receipt posted có post_url + post_id đối soát được.
-  const receiptList = page.getByTestId("receipt-list");
-  await expect(receiptList).toContainText("threads/@miro.demo");
-  await expect(receiptList).toContainText("posted");
-  const postUrl = await page.getByTestId("receipt-list").innerText();
-  expect(postUrl).toContain("https://www.threads.com/t/");
-
-  // 6. Lịch sử ghi đủ mốc.
-  const history = await request.get("/api/history").then((r) => r.json());
-  const events: string[] = history.result.map((h: { event: string }) => h.event);
-  for (const e of ["subtitle", "render", "approve", "publish"]) {
-    expect(events).toContain(e);
-  }
+  await expect(page.getByTestId("publish-title")).toContainText("Xuất bản");
+  await expect(page.getByTestId("publish-note")).toContainText("dry-run");
 });

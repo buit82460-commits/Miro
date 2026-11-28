@@ -30,7 +30,7 @@ import {
 import { useMiroStore } from '../../stores/useMiroStore';
 import { useTranslation } from '../../i18n/useTranslation';
 import { formatDuration } from '../../lib/format';
-import { Button, TaskProgressBar, TaskStatusBadge } from '../miro-ui/primitives';
+import { Button, TaskStatusBadge } from '../miro-ui/primitives';
 import { cn } from '../../lib/utils';
 
 export function ResourceKindIcon({ kind, className = 'w-4 h-4' }: { kind: ResourceKind; className?: string }) {
@@ -128,12 +128,25 @@ export function LiveTaskCard({
         <TaskStatusBadge status={task.status} />
       </div>
 
-      {/* Operation & Progress */}
+      {/* Tien do that tu BE — khong mo phong progress/steps.
+          Chi tiet day du tai /tasks-live/{id}. Chua co du lieu BE -> empty state. */}
       <div className="space-y-2">
         <p className="text-[13px] text-[var(--color-text-secondary)] leading-5">
-          {task.currentOperation}
+          Tiến độ trực tiếp từ BE — xem chi tiết tại{' '}
+          <button
+            type="button"
+            onClick={() =>
+              navigate(`/tasks-live/${encodeURIComponent(task.id)}`)
+            }
+            className="font-medium text-[var(--color-accent-text)] underline underline-offset-2 cursor-pointer"
+          >
+            /tasks-live/{task.id}
+          </button>
+          .
         </p>
-        <TaskProgressBar progress={task.progress} status={task.status} />
+        <div className="rounded-[8px] border border-dashed border-[var(--color-border)] p-4 text-center text-[12px] text-[var(--color-text-muted)]">
+          Chưa có tiến độ từ BE — poll GET /tasks/{'{id}'}/events tại trang task để xem sự kiện thật.
+        </div>
       </div>
 
       {/* Partial or Error callout */}
@@ -148,7 +161,9 @@ export function LiveTaskCard({
         </div>
       )}
 
-      {/* Expandable steps */}
+      {/* Cac buoc thuc thi (neu co tu mock cu) — BE khong co steps gia.
+          Luong BE that: poll GET /tasks/{id}/events o trang chi tiet.
+          Khong tu tao steps/progress mo phong. */}
       {!compact && task.steps.length > 0 && (
         <div>
           <button

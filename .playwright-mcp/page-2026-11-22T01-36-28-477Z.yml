@@ -1,0 +1,666 @@
+- generic [ref=f52e1]:
+  - generic [ref=f52e7]:
+    - complementary "Sidebar" [ref=f52e9]:
+      - generic [ref=f52e10]:
+        - button "Hide sidebar" [ref=f52e13] [cursor=pointer]:
+          - generic [aria-hidden] [ref=f52e17]: 
+        - link "Claude" [ref=f52e20] [cursor=pointer]:
+          - /url: /new
+      - generic [ref=f52e23]:
+        - heading "Navigation" [level=2] [ref=f52e24]
+        - generic [ref=f52e26]:
+          - generic [ref=f52e27]:
+            - link "New" [ref=f52e29] [cursor=pointer]:
+              - /url: /new
+              - generic [aria-hidden] [ref=f52e31]: 
+              - generic [aria-hidden] [ref=f52e37]:
+                - generic [ref=f52e38]: Ctrl
+                - generic [ref=f52e39]: +
+                - generic [ref=f52e40]: Shift
+                - generic [ref=f52e41]: +
+                - generic [ref=f52e42]: O
+            - button "Search" [ref=f52e43] [cursor=pointer]:
+              - generic [aria-hidden] [ref=f52e45]: 
+              - generic [aria-hidden] [ref=f52e49]:
+                - generic [ref=f52e50]: Ctrl
+                - generic [ref=f52e51]: +
+                - generic [ref=f52e52]: Shift
+                - generic [ref=f52e53]: +
+                - generic [ref=f52e54]: K
+          - generic [ref=f52e56]:
+            - link "Projects" [ref=f52e58] [cursor=pointer]:
+              - /url: /projects
+              - generic [aria-hidden] [ref=f52e60]: 
+            - link "Artifacts" [ref=f52e65] [cursor=pointer]:
+              - /url: /artifacts
+              - generic [aria-hidden] [ref=f52e67]: 
+            - link "Code Upgrade" [ref=f52e72] [cursor=pointer]:
+              - /url: /upgrade?feature=code&returnTo=%2Fcode
+              - generic [aria-hidden] [ref=f52e74]: 
+              - generic [ref=f52e75]:
+                - generic [ref=f52e76]: Code
+                - generic [ref=f52e79]: Upgrade
+            - link "Plugins" [ref=f52e81] [cursor=pointer]:
+              - /url: /plugins
+              - generic [aria-hidden] [ref=f52e83]: 
+          - generic [ref=f52e91]:
+            - generic:
+              - heading [level=3] [ref=f52e94]:
+                - button "Pinned" [expanded] [ref=f52e95] [cursor=pointer]:
+                  - generic [aria-hidden]: 
+              - generic [ref=f52e99]:
+                - generic [aria-hidden] [ref=f52e101]: 
+                - generic [ref=f52e102]: Drag to pin
+            - generic [ref=f52e103]:
+              - generic [ref=f52e104]:
+                - generic [ref=f52e106]:
+                  - heading [level=3] [ref=f52e107]:
+                    - button "Chats and tasks" [expanded] [ref=f52e108] [cursor=pointer]:
+                      - generic [aria-hidden]: 
+                  - button "Group and sort" [ref=f52e113] [cursor=pointer]:
+                    - generic [aria-hidden] [ref=f52e117]: 
+                - generic [ref=f52e118]:
+                  - generic [ref=f52e121]:
+                    - link "Đọc và tiếp tục Idle" [ref=f52e122] [cursor=pointer]:
+                      - /url: /chat/90755ee4-e8b4-4eca-bffa-ee02eeb15333
+                      - generic [ref=f52e123]: Đọc và tiếp tục
+                      - img "Idle" [ref=f52e127]
+                    - generic:
+                      - button "More options for Đọc và tiếp tục":
+                        - generic:
+                          - generic [aria-hidden]: 
+                  - generic [ref=f52e131]:
+                    - link "Định dạng lại lộ trình học với cột Thuộc tính Idle" [ref=f52e132] [cursor=pointer]:
+                      - /url: /chat/39e3062e-ff23-4d52-9e8e-3fda4ae06695
+                      - generic [ref=f52e133]: Định dạng lại lộ trình học với cột Thuộc tính
+                      - img "Idle" [ref=f52e137]
+                    - generic:
+                      - button "More options for Định dạng lại lộ trình học với cột Thuộc tính":
+                        - generic:
+                          - generic [aria-hidden]: 
+                  - generic [ref=f52e141]:
+                    - link "Tổ chức cấu trúc dự án theo FSD architecture Idle" [ref=f52e142] [cursor=pointer]:
+                      - /url: /chat/ad3b9607-40c3-4722-aaca-544716027fca
+                      - generic [ref=f52e143]: Tổ chức cấu trúc dự án theo FSD architecture
+                      - img "Idle" [ref=f52e147]
+                    - generic:
+                      - button "More options for Tổ chức cấu trúc dự án theo FSD architecture":
+                        - generic:
+                          - generic [aria-hidden]: 
+                  - generic [ref=f52e151]:
+                    - link "Quy tắc viết file trong FSD Idle" [ref=f52e152] [cursor=pointer]:
+                      - /url: /chat/1b8af4c3-db50-4246-a1f7-12e8c067993b
+                      - generic [ref=f52e153]: Quy tắc viết file trong FSD
+                      - img "Idle" [ref=f52e157]
+                    - generic:
+                      - button "More options for Quy tắc viết file trong FSD":
+                        - generic:
+                          - generic [aria-hidden]: 
+                  - generic [ref=f52e161]:
+                    - link "Greeting Idle" [ref=f52e162] [cursor=pointer]:
+                      - /url: /chat/f0eb0d36-fbd1-4fd1-956b-2d31c5a8060a
+                      - generic [ref=f52e163]: Greeting
+                      - img "Idle" [ref=f52e167]
+                    - generic:
+                      - button "More options for Greeting":
+                        - generic:
+                          - generic [aria-hidden]: 
+                  - generic [ref=f52e171]:
+                    - link "Chuẩn hóa kiến trúc document-in và document-out theo FSD Idle" [ref=f52e172] [cursor=pointer]:
+                      - /url: /chat/e0656dbc-0ea9-41d3-a5a8-e7886530aa0d
+                      - generic [ref=f52e173]: Chuẩn hóa kiến trúc document-in và document-out theo FSD
+                      - img "Idle" [ref=f52e177]
+                    - generic:
+                      - button "More options for Chuẩn hóa kiến trúc document-in và document-out theo FSD":
+                        - generic:
+                          - generic [aria-hidden]: 
+                  - generic [ref=f52e181]:
+                    - link "Rollback và đồng bộ nhánh với develop Idle" [ref=f52e182] [cursor=pointer]:
+                      - /url: /chat/4b60b692-7876-4455-ab35-f3b001136e03
+                      - generic [ref=f52e183]: Rollback và đồng bộ nhánh với develop
+                      - img "Idle" [ref=f52e187]
+                    - generic:
+                      - button "More options for Rollback và đồng bộ nhánh với develop":
+                        - generic:
+                          - generic [aria-hidden]: 
+                  - generic [ref=f52e191]:
+                    - link "Kiểm tra UI và yêu cầu Idle" [ref=f52e192] [cursor=pointer]:
+                      - /url: /chat/3ce359da-f64d-4144-81f8-d0a9f6947fc9
+                      - generic [ref=f52e193]: Kiểm tra UI và yêu cầu
+                      - img "Idle" [ref=f52e197]
+                    - generic:
+                      - button "More options for Kiểm tra UI và yêu cầu":
+                        - generic:
+                          - generic [aria-hidden]: 
+                  - generic [ref=f52e201]:
+                    - link "Untitled Idle" [ref=f52e202] [cursor=pointer]:
+                      - /url: /chat/9760df8d-37ad-46fd-8452-86b15883afe7
+                      - generic [ref=f52e203]: Untitled
+                      - img "Idle" [ref=f52e207]
+                    - generic:
+                      - button "More options":
+                        - generic:
+                          - generic [aria-hidden]: 
+                  - generic [ref=f52e211]:
+                    - link "So sánh thay đổi giữa hai file Idle" [ref=f52e212] [cursor=pointer]:
+                      - /url: /chat/231525df-3696-43df-b1eb-d02ac9230883
+                      - generic [ref=f52e213]: So sánh thay đổi giữa hai file
+                      - img "Idle" [ref=f52e217]
+                    - generic:
+                      - button "More options for So sánh thay đổi giữa hai file":
+                        - generic:
+                          - generic [aria-hidden]: 
+                  - generic [ref=f52e221]:
+                    - link "Cập nhật file page.tsx cho retake/in Idle" [ref=f52e222] [cursor=pointer]:
+                      - /url: /chat/0145ed7e-72c5-4895-87e7-497ed28321d7
+                      - generic [ref=f52e223]: Cập nhật file page.tsx cho retake/in
+                      - img "Idle" [ref=f52e227]
+                    - generic:
+                      - button "More options for Cập nhật file page.tsx cho retake/in":
+                        - generic:
+                          - generic [aria-hidden]: 
+                  - generic [ref=f52e231]:
+                    - link "Lỗi checkbox mất khi chuyển trang và 404 API Idle" [ref=f52e232] [cursor=pointer]:
+                      - /url: /chat/b93c380f-0b1a-4c8a-9537-b0e5b9c5d891
+                      - generic [ref=f52e233]: Lỗi checkbox mất khi chuyển trang và 404 API
+                      - img "Idle" [ref=f52e237]
+                    - generic:
+                      - button "More options for Lỗi checkbox mất khi chuyển trang và 404 API":
+                        - generic:
+                          - generic [aria-hidden]: 
+                  - generic [ref=f52e241]:
+                    - link "Sắp xếp dữ liệu không chính xác trong draft-list Idle" [ref=f52e242] [cursor=pointer]:
+                      - /url: /chat/3143cbe2-57db-4627-8e4a-6dd7b049c845
+                      - generic [ref=f52e243]: Sắp xếp dữ liệu không chính xác trong draft-list
+                      - img "Idle" [ref=f52e247]
+                    - generic:
+                      - button "More options for Sắp xếp dữ liệu không chính xác trong draft-list":
+                        - generic:
+                          - generic [aria-hidden]: 
+                  - generic [ref=f52e251]:
+                    - link "Ẩn button thêm mới trong tab chờ tiếp nhận Idle" [ref=f52e252] [cursor=pointer]:
+                      - /url: /chat/2699884a-da85-422d-81ca-48a535c6bd78
+                      - generic [ref=f52e253]: Ẩn button thêm mới trong tab chờ tiếp nhận
+                      - img "Idle" [ref=f52e257]
+                    - generic:
+                      - button "More options for Ẩn button thêm mới trong tab chờ tiếp nhận":
+                        - generic:
+                          - generic [aria-hidden]: 
+                  - generic [ref=f52e261]:
+                    - link "Sửa lỗi sorting trong draft-list Idle" [ref=f52e262] [cursor=pointer]:
+                      - /url: /chat/3e4072fe-e965-4487-8f1e-3fd32b2c55d7
+                      - generic [ref=f52e263]: Sửa lỗi sorting trong draft-list
+                      - img "Idle" [ref=f52e267]
+                    - generic:
+                      - button "More options for Sửa lỗi sorting trong draft-list":
+                        - generic:
+                          - generic [aria-hidden]: 
+                  - generic [ref=f52e271]:
+                    - link "React Query caching và state synchronization fix Idle" [ref=f52e272] [cursor=pointer]:
+                      - /url: /chat/d48b7e3a-fb03-48cf-a75b-d5c7630e3e7e
+                      - generic [ref=f52e273]: React Query caching và state synchronization fix
+                      - img "Idle" [ref=f52e277]
+                    - generic:
+                      - button "More options for React Query caching và state synchronization fix":
+                        - generic:
+                          - generic [aria-hidden]: 
+                  - generic [ref=f52e281]:
+                    - link "Giải thích chi tiết chủ đề theo script Idle" [ref=f52e282] [cursor=pointer]:
+                      - /url: /chat/23c089ee-b8ed-4662-bf69-f09b6e954a14
+                      - generic [ref=f52e283]: Giải thích chi tiết chủ đề theo script
+                      - img "Idle" [ref=f52e287]
+                    - generic:
+                      - button "More options for Giải thích chi tiết chủ đề theo script":
+                        - generic:
+                          - generic [aria-hidden]: 
+                  - generic [ref=f52e291]:
+                    - link "CustomDatePicker alignment issue across pages Idle" [ref=f52e292] [cursor=pointer]:
+                      - /url: /chat/e76cbadf-d1fb-4ddd-8b01-8c407487b68b
+                      - generic [ref=f52e293]: CustomDatePicker alignment issue across pages
+                      - img "Idle" [ref=f52e297]
+                    - generic:
+                      - button "More options for CustomDatePicker alignment issue across pages":
+                        - generic:
+                          - generic [aria-hidden]: 
+                  - generic [ref=f52e301]:
+                    - link "Hiển thị trường dữ liệu theo loại văn bản Idle" [ref=f52e302] [cursor=pointer]:
+                      - /url: /chat/f8d7200c-a7f2-467f-8e07-7feafccb561c
+                      - generic [ref=f52e303]: Hiển thị trường dữ liệu theo loại văn bản
+                      - img "Idle" [ref=f52e307]
+                    - generic:
+                      - button "More options for Hiển thị trường dữ liệu theo loại văn bản":
+                        - generic:
+                          - generic [aria-hidden]: 
+                  - generic [ref=f52e311]:
+                    - link "Sắp xếp lại trường tìm kiếm văn bản thường và mật Idle" [ref=f52e312] [cursor=pointer]:
+                      - /url: /chat/9b765cdf-defb-4dcf-9376-a9e16431a898
+                      - generic [ref=f52e313]: Sắp xếp lại trường tìm kiếm văn bản thường và mật
+                      - img "Idle" [ref=f52e317]
+                    - generic:
+                      - button "More options for Sắp xếp lại trường tìm kiếm văn bản thường và mật":
+                        - generic:
+                          - generic [aria-hidden]: 
+                  - button "View all" [ref=f52e320] [cursor=pointer]
+              - status [ref=f52e321]
+        - generic [ref=f52e323]:
+          - button "haodaojrk5@gmail.com Free" [ref=f52e325] [cursor=pointer]:
+            - generic [ref=f52e328]:
+              - img [aria-hidden] [ref=f52e330]: H
+              - generic [ref=f52e331]:
+                - generic [ref=f52e332]: haodaojrk5@gmail.com
+                - generic [aria-hidden] [ref=f52e333]: ·
+                - generic [ref=f52e334]: Free
+              - generic [aria-hidden] [ref=f52e336]: 
+          - link "Get apps and extensions" [ref=f52e338] [cursor=pointer]:
+            - /url: /downloads
+            - generic [ref=f52e340]:
+              - generic [aria-hidden]: 
+      - separator "Resize sidebar" [ref=f52e341]
+    - main [ref=f52e344]:
+      - generic [ref=f52e349]:
+        - status [ref=f52e350]: Loading
+        - generic [aria-hidden]:
+          - generic:
+            - generic:
+              - generic:
+                - generic:
+                  - heading [level=1]: Plugins
+              - generic:
+                - generic:
+                  - generic:
+                    - generic [aria-hidden]:
+                      - status:
+                        - generic: Loading
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - status:
+                          - generic: Loading
+                    - generic:
+                      - generic [aria-hidden]:
+                        - status:
+                          - generic: Loading
+          - generic:
+            - generic:
+              - generic:
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic [aria-hidden]:
+                        - generic:
+                          - generic:
+                            - generic [aria-hidden]:
+                              - generic:
+                                - generic:
+                                  - status:
+                                    - generic: Loading
+                              - generic:
+                                - generic [aria-hidden]:
+                                  - status:
+                                    - generic: Loading
+                                  - generic [aria-hidden]:
+                                    - generic:
+                                      - status:
+                                        - generic: Loading
+                                    - generic:
+                                      - status:
+                                        - generic: Loading
+                                  - generic [aria-hidden]:
+                                    - generic:
+                                      - status:
+                                        - generic: Loading
+                                - generic [aria-hidden]:
+                                  - status:
+                                    - generic: Loading
+                                  - generic [aria-hidden]:
+                                    - generic:
+                                      - status:
+                                        - generic: Loading
+                                    - generic:
+                                      - status:
+                                        - generic: Loading
+                                  - generic [aria-hidden]:
+                                    - generic:
+                                      - status:
+                                        - generic: Loading
+                                - generic [aria-hidden]:
+                                  - status:
+                                    - generic: Loading
+                                  - generic [aria-hidden]:
+                                    - generic:
+                                      - status:
+                                        - generic: Loading
+                                    - generic:
+                                      - status:
+                                        - generic: Loading
+                                  - generic [aria-hidden]:
+                                    - generic:
+                                      - status:
+                                        - generic: Loading
+                                - generic [aria-hidden]:
+                                  - status:
+                                    - generic: Loading
+                                  - generic [aria-hidden]:
+                                    - generic:
+                                      - status:
+                                        - generic: Loading
+                                    - generic:
+                                      - status:
+                                        - generic: Loading
+                                  - generic [aria-hidden]:
+                                    - generic:
+                                      - status:
+                                        - generic: Loading
+                            - generic:
+                              - generic [aria-hidden]:
+                                - generic:
+                                  - status:
+                                    - generic: Loading
+                                - generic:
+                                  - status:
+                                    - generic: Loading
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - generic:
+                                      - generic:
+                                        - generic:
+                                          - status:
+                                            - generic: Loading
+                                        - generic [aria-hidden]:
+                                          - generic:
+                                            - status:
+                                              - generic: Loading
+                                          - generic:
+                                            - generic:
+                                              - status:
+                                                - generic: Loading
+                                          - generic:
+                                            - status:
+                                              - generic: Loading
+                                - generic:
+                                  - generic [aria-hidden]:
+                                    - generic:
+                                      - generic:
+                                        - generic:
+                                          - status:
+                                            - generic: Loading
+                                        - generic [aria-hidden]:
+                                          - generic:
+                                            - status:
+                                              - generic: Loading
+                                          - generic:
+                                            - generic:
+                                              - status:
+                                                - generic: Loading
+                                          - generic:
+                                            - status:
+                                              - generic: Loading
+                                - generic:
+                                  - generic [aria-hidden]:
+                                    - generic:
+                                      - generic:
+                                        - generic:
+                                          - status:
+                                            - generic: Loading
+                                        - generic [aria-hidden]:
+                                          - generic:
+                                            - status:
+                                              - generic: Loading
+                                          - generic:
+                                            - generic:
+                                              - status:
+                                                - generic: Loading
+                                          - generic:
+                                            - status:
+                                              - generic: Loading
+                                - generic:
+                                  - generic [aria-hidden]:
+                                    - generic:
+                                      - generic:
+                                        - generic:
+                                          - status:
+                                            - generic: Loading
+                                        - generic [aria-hidden]:
+                                          - generic:
+                                            - status:
+                                              - generic: Loading
+                                          - generic:
+                                            - generic:
+                                              - status:
+                                                - generic: Loading
+                                          - generic:
+                                            - status:
+                                              - generic: Loading
+                                - generic:
+                                  - generic [aria-hidden]:
+                                    - generic:
+                                      - generic:
+                                        - generic:
+                                          - status:
+                                            - generic: Loading
+                                        - generic [aria-hidden]:
+                                          - generic:
+                                            - status:
+                                              - generic: Loading
+                                          - generic:
+                                            - generic:
+                                              - status:
+                                                - generic: Loading
+                                          - generic:
+                                            - status:
+                                              - generic: Loading
+                                - generic:
+                                  - generic [aria-hidden]:
+                                    - generic:
+                                      - generic:
+                                        - generic:
+                                          - status:
+                                            - generic: Loading
+                                        - generic [aria-hidden]:
+                                          - generic:
+                                            - status:
+                                              - generic: Loading
+                                          - generic:
+                                            - generic:
+                                              - status:
+                                                - generic: Loading
+                                          - generic:
+                                            - status:
+                                              - generic: Loading
+                                - generic:
+                                  - generic [aria-hidden]:
+                                    - generic:
+                                      - generic:
+                                        - generic:
+                                          - status:
+                                            - generic: Loading
+                                        - generic [aria-hidden]:
+                                          - generic:
+                                            - status:
+                                              - generic: Loading
+                                          - generic:
+                                            - generic:
+                                              - status:
+                                                - generic: Loading
+                                          - generic:
+                                            - status:
+                                              - generic: Loading
+                                - generic:
+                                  - generic [aria-hidden]:
+                                    - generic:
+                                      - generic:
+                                        - generic:
+                                          - status:
+                                            - generic: Loading
+                                        - generic [aria-hidden]:
+                                          - generic:
+                                            - status:
+                                              - generic: Loading
+                                          - generic:
+                                            - generic:
+                                              - status:
+                                                - generic: Loading
+                                          - generic:
+                                            - status:
+                                              - generic: Loading
+                            - generic:
+                              - generic [aria-hidden]:
+                                - generic:
+                                  - status:
+                                    - generic: Loading
+                                - generic:
+                                  - status:
+                                    - generic: Loading
+                              - generic:
+                                - generic:
+                                  - generic [aria-hidden]:
+                                    - generic:
+                                      - generic:
+                                        - generic:
+                                          - status:
+                                            - generic: Loading
+                                        - generic [aria-hidden]:
+                                          - generic:
+                                            - status:
+                                              - generic: Loading
+                                          - generic:
+                                            - generic:
+                                              - status:
+                                                - generic: Loading
+                                          - generic:
+                                            - status:
+                                              - generic: Loading
+                                - generic:
+                                  - generic [aria-hidden]:
+                                    - generic:
+                                      - generic:
+                                        - generic:
+                                          - status:
+                                            - generic: Loading
+                                        - generic [aria-hidden]:
+                                          - generic:
+                                            - status:
+                                              - generic: Loading
+                                          - generic:
+                                            - generic:
+                                              - status:
+                                                - generic: Loading
+                                          - generic:
+                                            - status:
+                                              - generic: Loading
+                                - generic:
+                                  - generic [aria-hidden]:
+                                    - generic:
+                                      - generic:
+                                        - generic:
+                                          - status:
+                                            - generic: Loading
+                                        - generic [aria-hidden]:
+                                          - generic:
+                                            - status:
+                                              - generic: Loading
+                                          - generic:
+                                            - generic:
+                                              - status:
+                                                - generic: Loading
+                                          - generic:
+                                            - status:
+                                              - generic: Loading
+                                - generic:
+                                  - generic [aria-hidden]:
+                                    - generic:
+                                      - generic:
+                                        - generic:
+                                          - status:
+                                            - generic: Loading
+                                        - generic [aria-hidden]:
+                                          - generic:
+                                            - status:
+                                              - generic: Loading
+                                          - generic:
+                                            - generic:
+                                              - status:
+                                                - generic: Loading
+                                          - generic:
+                                            - status:
+                                              - generic: Loading
+                                - generic:
+                                  - generic [aria-hidden]:
+                                    - generic:
+                                      - generic:
+                                        - generic:
+                                          - status:
+                                            - generic: Loading
+                                        - generic [aria-hidden]:
+                                          - generic:
+                                            - status:
+                                              - generic: Loading
+                                          - generic:
+                                            - generic:
+                                              - status:
+                                                - generic: Loading
+                                          - generic:
+                                            - status:
+                                              - generic: Loading
+                                - generic:
+                                  - generic [aria-hidden]:
+                                    - generic:
+                                      - generic:
+                                        - generic:
+                                          - status:
+                                            - generic: Loading
+                                        - generic [aria-hidden]:
+                                          - generic:
+                                            - status:
+                                              - generic: Loading
+                                          - generic:
+                                            - generic:
+                                              - status:
+                                                - generic: Loading
+                                          - generic:
+                                            - status:
+                                              - generic: Loading
+                                - generic:
+                                  - generic [aria-hidden]:
+                                    - generic:
+                                      - generic:
+                                        - generic:
+                                          - status:
+                                            - generic: Loading
+                                        - generic [aria-hidden]:
+                                          - generic:
+                                            - status:
+                                              - generic: Loading
+                                          - generic:
+                                            - generic:
+                                              - status:
+                                                - generic: Loading
+                                          - generic:
+                                            - status:
+                                              - generic: Loading
+                                - generic:
+                                  - generic [aria-hidden]:
+                                    - generic:
+                                      - generic:
+                                        - generic:
+                                          - status:
+                                            - generic: Loading
+                                        - generic [aria-hidden]:
+                                          - generic:
+                                            - status:
+                                              - generic: Loading
+                                          - generic:
+                                            - generic:
+                                              - status:
+                                                - generic: Loading
+                                          - generic:
+                                            - status:
+                                              - generic: Loading
+  - status [ref=f52e351]
+  - generic:
+    - generic:
+      - generic:
+        - status
+        - region "Notifications"
